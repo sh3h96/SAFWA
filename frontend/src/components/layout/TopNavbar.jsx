@@ -1,3 +1,4 @@
+import Avatar from '../common/Avatar';
 import { currentUser } from '../../mock/auth/user';
 
 /**
@@ -38,19 +39,12 @@ export default function TopNavbar() {
           </div>
 
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-slate-200 border border-outline-variant overflow-hidden flex items-center justify-center">
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-xs font-bold text-inverse-surface">
-                {user.initials}
-              </span>
-            )}
-          </div>
+          <Avatar 
+            src={user.avatar} 
+            name={user.name} 
+            initials={user.initials} 
+            size="md" 
+          />
         </div>
       </div>
 

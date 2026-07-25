@@ -1,48 +1,99 @@
 /**
- * Sidebar navigation items configuration.
- * Each item maps to a route/section in the admin dashboard.
+ * Categorized Sidebar navigation items configuration.
+ * Groups items logically into: Overview, Operations, Management, and System.
  */
-export const sidebarNavItems = [
+export const sidebarNavGroups = [
   {
-    id: 'dashboard',
-    icon: 'dashboard',
-    label: 'لوحة القيادة',
-    path: '/admin/dashboard',
+    id: 'overview',
+    title: 'الرئيسية والعملاء',
+    items: [
+      {
+        id: 'dashboard',
+        icon: 'dashboard',
+        label: 'لوحة القيادة',
+        path: '/admin/dashboard',
+      },
+      {
+        id: 'customer',
+        icon: 'person',
+        label: 'لوحة تحكم العميل',
+        path: '/admin/customer',
+      },
+    ],
   },
   {
-    id: 'workshop',
-    icon: 'precision_manufacturing',
-    label: 'ساحة الورشة',
-    path: '/admin/workshop',
+    id: 'operations',
+    title: 'عمليات الورشة والصيانة',
+    items: [
+      {
+        id: 'booking',
+        icon: 'edit_calendar',
+        label: 'حجز موعد جديد',
+        path: '/admin/booking',
+      },
+      {
+        id: 'workshop',
+        icon: 'precision_manufacturing',
+        label: 'ساحة الورشة',
+        path: '/admin/workshop',
+      },
+      {
+        id: 'technician',
+        icon: 'build',
+        label: 'طاولة عمل الفني',
+        path: '/admin/technician',
+      },
+      {
+        id: 'inspection',
+        icon: 'fact_check',
+        label: 'طلبات الفحص',
+        path: '/admin/inspection',
+      },
+      {
+        id: 'reports',
+        icon: 'garage',
+        label: 'مرآب وسجل الصيانة',
+        path: '/admin/reports',
+      },
+    ],
   },
   {
-    id: 'inventory',
-    icon: 'inventory_2',
-    label: 'المخزن',
-    path: '/admin/inventory',
+    id: 'management',
+    title: 'الإدارة والمالية',
+    items: [
+      {
+        id: 'inventory',
+        icon: 'inventory_2',
+        label: 'المخزن',
+        path: '/admin/inventory',
+      },
+      {
+        id: 'invoices',
+        icon: 'receipt_long',
+        label: 'الفواتير',
+        path: '/admin/invoices',
+      },
+      {
+        id: 'users',
+        icon: 'group',
+        label: 'المستخدمين',
+        path: '/admin/users',
+      },
+    ],
   },
   {
-    id: 'invoices',
-    icon: 'receipt_long',
-    label: 'الفواتير',
-    path: '/admin/invoices',
-  },
-  {
-    id: 'users',
-    icon: 'group',
-    label: 'المستخدمين',
-    path: '/admin/users',
-  },
-  {
-    id: 'reports',
-    icon: 'assessment',
-    label: 'التقارير',
-    path: '/admin/reports',
-  },
-  {
-    id: 'settings',
-    icon: 'settings',
-    label: 'الإعدادات',
-    path: '/admin/settings',
+    id: 'system',
+    title: 'النظام والإعدادات',
+    items: [
+      {
+        id: 'settings',
+        icon: 'settings',
+        label: 'الإعدادات',
+        path: '/admin/settings',
+      },
+    ],
   },
 ];
+
+// Flat export for backwards compatibility
+export const sidebarNavItems = sidebarNavGroups.flatMap((group) => group.items);

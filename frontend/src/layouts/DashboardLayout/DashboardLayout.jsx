@@ -1,3 +1,4 @@
+import { Outlet } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import TopNavbar from '../../components/layout/TopNavbar';
 
@@ -5,7 +6,7 @@ import TopNavbar from '../../components/layout/TopNavbar';
  * DashboardLayout — Shell layout for admin dashboard pages.
  * Sidebar (fixed right) + Main area (TopNavbar + scrollable content).
  */
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout() {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
@@ -18,7 +19,7 @@ export default function DashboardLayout({ children }) {
 
         {/* Page Content — scrollable */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          {children}
+          <Outlet />
         </div>
       </main>
     </div>
