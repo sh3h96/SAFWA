@@ -1,5 +1,4 @@
 const { faker } = require('@faker-js/faker');
-const bcrypt = require('bcryptjs'); // Assuming bcryptjs or bcrypt is used. We'll use a plain password hash just in case, or default to a known hash.
 
 // A pre-hashed password for 'password123' so we don't slow down seeding with bcrypt
 // This is typical for seeders.

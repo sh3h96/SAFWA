@@ -5,29 +5,13 @@ const factories = require('../factories');
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    // We will generate:
-    // 5 clients (users with role=client)
-    // 2 mechanics (users with role=mechanic)
-    // 1 admin (user with role=admin)
-    // 5 vehicles (one per client)
-    // 10 spare parts
-    // 5 appointments
-    // 5 technical reports
-    // 10 required parts
-    // 5 invoices
-    // 10 invoice items
-    // 5 payments
-    // 5 reviews
-
     // 1. Users
     const clientsData = Array.from({ length: 5 }).map(() => factories.createFakeUser('client'));
     const mechanicsData = Array.from({ length: 2 }).map(() => factories.createFakeUser('mechanic'));
     const adminData = [factories.createFakeUser('admin')];
     
-    // We must insert and get back IDs. Since bulkInsert doesn't always return all inserted IDs in all dialects seamlessly without specifying returning:true,
-    // wait, in MySQL bulkInsert doesn't return IDs reliably. So we will just query them after insertion by email, or since we know there are no users, we can just fetch all users.
-    await queryInterface.bulkInsert('Users', [...clientsData, ...mechanicsData, ...adminData], {});
-    const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM Users;`);
+    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
+    const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);
     
     const clients = users.filter(u => u.role === 'client');
     const mechanics = users.filter(u => u.role === 'mechanic');
@@ -36,13 +20,13 @@ module.exports = {
 
     // 2. Vehicles
     const vehiclesData = clients.map(client => factories.createFakeVehicle(client.id));
-    await queryInterface.bulkInsert('Vehicles', vehiclesData, {});
-    const [vehicles] = await queryInterface.sequelize.query(`SELECT id FROM Vehicles;`);
+    await queryInterface.bulkInsert('vehicles', vehiclesData, {});
+    const [vehicles] = await queryInterface.sequelize.query(`SELECT id FROM vehicles;`);
 
     // 3. Spare Parts
     const sparePartsData = Array.from({ length: 10 }).map(() => factories.createFakeSparePart());
-    await queryInterface.bulkInsert('SpareParts', sparePartsData, {});
-    const [parts] = await queryInterface.sequelize.query(`SELECT id FROM SpareParts;`);
+    await queryInterface.bulkInsert('spare_parts', sparePartsData, {});
+    const [parts] = await queryInterface.sequelize.query(`SELECT id FROM spare_parts;`);
 
     // 4. Appointments
     const appointmentsData = vehicles.map((vehicle, index) => {
@@ -50,13 +34,13 @@ module.exports = {
       const mechanic = mechanics[index % mechanics.length];
       return factories.createFakeAppointment(client.id, vehicle.id, mechanic.id);
     });
-    await queryInterface.bulkInsert('Appointments', appointmentsData, {});
-    const [appointments] = await queryInterface.sequelize.query(`SELECT id, mechanic_id, client_id FROM Appointments;`);
+    await queryInterface.bulkInsert('appointments', appointmentsData, {});
+    const [appointments] = await queryInterface.sequelize.query(`SELECT id, mechanic_id, client_id FROM appointments;`);
 
     // 5. Technical Reports
     const reportsData = appointments.map(app => factories.createFakeTechnicalReport(app.id, app.mechanic_id));
-    await queryInterface.bulkInsert('TechnicalReports', reportsData, {});
-    const [reports] = await queryInterface.sequelize.query(`SELECT id FROM TechnicalReports;`);
+    await queryInterface.bulkInsert('technical_reports', reportsData, {});
+    const [reports] = await queryInterface.sequelize.query(`SELECT id FROM technical_reports;`);
 
     // 6. Required Parts
     const requiredPartsData = reports.flatMap(report => {
@@ -65,12 +49,12 @@ module.exports = {
         factories.createFakeRequiredPart(report.id, parts[1].id)
       ];
     });
-    await queryInterface.bulkInsert('RequiredParts', requiredPartsData, {});
+    await queryInterface.bulkInsert('required_parts', requiredPartsData, {});
 
     // 7. Invoices
     const invoicesData = appointments.map(app => factories.createFakeInvoice(app.id));
-    await queryInterface.bulkInsert('Invoices', invoicesData, {});
-    const [invoices] = await queryInterface.sequelize.query(`SELECT id FROM Invoices;`);
+    await queryInterface.bulkInsert('invoices', invoicesData, {});
+    const [invoices] = await queryInterface.sequelize.query(`SELECT id FROM invoices;`);
 
     // 8. Invoice Items
     const invoiceItemsData = invoices.flatMap(invoice => {
@@ -79,28 +63,28 @@ module.exports = {
         factories.createFakeInvoiceItem(invoice.id, parts[1].id)
       ];
     });
-    await queryInterface.bulkInsert('InvoiceItems', invoiceItemsData, {});
+    await queryInterface.bulkInsert('invoice_items', invoiceItemsData, {});
 
     // 9. Payments
     const paymentsData = invoices.map(invoice => factories.createFakePayment(invoice.id));
-    await queryInterface.bulkInsert('Payments', paymentsData, {});
+    await queryInterface.bulkInsert('payments', paymentsData, {});
 
     // 10. Reviews
     const reviewsData = appointments.map(app => factories.createFakeReview(app.id, app.client_id));
-    await queryInterface.bulkInsert('Reviews', reviewsData, {});
+    await queryInterface.bulkInsert('reviews', reviewsData, {});
   },
 
   async down (queryInterface, Sequelize) {
     // Delete in reverse order of dependencies
-    await queryInterface.bulkDelete('Reviews', null, {});
-    await queryInterface.bulkDelete('Payments', null, {});
-    await queryInterface.bulkDelete('InvoiceItems', null, {});
-    await queryInterface.bulkDelete('Invoices', null, {});
-    await queryInterface.bulkDelete('RequiredParts', null, {});
-    await queryInterface.bulkDelete('TechnicalReports', null, {});
-    await queryInterface.bulkDelete('Appointments', null, {});
-    await queryInterface.bulkDelete('SpareParts', null, {});
-    await queryInterface.bulkDelete('Vehicles', null, {});
-    await queryInterface.bulkDelete('Users', null, {});
+    await queryInterface.bulkDelete('reviews', null, {});
+    await queryInterface.bulkDelete('payments', null, {});
+    await queryInterface.bulkDelete('invoice_items', null, {});
+    await queryInterface.bulkDelete('invoices', null, {});
+    await queryInterface.bulkDelete('required_parts', null, {});
+    await queryInterface.bulkDelete('technical_reports', null, {});
+    await queryInterface.bulkDelete('appointments', null, {});
+    await queryInterface.bulkDelete('spare_parts', null, {});
+    await queryInterface.bulkDelete('vehicles', null, {});
+    await queryInterface.bulkDelete('users', null, {});
   }
 };
