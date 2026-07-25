@@ -1,0 +1,352 @@
+<!DOCTYPE html><html dir="rtl" lang="ar" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>صفوة - حجز جديد</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#eceef0",
+                    "surface-container-highest": "#e0e3e5",
+                    "danger-text": "#EF4444",
+                    "on-tertiary-container": "#fff9f7",
+                    "surface-container-high": "#e6e8ea",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "danger-bg": "#FEF2F2",
+                    "tertiary-container": "#a96039",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed": "#341100",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-surface-variant": "#3e4949",
+                    "success-bg": "#ECFDF5",
+                    "inverse-surface": "#2d3133",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#d2e5f8",
+                    "surface-variant": "#e0e3e5",
+                    "secondary": "#4f6070",
+                    "primary": "#006565",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#ffdbcb",
+                    "info-bg": "#E0F2FE",
+                    "on-primary-fixed-variant": "#004f4f",
+                    "warning-text": "#F59E0B",
+                    "outline-variant": "#bdc9c8",
+                    "info-text": "#0284C7",
+                    "on-secondary-fixed": "#0b1d2b",
+                    "tertiary-fixed-dim": "#ffb692",
+                    "outline": "#6e7979",
+                    "on-secondary-fixed-variant": "#384958",
+                    "surface-dim": "#d8dadc",
+                    "surface-bright": "#f7f9fb",
+                    "secondary-fixed-dim": "#b7c8db",
+                    "on-primary-container": "#e3fffe",
+                    "inverse-primary": "#76d6d5",
+                    "border-slate": "#E2E8F0",
+                    "on-primary-fixed": "#002020",
+                    "warning-bg": "#FEF3C7",
+                    "on-surface": "#191c1e",
+                    "on-error": "#ffffff",
+                    "on-background": "#191c1e",
+                    "tertiary": "#8b4823",
+                    "primary-fixed-dim": "#76d6d5",
+                    "primary-fixed": "#93f2f2",
+                    "background": "#f7f9fb",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#d2e5f8",
+                    "on-secondary-container": "#556677",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#006a6a",
+                    "surface-container-low": "#f2f4f6",
+                    "surface": "#f7f9fb",
+                    "teal-hover": "#006666",
+                    "on-tertiary-fixed-variant": "#733512",
+                    "success-text": "#10B981",
+                    "primary-container": "#008080"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "touch-target": "44px",
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "gutter": "24px",
+                    "baseline": "4px"
+            },
+            "fontFamily": {
+                    "tajawal": ["Tajawal", "sans-serif"],
+                    "headline-h3": ["Inter"],
+                    "caption": ["Inter"],
+                    "headline-h2": ["Inter"],
+                    "headline-h1": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-h1-mobile": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-h3": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "caption": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "headline-h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-h1-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #F8FAFC;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .step-active { color: #008080; border-color: #008080; }
+        .step-inactive { color: #6e7979; border-color: #bdc9c8; }
+        
+        .radio-custom:checked + .card-select {
+            border-color: #008080;
+            background-color: #f0fdfa;
+            box-shadow: 0 0 0 1px #008080;
+        }
+
+        .scroll-hide::-webkit-scrollbar { display: none; }
+        .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .navy-bg { background-color: #0D1F2D; }
+        .teal-text { color: #008080; }
+        .teal-bg { background-color: #008080; }
+    </style>
+</head>
+<body class="bg-background min-h-screen pb-32">
+<!-- TopNavBar Component -->
+<nav class="bg-secondary dark:bg-on-secondary-fixed text-on-secondary shadow-sm docked full-width top-0 sticky z-50">
+<div class="flex flex-row-reverse justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target">
+<!-- Left Side Actions -->
+<div class="flex items-center gap-4">
+<div class="flex gap-3">
+<button class="material-symbols-outlined hover:bg-on-secondary-fixed-variant transition-colors duration-200 p-2 rounded-full active:scale-95 transition-transform" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined hover:bg-on-secondary-fixed-variant transition-colors duration-200 p-2 rounded-full active:scale-95 transition-transform" data-icon="settings">settings</button>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Close-up profile photograph of a professional workshop manager in a modern automotive center, wearing a clean uniform. The lighting is soft and professional with a neutral corporate background that matches the brand's navy and white color palette. High-quality digital photography style with a shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBteo06qMN8N54k9YJf_X3BDYzeMbjsJujs0YvyUciwUCkA_SWrOineAjoKP5YESuRhSexqevA-Y22aoIb7rS093KYLc5Coa6gARgNj0XLBGWrp9g3m1GmI6cNlO8E6dMlw9kkzvgAqaU9nLaH9dsEq3cdSxMq5ZDjNJ70NBKtoMwa4WUztL25bVBNBS3p25ko9MkQJzhVb9y67kJnOYH5-pO-RFaknFzBdyjWO9qaXqJZHGam_mg-6eaekh0nbjvMfqBpkOdzHMPE">
+</div>
+</div>
+<!-- Brand Identity -->
+<div class="flex items-center gap-4">
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHgZvdzCaq-KvQG4yfRHlIV2p10fKawmZsy_AnPBVhNs6TUx2EMijZ18-RsiqDpjezGfG8lvvXp1LFoFRsYyNsaj8MuZoIAHpXTZAre_TFoGkxz5nXM5NRVaUux14_ktY3J1BRf_eWvGhnbB26LmywWYTD9dob0UifEer03fFOQBWoV2CuB_XIhuHxZRzNXSCYlwZrb81c1fgF7O-AqRFMXFRSC6IeKa4kWRE4hvmVkdtzL44osao9udocEcPXH43QatbPM10dItk" alt="SAFWA" class="h-8 w-auto object-contain">
+</div>
+<!-- Mobile Search Placeholder (on_left per JSON) -->
+<div class="hidden md:flex items-center bg-white/10 rounded-lg px-3 py-1.5 gap-2">
+<span class="material-symbols-outlined text-secondary-fixed-dim">search</span>
+<input class="bg-transparent border-none text-white focus:ring-0 text-body-md w-48 placeholder:text-secondary-fixed-dim" placeholder="بحث..." type="text">
+</div>
+</div>
+</nav>
+<!-- Wizard Progress Header -->
+<header class="bg-white border-b border-border-slate py-8 px-margin-mobile md:px-margin-desktop">
+<div class="max-w-4xl mx-auto">
+<div class="flex items-center justify-between relative">
+<!-- Line -->
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container -translate-y-1/2 z-0"></div>
+<!-- Step 1 -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-white px-4">
+<div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold bg-white step-active">١</div>
+<span class="font-bold text-body-md step-active">تحديد السيارة والخدمة</span>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-white px-4">
+<div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold bg-white step-inactive">٢</div>
+<span class="text-body-md step-inactive">اختيار التاريخ والوقت</span>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-white px-4">
+<div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold bg-white step-inactive">٣</div>
+<span class="text-body-md step-inactive">تأكيد الحجز</span>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-4xl mx-auto px-margin-mobile md:px-margin-desktop mt-8 space-y-10">
+<!-- Section 1: Vehicle Selection -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined teal-text">directions_car</span>
+<h2 class="font-headline-h2 text-headline-h2 text-on-surface">اختر المركبة</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Card A -->
+<label class="cursor-pointer">
+<input checked="" class="hidden radio-custom" name="vehicle" type="radio">
+<div class="card-select p-6 bg-white border border-border-slate rounded-xl transition-all hover:shadow-md flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-h3 text-headline-h3">لكزس ES350 2022</h3>
+<p class="text-on-surface-variant font-caption text-caption mt-1">تاريخ آخر صيانة: 12-10-2023</p>
+</div>
+<span class="material-symbols-outlined teal-text" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="bg-surface-container-low border border-outline-variant px-4 py-2 rounded-lg flex items-center justify-center">
+<span class="font-data-mono text-data-mono tracking-[0.2em] text-on-surface">ق و ر 4 5 6 7</span>
+</div>
+</div>
+</label>
+<!-- Card B -->
+<label class="cursor-pointer">
+<input class="hidden radio-custom" name="vehicle" type="radio">
+<div class="card-select p-6 bg-white border border-border-slate rounded-xl transition-all hover:shadow-md flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-h3 text-headline-h3">تويوتا كامري 2023</h3>
+<p class="text-on-surface-variant font-caption text-caption mt-1">لا توجد سجلات صيانة سابقة</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant">circle</span>
+</div>
+<div class="bg-surface-container-low border border-outline-variant px-4 py-2 rounded-lg flex items-center justify-center">
+<span class="font-data-mono text-data-mono tracking-[0.2em] text-on-surface">أ ب ج 1 2 3 4</span>
+</div>
+</div>
+</label>
+</div>
+</section>
+<!-- Section 2: Service Selection -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined teal-text">build</span>
+<h2 class="font-headline-h2 text-headline-h2 text-on-surface">نوع الخدمة</h2>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter">
+<button class="group p-6 bg-white border border-border-slate rounded-xl hover:border-primary-container hover:bg-success-bg transition-all flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary">oil_barrel</span>
+<span class="font-body-md text-body-md text-on-surface">تغيير زيت المحرك</span>
+</button>
+<button class="group p-6 bg-white border border-border-slate rounded-xl hover:border-primary-container hover:bg-success-bg transition-all flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary">eject</span>
+<span class="font-body-md text-body-md text-on-surface">المكابح</span>
+</button>
+<button class="group p-6 bg-white border border-border-slate rounded-xl hover:border-primary-container hover:bg-success-bg transition-all flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary">electric_bolt</span>
+<span class="font-body-md text-body-md text-on-surface">فحص الكهرباء</span>
+</button>
+<button class="group p-6 bg-white border border-border-slate rounded-xl hover:border-primary-container hover:bg-success-bg transition-all flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary">ac_unit</span>
+<span class="font-body-md text-body-md text-on-surface">إصلاح التكييف</span>
+</button>
+</div>
+</section>
+<!-- Section 3: Issue Details -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined teal-text">description</span>
+<h2 class="font-headline-h2 text-headline-h2 text-on-surface">تفاصيل المشكلة</h2>
+</div>
+<div class="bg-white border border-border-slate p-6 rounded-xl space-y-4">
+<div>
+<label class="block text-body-md font-bold text-on-surface mb-2">وصف المشكلة</label>
+<textarea class="w-full rounded-lg border-border-slate focus:ring-primary-container/20 focus:border-primary-container transition-all" placeholder="يرجى كتابة تفاصيل العطل أو الأعراض التي تظهر على المركبة..." rows="4"></textarea>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-4">
+<button class="w-full sm:w-auto px-6 py-3 border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+<span class="font-body-md">إرفاق ملفات (صور أو مقطع صوتي)</span>
+</button>
+<p class="text-caption text-outline">الحد الأقصى للملف 10 ميجابايت</p>
+</div>
+</div>
+</section>
+<!-- Section 4: Date & Time -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined teal-text">calendar_month</span>
+<h2 class="font-headline-h2 text-headline-h2 text-on-surface">التاريخ والوقت المفضل</h2>
+</div>
+<div class="bg-white border border-border-slate p-6 rounded-xl space-y-6">
+<!-- Date Picker -->
+<div class="flex gap-4 overflow-x-auto pb-2 scroll-hide">
+<button class="flex-shrink-0 w-20 py-4 rounded-xl border border-primary-container bg-success-bg flex flex-col items-center gap-1 transition-all">
+<span class="text-caption font-bold teal-text">الأحد</span>
+<span class="text-headline-h2 font-bold teal-text">15</span>
+<span class="text-caption text-on-surface-variant">أكتوبر</span>
+</button>
+<button class="flex-shrink-0 w-20 py-4 rounded-xl border border-border-slate flex flex-col items-center gap-1 hover:border-outline transition-all">
+<span class="text-caption font-medium text-on-surface-variant">الاثنين</span>
+<span class="text-headline-h2 font-bold text-on-surface">16</span>
+<span class="text-caption text-on-surface-variant">أكتوبر</span>
+</button>
+<button class="flex-shrink-0 w-20 py-4 rounded-xl border border-border-slate flex flex-col items-center gap-1 hover:border-outline transition-all">
+<span class="text-caption font-medium text-on-surface-variant">الثلاثاء</span>
+<span class="text-headline-h2 font-bold text-on-surface">17</span>
+<span class="text-caption text-on-surface-variant">أكتوبر</span>
+</button>
+<button class="flex-shrink-0 w-20 py-4 rounded-xl border border-border-slate flex flex-col items-center gap-1 hover:border-outline transition-all">
+<span class="text-caption font-medium text-on-surface-variant">الأربعاء</span>
+<span class="text-headline-h2 font-bold text-on-surface">18</span>
+<span class="text-caption text-on-surface-variant">أكتوبر</span>
+</button>
+<button class="flex-shrink-0 w-20 py-4 rounded-xl border border-border-slate flex flex-col items-center gap-1 hover:border-outline transition-all">
+<span class="text-caption font-medium text-on-surface-variant">الخميس</span>
+<span class="text-headline-h2 font-bold text-on-surface">19</span>
+<span class="text-caption text-on-surface-variant">أكتوبر</span>
+</button>
+</div>
+<!-- Time Slots -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<button class="py-3 border border-border-slate rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-all font-data-mono">09:00 AM</button>
+<button class="py-3 border-2 border-primary-container bg-success-bg rounded-lg text-body-md teal-text font-bold font-data-mono">11:30 AM</button>
+<button class="py-3 border border-border-slate rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-all font-data-mono">02:00 PM</button>
+<button class="py-3 border border-border-slate rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-all font-data-mono">04:30 PM</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Sticky Footer) -->
+<footer class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_12px_rgba(13,31,45,0.08)] py-4 px-margin-mobile md:px-margin-desktop z-50">
+<div class="max-w-4xl mx-auto flex justify-between items-center">
+<!-- Next Button (Left in RTL) -->
+<button class="px-10 py-3 teal-bg text-white rounded-xl font-bold flex items-center gap-2 hover:bg-teal-hover active:scale-95 transition-all">
+<span class="">التالي</span>
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<!-- Cancel Button (Right in RTL) -->
+<button class="px-6 py-3 text-secondary-fixed-dim hover:text-danger-text transition-colors font-medium">
+                إلغاء
+            </button>
+</div>
+</footer>
+<script>
+        // Simple Interaction logic for demo
+        document.querySelectorAll('input[name="vehicle"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                // Style updates are handled via CSS :checked sibling
+            });
+        });
+
+        // Time slot selection toggle
+        const timeButtons = document.querySelectorAll('section:last-of-type .grid button');
+        timeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                timeButtons.forEach(b => {
+                    b.className = "py-3 border border-border-slate rounded-lg text-body-md text-on-surface hover:bg-surface-container-low transition-all font-data-mono";
+                });
+                btn.className = "py-3 border-2 border-primary-container bg-success-bg rounded-lg text-body-md teal-text font-bold font-data-mono";
+            });
+        });
+    </script>
+</body></html>

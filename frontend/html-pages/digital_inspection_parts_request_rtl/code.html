@@ -1,0 +1,402 @@
+<!DOCTYPE html><html lang="ar" dir="rtl" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#ffffff",
+                      "warning-text": "#F59E0B",
+                      "surface-tint": "#006a6a",
+                      "secondary-fixed-dim": "#b7c8db",
+                      "on-primary": "#ffffff",
+                      "teal-hover": "#006666",
+                      "on-surface-variant": "#3e4949",
+                      "on-primary-container": "#e3fffe",
+                      "secondary-container": "#d2e5f8",
+                      "background": "#f7f9fb",
+                      "success-text": "#10B981",
+                      "danger-bg": "#FEF2F2",
+                      "on-error-container": "#93000a",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#6e7979",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed": "#0b1d2b",
+                      "surface-container": "#eceef0",
+                      "info-bg": "#E0F2FE",
+                      "on-tertiary-container": "#fff9f7",
+                      "on-tertiary": "#ffffff",
+                      "warning-bg": "#FEF3C7",
+                      "tertiary-fixed-dim": "#ffb692",
+                      "surface-container-highest": "#e0e3e5",
+                      "tertiary-fixed": "#ffdbcb",
+                      "surface-bright": "#f7f9fb",
+                      "on-primary-fixed": "#002020",
+                      "surface": "#f7f9fb",
+                      "outline-variant": "#bdc9c8",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f2f4f6",
+                      "tertiary": "#8b4823",
+                      "on-surface": "#191c1e",
+                      "on-tertiary-fixed-variant": "#733512",
+                      "inverse-surface": "#2d3133",
+                      "inverse-primary": "#76d6d5",
+                      "secondary-fixed": "#d2e5f8",
+                      "success-bg": "#ECFDF5",
+                      "on-secondary-container": "#556677",
+                      "info-text": "#0284C7",
+                      "secondary": "#4f6070",
+                      "on-background": "#191c1e",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-variant": "#e0e3e5",
+                      "danger-text": "#EF4444",
+                      "primary-fixed": "#93f2f2",
+                      "border-slate": "#E2E8F0",
+                      "surface-container-high": "#e6e8ea",
+                      "primary-fixed-dim": "#76d6d5",
+                      "on-secondary-fixed-variant": "#384958",
+                      "tertiary-container": "#a96039",
+                      "primary": "#006565",
+                      "surface-dim": "#d8dadc",
+                      "primary-container": "#008080",
+                      "on-tertiary-fixed": "#341100",
+                      "on-primary-fixed-variant": "#004f4f"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-mobile": "16px",
+                      "baseline": "4px",
+                      "margin-desktop": "32px",
+                      "touch-target": "44px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "headline-h2": ["Tajawal"],
+                      "data-mono": ["JetBrains Mono"],
+                      "body-lg": ["Tajawal"],
+                      "body-md": ["Tajawal"],
+                      "headline-h3": ["Tajawal"],
+                      "caption": ["Tajawal"],
+                      "headline-h1-mobile": ["Tajawal"],
+                      "headline-h1": ["Tajawal"],
+                      "display-lg": ["Tajawal"]
+              },
+              "fontSize": {
+                      "headline-h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "data-mono": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-h3": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "caption": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "headline-h1-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-background text-on-surface">
+<div class="flex h-screen overflow-hidden">
+<!-- Side Navigation -->
+<aside class="docked left-0 h-full w-64 hidden md:flex flex-col bg-surface-container border-l border-outline-variant py-gutter px-baseline space-y-baseline z-40">
+<div class="px-4 mb-8">
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQIboi4DzIWCIbTX5t_GAyCl9Lf9UCxVSWGT0hW6sR1GHMAnKGW2iCT-xfRJzKvb-qw7zndSsyARtk7oy-AQiUq0EvnORwLB5phJDHdnbLww5NLJJKrM0oFp09zYs4Ka4BmxrS0--Wd2LtjcOUpgZfu8TwO8GeV3NbWwgeR_EQvBgX0RYpf8vl9ab-y9Gh3lQFFI304pCG3ey_6aoirkuQP0OblE_omb3bCFUqcBLl_duaFblnyL1tCfbyXf9aqgDF2XX2biH8ps8" alt="SAFWA" class="h-12 w-auto object-contain">
+
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant transition-all rounded-lg">
+<span class="material-symbols-outlined" data-icon="dashboard" data-original-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">لوحة القيادة</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg transition-all">
+<span class="material-symbols-outlined" data-icon="build_circle" data-original-icon="build_circle">build_circle</span>
+<span class="font-body-md text-body-md">طلبات الفحص</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant transition-all rounded-lg">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md text-body-md">المخزون</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant transition-all rounded-lg">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-body-md text-body-md">العملاء</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant transition-all rounded-lg">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-body-md text-body-md">التقارير</span>
+</a>
+</nav>
+<div class="mt-auto pt-gutter border-t border-outline-variant px-2">
+<div class="flex items-center gap-3 p-3 mb-4 rounded-xl bg-surface-container-high">
+<img class="w-10 h-10 rounded-full border-2 border-primary-fixed" data-alt="Profile portrait of a professional automotive technician wearing a tidy uniform, smiling confidently in a clean, bright workshop environment. High contrast, sharp detail, professional photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwiLkmHvNPzmMM5Zyd_U_v8uSxYNxoZHoBkedLyz_iFSxHQ2Jpyw_Ei8m_y7oa7Kec4doFGk64ric1wWGhYt4Uc6a3StSjPXeX3nG1aBL-3ogLQGnlL4ArJGVw61Ggpg0jOAZB6Y2Bx4n0hjxKkova_FkNgBkFHH1HOD38gXX6uE3REnzIXzL7W9sqWHEQaMtceNjT03EFMIIf1y5PdX6aOcJ6r7IzkhpF8R5FDYSiOLy9lKWcqMuMWnOl6DkXc0hmQNHTPIvnhjQ">
+<div>
+<p class="font-body-md text-body-md font-bold leading-none">أحمد محمد</p>
+<p class="text-caption text-on-surface-variant">فني معتمد</p>
+</div>
+</div>
+<button class="flex items-center gap-3 px-4 py-2 w-full text-danger-text hover:bg-danger-bg transition-all rounded-lg">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-md text-body-md">تسجيل الخروج</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
+<!-- Top Navigation -->
+<header class="sticky top-0 bg-surface border-b border-outline-variant flex flex-row-reverse justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target z-50">
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 duration-150 rounded-full relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<button class="md:hidden p-2 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h2 class="font-headline-h2 text-headline-h2 text-primary">نموذج فحص رقمي</h2>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-margin-mobile md:p-margin-desktop max-w-6xl mx-auto w-full space-y-gutter">
+<!-- Inspection Header Bento -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="md:col-span-2 bg-surface-container-lowest border border-border-slate rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+<div>
+<p class="text-caption text-on-surface-variant mb-1 uppercase tracking-wider">تفاصيل المركبة</p>
+<h3 class="font-headline-h1 text-headline-h1 text-on-surface">Lexus ES350 - 2024</h3>
+<div class="mt-3 flex items-center gap-4">
+<div class="plate-box">
+<div class="flex flex-col items-center justify-center border-l-2 border-slate-200 px-2">
+<span class="text-caption font-bold text-slate-500">KSA</span>
+<img class="w-4 h-auto" data-alt="Saudi Arabia flag icon for license plate identification." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvDzu-_ZLdPyjTSx4kR8nTBeJobGcnfGUFwz96JsLvxKv2Kicg6OBQGwSx_mS-vzfUt8S8FVr9nSq34HU_8QlY1RN6hcQfXuKCYyg1k2Jyd3nlYPUiuHBm6Gl4aYIlnMHDk0390GBqeCKuAiiq7rDPsYbsq2SuyGKxJHpEIN0YnSAtCaGliR0KATmo1_lPQ99vdBAanBBfgFKmw49EqmuXFr6SqQiXuhJV93VsVG54Hhis5HcTxjuIrACjOcR5tFT0arFNu3m-UXY">
+</div>
+<div class="flex items-center gap-4 px-2">
+<span class="text-headline-h2 font-bold">ر س د</span>
+<span class="text-headline-h2 font-bold font-data-mono">987</span>
+</div>
+</div>
+<span class="bg-surface-container-high px-3 py-1 rounded-full text-caption font-medium">لون أبيض لؤلؤي</span>
+</div>
+</div>
+<div class="bg-primary-container/10 p-4 rounded-xl border border-primary/20 text-center min-w-[140px]">
+<p class="text-caption text-primary font-bold mb-1">رقم أمر العمل</p>
+<p class="font-data-mono text-headline-h2 text-primary font-bold">#WO-9912</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-border-slate rounded-xl p-6 shadow-sm flex flex-col justify-center">
+<p class="text-caption text-on-surface-variant mb-4">حالة الفحص الإجمالية</p>
+<div class="flex items-center gap-3">
+<div class="relative w-16 h-16">
+<svg class="w-full h-full" viewBox="0 0 36 36">
+<path class="text-surface-container-high stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4"></path>
+<path class="text-success-text stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="65, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center font-data-mono text-body-md font-bold">65%</span>
+</div>
+<div>
+<p class="text-body-md font-bold">قيد الفحص</p>
+<p class="text-caption text-on-surface-variant">تم إكمال 4 من 6 بنود</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Inspection Checklist -->
+<section class="space-y-4">
+<div class="flex justify-between items-center px-2">
+<h4 class="font-headline-h3 text-headline-h3">بنود الفحص الفني</h4>
+<span class="text-caption text-primary flex items-center gap-1 font-bold">
+<span class="material-symbols-outlined text-[16px]" data-icon="history">history</span>
+                            آخر فحص: منذ 4 أشهر
+                        </span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Item 1: Engine -->
+<div class="bg-surface-container-lowest border border-border-slate rounded-xl p-5 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="settings_slow_motion">settings_slow_motion</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success-text"></div>
+</label>
+</div>
+<h5 class="font-headline-h3 text-headline-h3 mb-1">المحرك وناقل الحركة</h5>
+<p class="text-caption text-on-surface-variant">فحص الزيت، التبريد، وسلاسة التنقيل</p>
+<div class="mt-4 flex items-center gap-2">
+<span class="bg-success-bg text-success-text px-3 py-1 rounded-full text-caption font-bold">سليم (Pass)</span>
+</div>
+</div>
+<!-- Item 2: Brakes -->
+<div class="bg-surface-container-lowest border border-border-slate rounded-xl p-5 hover:shadow-md transition-shadow ring-2 ring-warning-text/20">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-warning-bg p-2 rounded-lg">
+<span class="material-symbols-outlined text-warning-text" data-icon="brightness_low">brightness_low</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success-text"></div>
+</label>
+</div>
+<h5 class="font-headline-h3 text-headline-h3 mb-1">نظام الفرامل</h5>
+<p class="text-caption text-on-surface-variant">فحص الفحمات، الهوبات، وزيت الفرامل</p>
+<div class="mt-4 flex items-center gap-2">
+<span class="bg-warning-bg text-warning-text px-3 py-1 rounded-full text-caption font-bold">يتطلب اهتمام</span>
+</div>
+</div>
+<!-- Item 3: Electrical -->
+<div class="bg-surface-container-lowest border border-border-slate rounded-xl p-5 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="bolt">bolt</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success-text"></div>
+</label>
+</div>
+<h5 class="font-headline-h3 text-headline-h3 mb-1">الكهرباء والبطارية</h5>
+<p class="text-caption text-on-surface-variant">فحص الجهد الكهربائي وعمل الأنظمة</p>
+<div class="mt-4 flex items-center gap-2">
+<span class="bg-success-bg text-success-text px-3 py-1 rounded-full text-caption font-bold">سليم (Pass)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Photo Upload Grid -->
+<section class="space-y-4">
+<h4 class="font-headline-h3 text-headline-h3 px-2">توثيق الأعطال بالصور</h4>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-gutter">
+<div class="relative group aspect-video overflow-hidden rounded-xl border border-border-slate">
+<img class="w-full h-full object-cover" data-alt="Close-up macro shot of a worn brake pad showing significant metallic friction material erosion. Industrial workshop lighting with sharp detail and a professional teal-tinted aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5PET-9-ucobG_PR7aZOEtNhnpMGUc4_wXOupWZ-OBxT1bUvAtu0zrvWYb_oCAfNP17HjfR3twiCgtIVHxo3VRq84ytsvOlQwF5yIQETyEymrTJkL2yDh08p6ALwjpwxXybr54z70aBh-uSUy2JD_W0Z7Qwn0DGcBarzCUNKvI0xwRDAlQLwgE9cpGXmBRJeLrqn1PBgy8VQh1eoT6kmEt_PvYtvFwW2pm2Ugx1yNcGL57QPqoyG1gESlM_OxhUdLRqfYohLNU-Vg">
+<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-3">
+<p class="text-white text-caption font-bold">صورة تآكل الفحمات</p>
+</div>
+<button class="absolute top-2 right-2 bg-danger-bg text-danger-text p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="relative group aspect-video overflow-hidden rounded-xl border border-border-slate">
+<img class="w-full h-full object-cover" data-alt="Technician highlighting a minor oil leak on a car chassis with a flashlight. High-key light-mode workshop photography with professional composition and clean industrial details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNViGmGVq1Nao7XXc5_CzpvW8gcPHtVlZ9i-I-_HvKD8tZboC6VQiGq8Mr5af7__-NrEz8G_odrzNHB0e7YGJebvU4r_AyV4OD3qfIVTwq4SfVZfHb2fF5S_GuGzp_y3-40dV0GDzAvinDPAxa_43PQGPKdmg7RRjWVLspVLNPaE0xRqiUyUFo4l0_MbHMGCN9SZR-SjZSRexaRecCecr_4tVxVlBbuZR0W1Xs7_AAIPspSH6tB-btPgt4hrO9GDBUn62fbv-b0tY">
+<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-3">
+<p class="text-white text-caption font-bold">تسريب زيت خفيف</p>
+</div>
+<button class="absolute top-2 right-2 bg-danger-bg text-danger-text p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+<button class="border-2 border-dashed border-outline-variant rounded-xl aspect-video flex flex-col items-center justify-center gap-2 hover:bg-surface-container-low transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-display-lg" data-icon="add_a_photo">add_a_photo</span>
+</div>
+<p class="text-body-md font-bold text-on-surface-variant">إضافة صورة</p>
+</button>
+</div>
+</section>
+<!-- Spare Parts Picker -->
+<section class="space-y-4">
+<h4 class="font-headline-h3 text-headline-h3 px-2">طلب قطع الغيار</h4>
+<div class="bg-surface-container-lowest border border-border-slate rounded-xl p-6 shadow-sm">
+<div class="relative mb-6">
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full pr-12 pl-4 py-3 bg-background border border-border-slate rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="ابحث عن اسم القطعة أو الرقم التسلسلي..." type="text">
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-xl border border-border-slate/50">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-border-slate">
+<span class="material-symbols-outlined text-primary" data-icon="oil_barrel">oil_barrel</span>
+</div>
+<div>
+<p class="font-body-md font-bold">فلتر زيت أصلي</p>
+<p class="text-caption text-on-surface-variant font-data-mono">SKU: LEX-OIL-442</p>
+</div>
+</div>
+<div class="flex items-center bg-white border border-border-slate rounded-lg p-1">
+<button class="w-8 h-8 flex items-center justify-center text-primary hover:bg-surface-container transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<input class="w-10 text-center border-none focus:ring-0 font-data-mono font-bold p-0" type="number" value="1">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-xl border border-border-slate/50">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-border-slate">
+<span class="material-symbols-outlined text-primary" data-icon="settings_input_component">settings_input_component</span>
+</div>
+<div>
+<p class="font-body-md font-bold">فحمات فرامل أمامية</p>
+<p class="text-caption text-on-surface-variant font-data-mono">SKU: LEX-BRK-990</p>
+</div>
+</div>
+<div class="flex items-center bg-white border border-border-slate rounded-lg p-1">
+<button class="w-8 h-8 flex items-center justify-center text-primary hover:bg-surface-container transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<input class="w-10 text-center border-none focus:ring-0 font-data-mono font-bold p-0" type="number" value="1">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Technician Notes -->
+<section class="space-y-4">
+<h4 class="font-headline-h3 text-headline-h3 px-2">ملاحظات الفني</h4>
+<textarea class="w-full h-32 p-4 bg-surface-container-lowest border border-border-slate rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none" placeholder="أضف أي تفاصيل إضافية أو توصيات خاصة بالمركبة..."></textarea>
+</section>
+<!-- Submit Button -->
+<div class="pt-gutter">
+<button class="w-full bg-primary text-on-primary py-5 rounded-xl font-headline-h2 text-headline-h2 shadow-lg shadow-primary/20 hover:bg-teal-hover active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+<span class="">رفع التقرير للمدير للاعتماد</span>
+<span class="material-symbols-outlined" data-icon="cloud_upload">cloud_upload</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex flex-row-reverse justify-around items-center h-16 pb-safe bg-surface border-t border-outline-variant md:hidden shadow-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-caption font-caption">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="text-caption font-caption">الفحص</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="text-caption font-caption">القطع</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-caption font-caption">حسابي</span>
+</a>
+</nav>
+<script>
+        // Simple Micro-interaction for checklist item background
+        document.querySelectorAll('.sr-only.peer').forEach(input => {
+            input.addEventListener('change', function() {
+                const card = this.closest('.bg-surface-container-lowest');
+                if (this.checked) {
+                    card.classList.add('border-primary/20');
+                } else {
+                    card.classList.remove('border-primary/20');
+                }
+            });
+        });
+    </script>
+</body></html>

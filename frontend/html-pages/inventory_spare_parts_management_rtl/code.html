@@ -1,0 +1,456 @@
+<!DOCTYPE html><html lang="ar" dir="rtl" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed-variant": "#384958",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "outline": "#6e7979",
+                      "on-secondary-fixed": "#0b1d2b",
+                      "tertiary-fixed-dim": "#ffb692",
+                      "inverse-primary": "#76d6d5",
+                      "border-slate": "#E2E8F0",
+                      "on-primary-container": "#e3fffe",
+                      "secondary-fixed-dim": "#b7c8db",
+                      "on-primary-fixed-variant": "#004f4f",
+                      "tertiary-fixed": "#ffdbcb",
+                      "info-bg": "#E0F2FE",
+                      "primary": "#006565",
+                      "error": "#ba1a1a",
+                      "surface-variant": "#e0e3e5",
+                      "secondary": "#4f6070",
+                      "warning-text": "#F59E0B",
+                      "outline-variant": "#bdc9c8",
+                      "info-text": "#0284C7",
+                      "on-secondary": "#ffffff",
+                      "danger-bg": "#FEF2F2",
+                      "tertiary-container": "#a96039",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#d2e5f8",
+                      "success-bg": "#ECFDF5",
+                      "inverse-surface": "#2d3133",
+                      "on-error-container": "#93000a",
+                      "on-surface-variant": "#3e4949",
+                      "on-tertiary-fixed": "#341100",
+                      "inverse-on-surface": "#eff1f3",
+                      "on-tertiary-container": "#fff9f7",
+                      "surface-container-highest": "#e0e3e5",
+                      "danger-text": "#EF4444",
+                      "surface-container": "#eceef0",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#e6e8ea",
+                      "success-text": "#10B981",
+                      "primary-container": "#008080",
+                      "surface": "#f7f9fb",
+                      "teal-hover": "#006666",
+                      "on-tertiary-fixed-variant": "#733512",
+                      "surface-tint": "#006a6a",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#f2f4f6",
+                      "primary-fixed": "#93f2f2",
+                      "on-secondary-container": "#556677",
+                      "secondary-container": "#d2e5f8",
+                      "background": "#f7f9fb",
+                      "error-container": "#ffdad6",
+                      "on-background": "#191c1e",
+                      "warning-bg": "#FEF3C7",
+                      "on-surface": "#191c1e",
+                      "on-error": "#ffffff",
+                      "on-primary-fixed": "#002020",
+                      "primary-fixed-dim": "#76d6d5",
+                      "tertiary": "#8b4823"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "touch-target": "44px",
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "baseline": "4px"
+              },
+              "fontFamily": {
+                      "headline-h3": ["Tajawal"],
+                      "caption": ["Tajawal"],
+                      "headline-h2": ["Tajawal"],
+                      "headline-h1": ["Tajawal"],
+                      "display-lg": ["Tajawal"],
+                      "body-md": ["Tajawal"],
+                      "headline-h1-mobile": ["Tajawal"],
+                      "data-mono": ["JetBrains Mono"],
+                      "body-lg": ["Tajawal"]
+              }
+            }
+          }
+        }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-surface text-on-surface min-h-screen flex flex-row">
+<!-- SideNavBar (Authority: JSON & Style Guidance) -->
+<aside class="hidden md:flex flex-col gap-baseline p-4 h-screen fixed right-0 border-l border-border-slate bg-surface-container-low w-64 z-50">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 rounded overflow-hidden"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHgZvdzCaq-KvQG4yfRHlIV2p10fKawmZsy_AnPBVhNs6TUx2EMijZ18-RsiqDpjezGfG8lvvXp1LFoFRsYyNsaj8MuZoIAHpXTZAre_TFoGkxz5nXM5NRVaUux14_ktY3J1BRf_eWvGhnbB26LmywWYTD9dob0UifEer03fFOQBWoV2CuB_XIhuHxZRzNXSCYlwZrb81c1fgF7O-AqRFMXFRSC6IeKa4kWRE4hvmVkdtzL44osao9udocEcPXH43QatbPM10dItk" alt="SAFWA Logo" class="w-full h-full object-contain"></div>
+
+</div>
+<nav class="flex-1 space-y-2">
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-original-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">لوحة القيادة</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg font-bold">
+<span class="material-symbols-outlined" data-original-icon="settings_input_component">settings_input_component</span>
+<span class="font-body-md text-body-md">قطع الغيار</span>
+</a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant rounded-lg transition-colors"><span class="material-symbols-outlined" data-original-icon="history_edu">history_edu</span><span class="font-body-md text-body-md">سجل المخزون</span></a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant rounded-lg transition-colors"><span class="material-symbols-outlined" data-original-icon="assessment">assessment</span><span class="font-body-md text-body-md">التقارير</span></a>
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant rounded-lg transition-colors">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">الإعدادات</span>
+</a>
+</nav>
+<button class="mt-4 bg-primary-container text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-hover transition-all active:scale-95"><span class="material-symbols-outlined">add</span><span class="">إضافة جديدة</span></button>
+<div class="mt-auto border-t border-border-slate pt-4">
+<a href="#" class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant rounded-lg transition-colors">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md text-body-md">مركز المساعدة</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:mr-64 flex flex-col min-h-screen">
+<!-- TopNavBar (Authority: JSON & Style Guidance) -->
+<header class="flex flex-row-reverse justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target bg-surface border-b border-border-slate sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors">settings</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border-slate">
+<img class="w-full h-full object-cover" data-alt="A professional portrait of a workshop manager in a clean, modern automotive service center. The manager is wearing a professional polo shirt with a subtle logo. The background is a soft-focus automotive workshop with high-end diagnostic tools and clean white flooring, reflecting a modern industrial aesthetic with teal and navy accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDL2gr-r57WG5M5ouOtOgjSWwhGKJRSqTVNmAZ2K2OsER30dvSD3AUDSZyyF69nXeIc1CbY2lhOatxGMhEY1w2acHFfgrn673obLHjH1eD8G7ea_MITupila9ulA8fQ2El9gSHXOkJbC8OJX_YVuS2LmIEbYSUojUWF2eTd2Oay15xeVsJNmTeZ06918ntWmeNmX_WLPhwzEpLVrYqw7EKwI0zVimtrgNYWQ2m0GD8_m975vRAH7VMqKlIKGyCUJd8PGX7uDywj3kI">
+</div>
+</div>
+<div class="flex items-center gap-8">
+<h1 class="font-headline-h1 text-headline-h1 text-primary">المخزون</h1>
+<nav class="hidden lg:flex gap-6">
+<a class="font-body-md text-body-md text-primary font-bold border-b-2 border-primary pb-1" href="#">المخزون</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">لوحة القيادة</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">الموردون</a>
+</nav>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-margin-mobile md:p-margin-desktop space-y-6 max-w-[1400px] mx-auto w-full">
+<!-- Low Stock Alert Banner -->
+<div class="bg-danger-bg border border-error/20 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-danger-text text-3xl">warning</span>
+<p class="font-headline-h3 text-headline-h3 text-danger-text">تنبيه: 4 قطع وصلت إلى حد الطلب الأدنى</p>
+</div>
+<button class="bg-danger-text text-white px-6 py-2 rounded-lg font-bold hover:brightness-110 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">shopping_cart_checkout</span>
+<span class="">طلب من المورد</span>
+</button>
+</div>
+<!-- Inventory Header & Controls -->
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-white p-6 rounded-xl border border-border-slate shadow-sm">
+<div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="space-y-2">
+<label class="text-sm font-bold text-secondary">البحث عن قطعة</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pr-10 pl-4 py-2 bg-surface-container rounded-lg border-transparent focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all text-body-md" placeholder="ابحث بالاسم أو SKU..." type="text">
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-bold text-secondary">الشركة المصنعة</label>
+<select class="w-full px-4 py-2 bg-surface-container rounded-lg border-transparent focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all text-body-md">
+<option>الكل</option>
+<option>Toyota</option>
+<option>Nissan</option>
+<option>Universal</option>
+</select>
+</div>
+<div class="space-y-2 flex items-end">
+<button class="w-full bg-white border border-border-slate text-secondary px-4 py-2 rounded-lg hover:bg-surface-variant transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">filter_list</span>
+<span class="">تصفية متقدمة</span>
+</button>
+</div>
+</div>
+<button class="bg-primary-container text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-hover shadow-lg shadow-primary-container/20 transition-all h-[44px]">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="">إضافة قطعة جديدة</span>
+</button>
+</div>
+<!-- Main Table Container -->
+<div class="bg-white rounded-xl border border-border-slate shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-right border-collapse">
+<thead class="bg-surface-container-low border-b border-border-slate">
+<tr>
+<th class="px-6 py-4 font-headline-h3 text-secondary">القطعة</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">رمز SKU</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">الفئة</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">مستوى المخزون</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">سعر الشراء</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">سعر البيع</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">المورد</th>
+<th class="px-6 py-4 font-headline-h3 text-secondary">الإجراءات</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-slate">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded bg-surface-container border border-border-slate overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A macro studio photograph of a genuine Toyota oil filter, featuring a clean white canister with precise red and blue branding. The lighting is crisp and professional, highlighting the metallic texture and technical specifications printed on the filter. The overall aesthetic is industrial and high-quality, fitting a professional automotive inventory system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3C612AkONDbqQKqmccKg77yeCYb5WmdYkaRisC62asFbBAZ7WGoRAEl490ESP0sU2Liotnm47TqraBrTrSe-I58SvymzrPr4myuzJDvf_EZS6IgHbtXGM3DCYjLju5sjhIgpU377izPCxquRQ0A8jHMGAN4W6ZKap5iP9eeihT5RFz_wjA2D0dxU48Z_RqU7YapqTPlAMiMoyYlVZZKVHZnDmH1F_LYmIC57l7d4rAXUE2u4JMCZalDX6rEUOFi5PA6q9OoHE0_w">
+</div>
+<span class="font-body-md text-body-md font-bold">فلتر زيت تويوتا الأصلي</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-data-mono bg-surface-container px-2 py-1 rounded border border-border-slate">SKU-TY-882</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-info-bg text-info-text text-xs font-bold">فلاتر</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-32">
+<div class="flex justify-between text-xs mb-1">
+<span class="">5 / 50</span>
+<span class="text-danger-text">منخفض</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-danger-text h-full rounded-full" style="width: 10%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-data-mono">25 ر.س</td>
+<td class="px-6 py-4 font-data-mono text-primary font-bold">45 ر.س</td>
+<td class="px-6 py-4 text-body-md">الوكيل المعتمد</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-2 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-all" onclick="toggleModal()">
+<span class="material-symbols-outlined">inventory_2</span>
+</button>
+<button class="p-2 text-secondary hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-danger-text hover:bg-danger-bg rounded-lg transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded bg-surface-container border border-border-slate overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional product shot of high-performance ceramic brake pads for a Nissan vehicle. The pads are displayed on a clean grey background, showing the textured friction material and the solid metal backing. The image is sharp and detailed, emphasizing the precision engineering and durability of the automotive component." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN3mIJHtQ0VlwafVK0QuAJvdlzqNbIGSUVyMnNToO4cC-_lYNURPihacBBnJ2HsvSs_0yMVxY-JShhVdHxB4o9TL5ggjg2T6rqjlBPLUI__OJ0SJH2bC4NnlddZZmDIEEk-silVAdy3e7VV8-wOnSv1my9QA__XVDtWwTGUFKZwuAIVNgRs3lhwaEoqG-JyfJtsxj3vYEV8zTweCdZTE5tUNJ9PjcC12sEsAXlLN5tQz6ZMGP00UHGud3ZmRbYRXVIvqRkLzU-M2Y">
+</div>
+<span class="font-body-md text-body-md font-bold">فحمات فرامل نيسان</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-data-mono bg-surface-container px-2 py-1 rounded border border-border-slate">SKU-NS-104</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-success-bg text-success-text text-xs font-bold">فرامل</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-32">
+<div class="flex justify-between text-xs mb-1">
+<span class="">42 / 60</span>
+<span class="text-success-text">جيد</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-success-text h-full rounded-full" style="width: 70%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-data-mono">120 ر.س</td>
+<td class="px-6 py-4 font-data-mono text-primary font-bold">185 ر.س</td>
+<td class="px-6 py-4 text-body-md">مؤسسة السرعة</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-2 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-all" onclick="toggleModal()">
+<span class="material-symbols-outlined">inventory_2</span>
+</button>
+<button class="p-2 text-secondary hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-danger-text hover:bg-danger-bg rounded-lg transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded bg-surface-container border border-border-slate overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A sleek, modern iridium spark plug displayed vertically against a dark industrial background. The photograph uses a shallow depth of field, with the focus on the platinum-tipped electrode. Subtle blue highlights reflect off the ceramic insulator and metal threading, evoking a sense of high-performance technology and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWNCWdDUYgTDgPYomrL7Tjl8O8pPWcAdZrbO7d5DTHP0mWsAbLI6fiFyr5I7l6kCxv0J_rxL0KyrLPoqQnrR6TUr3rO8VYnvd4LN8wZC8rEqWtg3Q-SdUQ4K_3GA3_Frv6gihSsXHPBI1GItjPLh0TN0sQx2C_JSfCQ4Y8jQwCki7zht5lnFHxrkAhEEE2Q17PHNCplRlddFMLp9RtDuTIGZfpuqGmBWxYmhtdyVq2uBWF7GdjQCFSZsCOFuCHuOjyJ9NFCC--5hM">
+</div>
+<span class="font-body-md text-body-md font-bold">بواجي إيريديوم ليزر</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-data-mono bg-surface-container px-2 py-1 rounded border border-border-slate">SKU-UN-440</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-warning-bg text-warning-text text-xs font-bold">كهرباء</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-32">
+<div class="flex justify-between text-xs mb-1">
+<span class="">12 / 80</span>
+<span class="text-warning-text">متوسط</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-warning-text h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-data-mono">15 ر.س</td>
+<td class="px-6 py-4 font-data-mono text-primary font-bold">35 ر.س</td>
+<td class="px-6 py-4 text-body-md">متجر العالمية</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-2 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-all" onclick="toggleModal()">
+<span class="material-symbols-outlined">inventory_2</span>
+</button>
+<button class="p-2 text-secondary hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-danger-text hover:bg-danger-bg rounded-lg transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="bg-surface-container-low px-6 py-4 flex items-center justify-between border-t border-border-slate">
+<span class="text-sm text-secondary">عرض 1-10 من أصل 245 قطعة</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center border border-border-slate rounded hover:bg-white transition-all">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center bg-primary text-white rounded font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center border border-border-slate rounded hover:bg-white transition-all">2</button>
+<button class="w-8 h-8 flex items-center justify-center border border-border-slate rounded hover:bg-white transition-all">3</button>
+<button class="w-8 h-8 flex items-center justify-center border border-border-slate rounded hover:bg-white transition-all">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Stock Adjustment Modal (Overlay) -->
+<div class="fixed inset-0 bg-on-background/40 backdrop-blur-sm z-[60] flex items-center justify-center transition-all opacity-0 pointer-events-none" id="stockModal">
+<div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 transform" id="modalContainer">
+<div class="p-6 border-b border-border-slate flex items-center justify-between bg-surface-container-low">
+<h3 class="font-headline-h2 text-headline-h2 text-primary">تعديل المخزون</h3>
+<button class="text-secondary hover:text-danger-text transition-colors" onclick="toggleModal()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-8 space-y-6">
+<div class="flex items-center gap-4 bg-surface-container p-4 rounded-xl">
+<div class="w-16 h-16 bg-white rounded-lg border border-border-slate overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up image of a car part for identification in a warehouse management system. High quality and clear lighting to show item details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcuruONAVxXjWYVErbKLg5lIgLCVfZzT9OQHEwqWSfoNld7nxx7SLJhpz1E03CwavNA8D6oHz0B1DOoTEHvjROR0k5W-GBsFVQ49Kc5b3IlEuBbZxfarS1z32vf5iW7m4Uz_Nyq9mcSRPp3uvLuLBanmoSXzSIsh6JgOFSA2F-5pm7M1Wp17MTEbXp2n1X9NRQ1FsUWrH63GxOtuD6FiPPPB8AoSBradNMQIPTi1daGBRVoKKgQNIsAnfoM8d3_YT51b34xow1lPk">
+</div>
+<div>
+<p class="font-bold text-lg">فلتر زيت تويوتا</p>
+<p class="font-data-mono text-sm text-secondary">SKU-TY-882</p>
+</div>
+</div>
+<div class="space-y-3 text-center">
+<label class="text-sm font-bold text-secondary block">الكمية الحالية: <span class="text-primary">5</span></label>
+<div class="flex items-center justify-center gap-6">
+<button class="w-12 h-12 rounded-full border-2 border-border-slate flex items-center justify-center hover:bg-danger-bg hover:border-danger-text hover:text-danger-text transition-all active:scale-90" onclick="adjustQty(-1)">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<input class="w-24 text-center text-2xl font-bold border-0 bg-surface-container-high rounded-xl focus:ring-2 focus:ring-primary-container" id="qtyInput" type="number" value="5">
+<button class="w-12 h-12 rounded-full border-2 border-border-slate flex items-center justify-center hover:bg-success-bg hover:border-success-text hover:text-success-text transition-all active:scale-90" onclick="adjustQty(1)">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-bold text-secondary">سبب التعديل</label>
+<textarea class="w-full p-4 bg-surface-container rounded-xl border-transparent focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all text-body-md h-24 resize-none" placeholder="أدخل سبب تعديل المخزون (مثال: جرد دوري، تلف، إرجاع...)"></textarea>
+</div>
+</div>
+<div class="p-6 bg-surface-container-low border-t border-border-slate flex gap-4">
+<button class="flex-1 py-3 border border-border-slate rounded-lg font-bold text-secondary hover:bg-surface-variant transition-all" onclick="toggleModal()">إلغاء</button>
+<button class="flex-[2] py-3 bg-primary-container text-white rounded-lg font-bold hover:bg-teal-hover shadow-lg shadow-primary-container/20 transition-all">تحديث المخزون</button>
+</div>
+</div>
+</div>
+<!-- Mobile Bottom NavBar (Authority: JSON & Style Guidance) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border-slate flex justify-around items-center h-touch-target px-4 z-50">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px]">الرئيسية</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings_input_component</span>
+<span class="text-[10px] font-bold">المخزون</span>
+</a>
+<div class="relative -top-6">
+<button class="w-12 h-12 bg-primary-container text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="text-[10px]">السجل</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">الحساب</span>
+</a>
+</nav>
+<script>
+        function toggleModal() {
+            const modal = document.getElementById('stockModal');
+            const container = document.getElementById('modalContainer');
+            
+            if (modal.classList.contains('opacity-0')) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => container.classList.remove('scale-95'), 10);
+            } else {
+                container.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                }, 200);
+            }
+        }
+
+        function adjustQty(val) {
+            const input = document.getElementById('qtyInput');
+            let current = parseInt(input.value);
+            if (current + val >= 0) {
+                input.value = current + val;
+            }
+        }
+
+        // Search highlight micro-interaction
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-primary-container/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-primary-container/20');
+        });
+    </script>
+</body></html>

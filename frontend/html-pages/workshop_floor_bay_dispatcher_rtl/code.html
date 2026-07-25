@@ -1,0 +1,468 @@
+<!DOCTYPE html><html lang="ar" dir="rtl" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Tajawal:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#f2f4f6",
+                        "info-text": "#0284C7",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#0b1d2b",
+                        "info-bg": "#E0F2FE",
+                        "warning-text": "#F59E0B",
+                        "tertiary-fixed": "#ffdbcb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "danger-text": "#EF4444",
+                        "secondary": "#4f6070",
+                        "surface-container-high": "#e6e8ea",
+                        "tertiary-container": "#a96039",
+                        "on-secondary-fixed-variant": "#384958",
+                        "on-tertiary-fixed-variant": "#733512",
+                        "on-primary-container": "#e3fffe",
+                        "surface": "#f7f9fb",
+                        "inverse-primary": "#76d6d5",
+                        "on-secondary-container": "#556677",
+                        "surface-container": "#eceef0",
+                        "success-text": "#10B981",
+                        "secondary-container": "#d2e5f8",
+                        "warning-bg": "#FEF3C7",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#341100",
+                        "on-surface": "#191c1e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed-dim": "#76d6d5",
+                        "on-background": "#191c1e",
+                        "success-bg": "#ECFDF5",
+                        "outline-variant": "#bdc9c8",
+                        "outline": "#6e7979",
+                        "teal-hover": "#006666",
+                        "on-tertiary-container": "#fff9f7",
+                        "on-primary-fixed": "#002020",
+                        "secondary-fixed-dim": "#b7c8db",
+                        "secondary-fixed": "#d2e5f8",
+                        "inverse-surface": "#2d3133",
+                        "danger-bg": "#FEF2F2",
+                        "primary-fixed": "#93f2f2",
+                        "surface-dim": "#d8dadc",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#004f4f",
+                        "primary": "#006565",
+                        "tertiary": "#8b4823",
+                        "border-slate": "#E2E8F0",
+                        "tertiary-fixed-dim": "#ffb692",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#008080",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#006a6a",
+                        "on-surface-variant": "#3e4949"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "baseline": "4px",
+                        "touch-target": "44px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-h2": ["Tajawal"],
+                        "headline-h1": ["Tajawal"],
+                        "body-md": ["Tajawal"],
+                        "body-lg": ["Tajawal"],
+                        "headline-h1-mobile": ["Tajawal"],
+                        "display-lg": ["Tajawal"],
+                        "caption": ["Tajawal"],
+                        "headline-h3": ["Tajawal"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                }
+            }
+        }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-surface text-on-surface min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-inverse-surface border-b border-slate dark:border-outline-variant docked full-width top-0 flex flex-row-reverse justify-between items-center px-margin-mobile md:px-margin-desktop h-16 w-full z-50 fixed">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="help">help</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="settings">settings</span>
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="notifications" data-original-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</div>
+<div class="w-8 h-8 rounded-full bg-slate-200 overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional close-up portrait of a Saudi workshop supervisor wearing a clean technician uniform with a small SAFWA logo, high-key studio lighting, modern corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyFrWCIho6W0vaue4Ped2n9jdT4RppGOh-lKYTDQPWaWMGec5wzabtxUVcqGc_iUTASGbjQCmDlc1Yx8dUMiGDnRaYR2enRNeGXjIuwbt8SC_U37SpT6kxqIta1Y6Ic0m4mNx1Z7kCkddDfkNspc5h8TZq13c1ZyJ5PuD0EWLlfS4KXpu1XAbBQGvEWdE8xG6yz6OSxwD7p24lq3HMnLm_6kbYtPVmati7gayBd2sjRl1wHDlElHb_jHh2zrTkTxBALkVWFvb63Jw">
+</div>
+</div>
+<div class="flex items-center gap-8">
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMH-MZ92KMCy6hqaBtgtJHDgt3vCK2EqZaKx-fLzqw8NY5TzQw6wxSk4kQXKzKZaFnyaZl3v40gcVkzRGdqXnxt8mYQFsSJkNOQum-dOLAWquFDOJx-1Ww6u3GZ1_KzL70hS-qIurldDocoe3ji-ucqGbtLKMLXL82pxmvFrg6nxMs-6JhTUEFSVFJ2zUsKgZw-05QjT0gBfblQubEZSKFa3wmqw9gxwkXq-kpOjgN1UIusFyjmVrdeGHJ059JEvLkplUHU34-Y88" alt="SAFWA Logo" class="h-12 w-auto object-contain">
+<nav class="hidden md:flex gap-6">
+<a class="text-primary border-b-2 border-primary font-bold transition-colors" href="#">لوحة التحكم</a>
+<a class="text-on-secondary-fixed-variant font-body-md text-body-md hover:text-teal-hover transition-colors" href="#">الطلبات</a>
+<a class="text-on-secondary-fixed-variant font-body-md text-body-md hover:text-teal-hover transition-colors" href="#">المخزون</a>
+</nav>
+</div>
+</header>
+<!-- SideNavBar (Right) -->
+<aside class="bg-surface-container-low dark:bg-surface-container-highest docked h-full right-0 border-l border-slate dark:border-outline-variant fixed right-0 top-0 h-full w-64 flex flex-col pt-16 z-40 rtl">
+<div class="p-6">
+<div class="mb-8">
+<h2 class="text-headline-h3 font-headline-h3 text-primary dark:text-primary-fixed">صفوة</h2>
+<p class="text-caption text-on-surface-variant">إدارة ورشة العمل</p>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-body-md font-body-md">لوحة القيادة</span>
+</a>
+<a class="flex items-center gap-3 p-3 bg-primary-container text-on-primary-container rounded-lg font-bold transition-all cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+<span class="text-body-md font-body-md">منصات الخدمة</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="text-body-md font-body-md">المخزون</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="text-body-md font-body-md">العملاء</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-body-md font-body-md">التقارير</span>
+</a>
+</nav>
+<button class="mt-8 w-full py-3 bg-primary-container text-on-primary-container rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                امر عمل جديد
+            </button>
+</div>
+<div class="mt-auto p-6 border-t border-slate">
+<a class="flex items-center gap-3 p-3 text-danger-text hover:bg-danger-bg rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="text-body-md font-body-md">تسجيل الخروج</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="mr-64 pt-16 flex h-[calc(100vh-64px)]">
+<!-- Left Sidebar: Unassigned Vehicles -->
+<aside class="w-80 bg-white border-l border-slate flex flex-col">
+<div class="p-6 border-b border-slate bg-surface">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-headline-h3 text-on-surface">مركبات بانتظار التوزيع</h3>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full text-caption font-bold">2</span>
+</div>
+<div class="relative">
+<input class="w-full pr-10 pl-4 py-2 bg-surface-container-low border border-slate rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-body-md" placeholder="بحث عن مركبة..." type="text">
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant" data-icon="search">search</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Unassigned Card 1 -->
+<div class="p-4 bg-white border border-slate rounded-xl shadow-sm hover:border-primary cursor-move transition-all group">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-body-lg">تويوتا كامري</h4>
+<p class="text-caption text-on-surface-variant">2023 • فضي</p>
+</div>
+<div class="bg-surface border border-slate px-2 py-1 rounded plate-container text-data-mono text-[10px] flex items-center gap-2">
+<span class="">KSA</span>
+<span class="font-bold">ح ص ل ٥٥١</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-caption flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+                            منذ ٣٠ دقيقة
+                        </span>
+<button class="text-primary hover:underline text-caption font-bold">توزيع</button>
+</div>
+</div>
+<!-- Unassigned Card 2 -->
+<div class="p-4 bg-white border border-slate rounded-xl shadow-sm hover:border-primary cursor-move transition-all">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-body-lg">مازدا 6</h4>
+<p class="text-caption text-on-surface-variant">2022 • أحمر</p>
+</div>
+<div class="bg-surface border border-slate px-2 py-1 rounded plate-container text-data-mono text-[10px] flex items-center gap-2">
+<span class="">KSA</span>
+<span class="font-bold">ر ق م ٩٩٢</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-caption flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+                            منذ ٤٥ دقيقة
+                        </span>
+<button class="text-primary hover:underline text-caption font-bold">توزيع</button>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Workshop Grid -->
+<section class="flex-1 overflow-y-auto bg-surface p-8">
+<div class="max-w-6xl mx-auto">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-display-lg font-display-lg text-primary">توزيع منصات الخدمة</h2>
+<p class="text-body-lg text-on-secondary-fixed-variant mt-1">إدارة فورية لرافعات الورشة والفنيين</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white border border-slate rounded-lg text-body-md font-medium hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+                            تصفية
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-body-md font-medium hover:bg-teal-hover transition-colors">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+                            تخطيط الورشة
+                        </button>
+</div>
+</div>
+<!-- Floor Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Bay 1: Occupied -->
+<div class="bg-white border border-slate rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow relative group">
+<div class="absolute top-4 left-4">
+<button class="p-2 bg-surface hover:bg-surface-container rounded-full text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity" onclick="toggleModal('reassign-modal')">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-primary-container text-on-primary-container rounded-xl flex items-center justify-center font-bold text-xl">1</div>
+<div>
+<h3 class="text-headline-h3">منصة ميكانيكا</h3>
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-success-text"></span>
+<span class="text-caption text-on-surface-variant">المنصة تعمل بكفاءة</span>
+</div>
+</div>
+</div>
+<span class="bg-success-bg text-success-text px-3 py-1 rounded-full text-caption font-bold border border-success-text/10">جاري الإصلاح</span>
+</div>
+<div class="flex gap-6 mb-6">
+<div class="w-32 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate">
+<img class="w-full h-full object-cover" data-alt="A clean, high-resolution side profile photo of a dark blue Nissan Patrol SUV parked in a modern, well-lit automotive workshop. The lighting is crisp, professional automotive photography style, highlighting the metallic paint and rugged lines of the vehicle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNM6ljK4WzdJ6w1V28jql7BDmCKrMyQDPHEkcPiB3pyqRIkpDCDTNKaiF5A4mFydxSriZFrokJNjG1kXxrrpyXVLs8qG5j1uDe4RK7CsZu8zSSMVH6DNED_Vlr0lmTPGAAL8D4L7dNqotLFy1IryogYGiyzX6OgwfGeRcJxdcNUY8ZlWayUmHsgvpr2-Iy48z6UHahDZnTbot2WAt1QboVkxVX0tqvI_4igQYH1rsx6i0yii7beRlHZr897m1Srd_47O5Z5oOGogw">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-headline-h3">نيسان باترول</h4>
+<div class="bg-surface border-2 border-on-surface px-2 py-1 rounded plate-container text-data-mono text-sm font-bold">
+                                            L R N 1010
+                                        </div>
+</div>
+<p class="text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="person">person</span>
+                                        الفني: أحمد سالم
+                                    </p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-caption font-bold">
+<span class="">نسبة الإنجاز</span>
+<span class="">75%</span>
+</div>
+<div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full transition-all duration-1000" style="width: 75%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bay 2: Occupied -->
+<div class="bg-white border border-slate rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow relative group">
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-high text-on-surface-variant rounded-xl flex items-center justify-center font-bold text-xl">2</div>
+<div>
+<h3 class="text-headline-h3">منصة كهرباء</h3>
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-success-text"></span>
+<span class="text-caption text-on-surface-variant">المنصة تعمل بكفاءة</span>
+</div>
+</div>
+</div>
+<span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-caption font-bold border border-emerald-200">جاهز للتسليم</span>
+</div>
+<div class="flex gap-6 mb-6">
+<div class="w-32 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate">
+<img class="w-full h-full object-cover" data-alt="A studio-quality photograph of a silver Ford Taurus sedan inside a high-tech workshop. The vehicle is perfectly clean, reflecting soft overhead studio lights. The background is a blurred minimalist service area with teal accents, maintaining a professional and reliable tone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvIIXnDj7Uwy8NHIxn9dfqYt3lQHJw-2VG_EzPMykAk9vPIltMyZNhLWIh8oFrowbEAcS96ntZ96s7R6fVSuGei7cJrqnw-aQ7iqePLZFDt6FaFh8TMQPzO-W2wXhG_q6w3Ie-KSv8j7vd7oR06vlD-UB2D3MGZpXYfSZ2RYKSHNEMQTJbjplt56Q6aqwBo00MPyq3LPCd-Lvmt3Ve_WcxQ7u4dO0TZw1Wyw_-y_62qOAWXF6NPDBksbnymOTyZsUxXvtE5-S7OtY">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-headline-h3">فورد توروس</h4>
+<div class="bg-surface border-2 border-on-surface px-2 py-1 rounded plate-container text-data-mono text-sm font-bold">
+                                            K H D 2022
+                                        </div>
+</div>
+<p class="text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="person">person</span>
+                                        الفني: خالد محمد
+                                    </p>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-success-bg rounded-xl">
+<div class="flex items-center gap-2 text-success-text">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+<span class="text-body-md font-bold">تم اكتمال الفحص بنجاح</span>
+</div>
+<button class="text-primary text-caption font-bold underline">إصدار الفاتورة</button>
+</div>
+</div>
+</div>
+<!-- Bay 3: Delayed -->
+<div class="bg-white border border-slate rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow relative group">
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-warning-bg text-warning-text rounded-xl flex items-center justify-center font-bold text-xl">3</div>
+<div>
+<h3 class="text-headline-h3">منصة خدمة سريعة</h3>
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-warning-text"></span>
+<span class="text-caption text-on-surface-variant">متوقف مؤقتاً</span>
+</div>
+</div>
+</div>
+<span class="bg-warning-bg text-warning-text px-3 py-1 rounded-full text-caption font-bold border border-warning-text/10">بانتظار قطع الغيار</span>
+</div>
+<div class="flex gap-6 mb-6">
+<div class="w-32 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate">
+<img class="w-full h-full object-cover" data-alt="A vibrant professional photo of a white Hyundai Elantra in a modern automotive service bay. Soft industrial lighting, clean environment, high contrast. The mood is functional and organized, emphasizing the technical precision of the SAFWA service environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIZ_MeY2fDmzlE8Ut1UduZI4plzTkFUuMuDTH_DxRO4J--N6JSDmhiYEBeDo38KsjDr1cqEVSHL8-DjDLLq222WYKutyfanBR0SRUOTB8zbtBAbcY1QUUDqx9wFu5jsiYYEwOpL4f39dvFpp77bu-fpbekSwI6DFla3WlOAhVtpHNFZpBPm2Sh4ltl5tr3ptm-yxyLHI2_BLDlH6rSUvcdU1EJZd3Rx6s7vTB0GX-BX4PzPjbH9XOGaoj0s8BW5bMnbeqAmT71xUM">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-headline-h3">هيونداي إلنترا</h4>
+<div class="bg-surface border-2 border-on-surface px-2 py-1 rounded plate-container text-data-mono text-sm font-bold">
+                                            A A A 4444
+                                        </div>
+</div>
+<p class="text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="person">person</span>
+                                        الفني: عمر
+                                    </p>
+</div>
+</div>
+<div class="p-3 bg-warning-bg/30 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-warning-text" data-icon="inventory">inventory</span>
+<div class="text-caption">
+<p class="font-bold text-warning-text">فلتر زيت - غير متوفر</p>
+<p class="text-on-surface-variant">يتوفر خلال: ٢ ساعة</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bay 4: Empty Slot -->
+<div class="border-2 border-dashed border-slate rounded-2xl flex items-center justify-center p-12 bg-surface-container-low hover:bg-white hover:border-primary transition-all group cursor-pointer">
+<div class="text-center">
+<div class="w-16 h-16 bg-white border border-slate rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="add_circle">add_circle</span>
+</div>
+<h3 class="text-headline-h3 text-on-surface mb-2">منصة فارغة</h3>
+<p class="text-body-md text-on-surface-variant mb-6">هذه المنصة جاهزة لاستقبال مركبة جديدة</p>
+<button class="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-teal-hover transition-colors">تعيين سيارة جديدة</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Quick Re-assign Modal -->
+<div class="fixed inset-0 z-[60] hidden" id="reassign-modal">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px]" onclick="toggleModal('reassign-modal')"></div>
+<!-- Modal Content -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate">
+<div class="p-6 border-b border-slate flex justify-between items-center bg-surface">
+<h3 class="text-headline-h2 text-primary">تعديل تعيين المنصة</h3>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors" onclick="toggleModal('reassign-modal')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="p-6 space-y-6">
+<!-- Vehicle Info -->
+<div class="flex gap-4 p-4 bg-surface-container rounded-xl">
+<div class="w-20 h-14 rounded-lg bg-slate-300">
+<img class="w-full h-full object-cover rounded-lg" data-alt="A clean, close-up thumbnail of a dark Nissan Patrol, showing the front grille and headlight details, professional automotive lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBja91G-rHLkHknrS_eDnNvEknJDUftwv85P_WbqbS59HGymWS9JZh3fuIoB2SsCIwY7BVqrazMXxlsllAckaWuIOEpYy3ccxZ5D7PJmdCV4l3fWnBVR-Lf2jGuj670QY998Rg5wrtONrSc1X-sHi3IfzrTUDc2VIkFFqmmjmyEYvOiD8nLdK40NWsEimy16zyHUEtXrnwOgFSKdNXaBG6nthMKfJiAS0NO2oRLtB3poqiqrFIx1Iv962BJs8OQTZBgQMR5sX_b_GM">
+</div>
+<div>
+<h4 class="font-bold text-body-lg">نيسان باترول - المنصة 1</h4>
+<div class="bg-white border border-slate px-2 py-0.5 rounded plate-container text-data-mono text-xs mt-1 inline-block">L R N 1010</div>
+</div>
+</div>
+<!-- Form Controls -->
+<div class="space-y-4">
+<div>
+<label class="block text-body-md font-bold mb-2">تغيير الفني المباشر</label>
+<select class="w-full bg-white border border-slate rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+<option>أحمد سالم (الحالي)</option>
+<option>محمد فهد</option>
+<option>سعد العتيبي</option>
+<option>ياسر القحطاني</option>
+</select>
+</div>
+<div>
+<label class="block text-body-md font-bold mb-2">نقل إلى منصة أخرى</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="py-2 border border-primary bg-primary-container text-on-primary-container rounded-lg text-caption font-bold">منصة 1</button>
+<button class="py-2 border border-slate hover:border-primary rounded-lg text-caption font-bold">منصة 2</button>
+<button class="py-2 border border-slate hover:border-primary rounded-lg text-caption font-bold">منصة 3</button>
+<button class="py-2 border border-slate hover:border-primary rounded-lg text-caption font-bold">منصة 4</button>
+<button class="py-2 border border-slate hover:border-primary rounded-lg text-caption font-bold">خارج المنصة</button>
+</div>
+</div>
+<div>
+<label class="block text-body-md font-bold mb-2">تغيير الحالة</label>
+<select class="w-full bg-white border border-slate rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+<option>جاري الإصلاح</option>
+<option>تم الانتهاء</option>
+<option>بانتظار قطع الغيار</option>
+<option>بانتظار موافقة العميل</option>
+</select>
+</div>
+</div>
+</div>
+<div class="p-6 bg-surface-container flex gap-3">
+<button class="flex-1 py-3 bg-primary text-white rounded-xl font-bold hover:bg-teal-hover transition-colors" onclick="toggleModal('reassign-modal')">حفظ التغييرات</button>
+<button class="flex-1 py-3 bg-white border border-slate rounded-xl font-bold hover:bg-slate-50 transition-colors" onclick="toggleModal('reassign-modal')">إلغاء</button>
+</div>
+</div>
+</div>
+<script>
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        // Add some basic drag-over visual feedback logic if needed for prototype feel
+        const bayCards = document.querySelectorAll('.grid > div');
+        bayCards.forEach(card => {
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                card.classList.add('ring-2', 'ring-primary');
+            });
+            card.addEventListener('dragleave', () => {
+                card.classList.remove('ring-2', 'ring-primary');
+            });
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                card.classList.remove('ring-2', 'ring-primary');
+                // Simulate drop action
+            });
+        });
+    </script>
+
+
+</body></html>
