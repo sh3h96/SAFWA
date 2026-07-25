@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SAFWA - إنشاء حساب جديد</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Tajawal:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-fixed-variant": "#733512",
+                        "surface": "#f7f9fb",
+                        "secondary-fixed-dim": "#b7c8db",
+                        "primary-container": "#008080",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-fixed": "#d2e5f8",
+                        "on-secondary-fixed": "#0b1d2b",
+                        "success-text": "#10B981",
+                        "on-primary": "#ffffff",
+                        "info-bg": "#E0F2FE",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#4f6070",
+                        "success-bg": "#ECFDF5",
+                        "danger-bg": "#FEF2F2",
+                        "inverse-surface": "#2d3133",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#384958",
+                        "on-primary-fixed-variant": "#004f4f",
+                        "surface-container-high": "#e6e8ea",
+                        "tertiary-fixed-dim": "#ffb692",
+                        "warning-bg": "#FEF3C7",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#8b4823",
+                        "on-secondary-container": "#556677",
+                        "outline-variant": "#bdc9c8",
+                        "warning-text": "#F59E0B",
+                        "tertiary-fixed": "#ffdbcb",
+                        "on-error-container": "#93000a",
+                        "primary": "#006565",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#d2e5f8",
+                        "on-primary-container": "#e3fffe",
+                        "surface-container-low": "#f2f4f6",
+                        "border-slate": "#E2E8F0",
+                        "surface-tint": "#006a6a",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#a96039",
+                        "inverse-primary": "#76d6d5",
+                        "danger-text": "#EF4444",
+                        "primary-fixed": "#93f2f2",
+                        "on-primary-fixed": "#002020",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "teal-hover": "#006666",
+                        "on-tertiary-fixed": "#341100",
+                        "background": "#f7f9fb",
+                        "info-text": "#0284C7",
+                        "on-surface": "#191c1e",
+                        "outline": "#6e7979",
+                        "primary-fixed-dim": "#76d6d5",
+                        "on-surface-variant": "#3e4949",
+                        "on-background": "#191c1e",
+                        "on-tertiary-container": "#fff9f7"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "tajawal": ["Tajawal", "sans-serif"],
+                        "data-mono": ["JetBrains Mono", "monospace"],
+                        "display-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Tajawal', 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kinetic-shadow {
+            box-shadow: 0px 4px 12px rgba(13, 31, 45, 0.08);
+        }
+        .step-active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #008080;
+        }
+        input:focus {
+            outline: none !important;
+            border-color: #008080 !important;
+            box-shadow: 0 0 0 2px rgba(0, 128, 128, 0.15) !important;
+        }
+        .strength-bar {
+            height: 4px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-on-surface">
+<!-- Top AppBar (from Shared Components Logic) -->
+<header class="bg-surface border-b border-border-slate flex flex-row-reverse justify-between items-center w-full px-8 h-16 sticky top-0 z-50">
+<div class="flex items-center gap-2">
+<h1 class="font-bold text-2xl text-primary tracking-tight">SAFWA</h1>
+</div>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-secondary hover:text-primary-container transition-colors duration-200" href="#">الرئيسية</a>
+<a class="text-secondary hover:text-primary-container transition-colors duration-200" href="#">الخدمات</a>
+<a class="text-secondary hover:text-primary-container transition-colors duration-200" href="#">عن صفوة</a>
+</div>
+<button class="px-4 py-2 text-primary font-bold hover:bg-surface-container-low rounded-lg transition-colors duration-200">
+            تسجيل الدخول
+        </button>
+</header>
+<main class="flex-grow flex items-center justify-center py-12 px-4 md:px-margin-desktop">
+<div class="w-full max-w-2xl bg-surface-container-lowest border border-border-slate rounded-xl p-8 kinetic-shadow">
+<!-- Branding & Step Indicator -->
+<div class="flex flex-col items-center mb-8">
+<img alt="SAFWA Logo" class="h-20 mb-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAewOIH-WXxF3gWxYeZOIUrk60J2kACZ4FR8Z0DYCFZnBjpepHQBG9sEGuuDgFETO3sv6Ml3Z5lWIZia_tPR20SkvG1oSKtdwRmVNg_PYCvYfUV5aFdWv29gXYZK8exZ-MPqjSHrKv6h1CYjy1vNd24s8d-PAUOWqPDStxpgmH8SuxP5AHXK-j9OKVtmLQhgCfw5tUV9IxCrObSRlfBME8WWx-sJ9M9Q3CgDPrZc_KeHArEam-dm6E5rwTfKfrW7YMzhIyO3KTtHjU"/>
+<h2 class="font-tajawal font-bold text-2xl text-on-surface mb-2">إنشاء حساب جديد</h2>
+<div class="flex items-center gap-4 text-secondary font-tajawal text-sm relative">
+<span class="text-primary font-bold border-b-2 border-primary pb-1">البيانات الشخصية</span>
+<span class="text-outline">●</span>
+<span class="opacity-50">تأكيد الحساب</span>
+</div>
+</div>
+<form class="space-y-6">
+<!-- Account Type Selector -->
+<div class="space-y-2">
+<label class="block text-sm font-bold text-secondary mb-3">نوع الحساب</label>
+<div class="grid grid-cols-2 gap-4 p-1 bg-surface-container rounded-lg">
+<button class="flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-white shadow-sm text-primary font-bold transition-all duration-300" id="btn-customer" onclick="setActiveTab(this)" type="button">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">car_repair</span>
+<span class="text-sm">عميل / صاحب مركبة</span>
+</button>
+<button class="flex items-center justify-center gap-2 py-3 px-4 rounded-md text-secondary hover:bg-surface-container-high transition-all duration-300" id="btn-workshop" onclick="setActiveTab(this)" type="button">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm">مركز صيانة / ورشة</span>
+</button>
+</div>
+</div>
+<!-- Form Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Full Name -->
+<div class="space-y-1.5">
+<label class="block text-sm font-bold text-secondary">الاسم الكامل</label>
+<input class="w-full p-3 border border-border-slate rounded-lg text-sm bg-white" placeholder="أدخل اسمك الثلاثي" type="text"/>
+</div>
+<!-- Phone Number -->
+<div class="space-y-1.5">
+<label class="block text-sm font-bold text-secondary">رقم الجوال</label>
+<div class="flex">
+<select class="p-3 border border-border-slate border-l-0 rounded-r-lg bg-surface-container-low text-xs font-data-mono">
+<option>+966 🇸🇦</option>
+<option>+971 🇦🇪</option>
+<option>+965 🇰🇼</option>
+<option>+974 🇶🇦</option>
+</select>
+<input class="w-full p-3 border border-border-slate rounded-l-lg text-sm bg-white font-data-mono" placeholder="5XXXXXXXX" type="tel"/>
+</div>
+</div>
+<!-- Email -->
+<div class="space-y-1.5 md:col-span-2">
+<label class="block text-sm font-bold text-secondary">البريد الإلكتروني</label>
+<input class="w-full p-3 border border-border-slate rounded-lg text-sm bg-white font-data-mono" placeholder="example@domain.com" type="email"/>
+</div>
+<!-- Password -->
+<div class="space-y-1.5">
+<label class="block text-sm font-bold text-secondary">كلمة المرور</label>
+<div class="relative">
+<input class="w-full p-3 border border-border-slate rounded-lg text-sm bg-white font-data-mono pr-10" id="password" placeholder="********" type="password"/>
+<button class="absolute inset-y-0 right-0 pr-3 flex items-center text-secondary" type="button">
+<span class="material-symbols-outlined text-xl">visibility</span>
+</button>
+</div>
+<!-- Strength Meter -->
+<div class="pt-2">
+<div class="flex gap-1 mb-1">
+<div class="strength-bar flex-1 bg-success-text"></div>
+<div class="strength-bar flex-1 bg-success-text"></div>
+<div class="strength-bar flex-1 bg-border-slate"></div>
+</div>
+<span class="text-[10px] text-success-text font-bold">قوة كلمة المرور: متوسطة</span>
+</div>
+</div>
+<!-- Confirm Password -->
+<div class="space-y-1.5">
+<label class="block text-sm font-bold text-secondary">تأكيد كلمة المرور</label>
+<input class="w-full p-3 border border-border-slate rounded-lg text-sm bg-white font-data-mono" placeholder="********" type="password"/>
+</div>
+</div>
+<!-- Optional Section: Accordion -->
+<div class="border border-border-slate rounded-lg overflow-hidden bg-surface-container-low">
+<button class="w-full p-4 flex justify-between items-center bg-white hover:bg-surface-container transition-colors duration-200 group" onclick="toggleAccordion('car-details')" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform duration-200">directions_car</span>
+<span class="text-sm font-bold text-secondary">إضافة مركبتك الأولى الآن (اختياري)</span>
+</div>
+<span class="material-symbols-outlined transition-transform duration-300" id="accordion-icon">expand_more</span>
+</button>
+<div class="hidden p-6 border-t border-border-slate space-y-4" id="car-details">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="block text-xs font-bold text-secondary uppercase">لوحة المركبة</label>
+<div class="bg-white border-2 border-on-surface rounded p-2 flex justify-between items-center font-data-mono text-center">
+<input class="w-1/2 p-1 border-none focus:ring-0 text-lg tracking-[0.2em] font-bold text-center" maxlength="4" placeholder="1234" type="text"/>
+<div class="w-[1px] h-6 bg-on-surface mx-1"></div>
+<input class="w-1/2 p-1 border-none focus:ring-0 text-lg font-bold text-center" maxlength="3" placeholder="أ ب ج" type="text"/>
+</div>
+<span class="text-[10px] text-outline italic">مثال: 1234 أ ب ج</span>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-bold text-secondary uppercase">موديل المركبة</label>
+<input class="w-full p-3 border border-border-slate rounded-lg text-sm bg-white" placeholder="مثلاً: Toyota Camry 2023" type="text"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Agreement -->
+<div class="flex items-start gap-3">
+<input class="mt-1 w-4 h-4 text-primary-container border-border-slate rounded focus:ring-primary-container" id="terms" type="checkbox"/>
+<label class="text-xs text-secondary leading-relaxed" for="terms">
+                        بإنشاء حساب، فإنك توافق على <a class="text-primary font-bold underline" href="#">الشروط والأحكام</a> و <a class="text-primary font-bold underline" href="#">سياسة الخصوصية</a> الخاصة بمنصة صفوة.
+                    </label>
+</div>
+<!-- CTA -->
+<button class="w-full h-12 bg-primary-container text-on-primary font-bold rounded-lg shadow-sm hover:bg-teal-hover transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2" type="submit">
+<span>إنشاء الحساب</span>
+<span class="material-symbols-outlined">person_add</span>
+</button>
+</form>
+<!-- Footer Link -->
+<div class="mt-8 pt-6 border-t border-border-slate text-center">
+<p class="text-sm text-secondary">
+                    لديك حساب بالفعل؟ 
+                    <a class="text-primary font-bold hover:underline transition-all" href="#">تسجيل الدخول</a>
+</p>
+</div>
+</div>
+</main>
+<!-- Footer (from Shared Components Logic) -->
+<footer class="bg-surface-container-low border-t border-border-slate flex flex-col md:flex-row-reverse justify-between items-center w-full px-8 py-6 text-secondary text-sm">
+<div class="flex gap-6 mb-4 md:mb-0">
+<a class="hover:text-primary-container transition-all" href="#">الشروط والأحكام</a>
+<a class="hover:text-primary-container transition-all" href="#">سياسة الخصوصية</a>
+<a class="hover:text-primary-container transition-all" href="#">اتصل بنا</a>
+</div>
+<div class="text-center md:text-right">
+<span class="font-headline-h3 text-primary ml-4">SAFWA</span>
+<span>© 2024 SAFWA. جميع الحقوق محفوظة</span>
+</div>
+</footer>
+<script>
+        function setActiveTab(btn) {
+            const container = btn.parentElement;
+            const buttons = container.querySelectorAll('button');
+            buttons.forEach(b => {
+                b.classList.remove('bg-white', 'shadow-sm', 'text-primary', 'font-bold');
+                b.classList.add('text-secondary');
+                const icon = b.querySelector('.material-symbols-outlined');
+                if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+            });
+            
+            btn.classList.add('bg-white', 'shadow-sm', 'text-primary', 'font-bold');
+            btn.classList.remove('text-secondary');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1";
+        }
+
+        function toggleAccordion(id) {
+            const element = document.getElementById(id);
+            const icon = document.getElementById('accordion-icon');
+            if (element.classList.contains('hidden')) {
+                element.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                element.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Simple form validation visual cue
+        document.getElementById('password').addEventListener('input', function(e) {
+            const bars = document.querySelectorAll('.strength-bar');
+            const val = e.target.value;
+            if (val.length < 4) {
+                bars[0].className = 'strength-bar flex-1 bg-danger-text';
+                bars[1].className = 'strength-bar flex-1 bg-border-slate';
+                bars[2].className = 'strength-bar flex-1 bg-border-slate';
+            } else if (val.length < 8) {
+                bars[0].className = 'strength-bar flex-1 bg-warning-text';
+                bars[1].className = 'strength-bar flex-1 bg-warning-text';
+                bars[2].className = 'strength-bar flex-1 bg-border-slate';
+            } else {
+                bars[0].className = 'strength-bar flex-1 bg-success-text';
+                bars[1].className = 'strength-bar flex-1 bg-success-text';
+                bars[2].className = 'strength-bar flex-1 bg-success-text';
+            }
+        });
+    </script>
+</body></html>
