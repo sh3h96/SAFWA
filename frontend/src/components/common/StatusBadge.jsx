@@ -14,14 +14,16 @@ const variantClasses = {
   primary: 'bg-primary/10 text-primary',
 };
 
-export default function StatusBadge({ variant = 'info', label }) {
-  const classes = variantClasses[variant] || variantClasses.info;
+export default function StatusBadge({ variant, label, status, text }) {
+  const badgeVariant = variant || status || 'info';
+  const badgeLabel = label || text;
+  const classes = variantClasses[badgeVariant] || variantClasses.info;
 
   return (
     <span
       className={`px-3 py-1 rounded-full text-[11px] font-bold ${classes}`}
     >
-      {label}
+      {badgeLabel}
     </span>
   );
 }

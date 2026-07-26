@@ -9,6 +9,8 @@ import {
 } from '../../mock/admin/dashboard';
 import { workOrdersData } from '../../mock/admin/workOrders';
 
+import PageHeader from '../../components/common/PageHeader';
+
 /**
  * AdminDashboardPage — Main admin dashboard (لوحة التحكم العامة).
  * Assembles: PageHeader, MetricsGrid, Charts, WorkOrdersTable.
@@ -17,20 +19,12 @@ export default function AdminDashboardPage() {
   return (
     <>
       {/* Page Header */}
-      <div className="mb-8 flex justify-between items-end">
-        <div>
-          <h2 className="text-2xl font-bold text-inverse-surface mb-1">
-            لوحة التحكم العامة
-          </h2>
-          <p className="text-secondary text-sm">
-            أهلاً بك مجدداً، إليك ملخص نشاط الورشة لهذا اليوم.
-          </p>
-        </div>
-        <button className="bg-primary-container text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-teal-hover transition-colors shadow-sm">
-          <span className="material-symbols-outlined text-lg">add_circle</span>
-          <span>أمر عمل جديد</span>
-        </button>
-      </div>
+      <PageHeader 
+        title="لوحة التحكم العامة"
+        subtitle="أهلاً بك مجدداً، إليك ملخص نشاط الورشة لهذا اليوم."
+        actionLabel="أمر عمل جديد"
+        actionIcon="add_circle"
+      />
 
       {/* Top Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
