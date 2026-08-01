@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ===========================
 # Dependencies
 # ===========================
@@ -92,3 +93,8 @@ Homestead.yaml
 Homestead.json
 /.vagrant
 .phpactor.json
+=======
+﻿node_modules/
+.env
+uploads/
+>>>>>>> abd9876 (Fix database connection and setup product validation endpoint)
