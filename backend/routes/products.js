@@ -1,15 +1,12 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/upload');
 const Product = require('../models/Product');
+const { storeProductRules, validate } = require('../validators/productValidator');
 
-router.post('/products', upload.single('image'), async (req, res) => {
+router.post('/products', upload.single('image'), storeProductRules, validate, async (req, res) => {
     try {
         const { name, price, stock } = req.body;
-
-        if (!name || !price) {
-            return res.status(400).json({ status: 'error', message: 'اسم المنتج والسعر مطلوبان' });
-        }
 
         const imageName = req.file ? req.file.filename : null;
 
