@@ -1,30 +1,100 @@
-/vendor/
+<<<<<<< HEAD
+# ===========================
+# Dependencies
+# ===========================
 node_modules/
-npm-debug.log
-yarn-error.log
+/vendor/
 
-# Laravel 4 specific
+# ===========================
+# Build outputs
+# ===========================
+dist/
+dist-ssr/
+build/
+*.local
+
+# ===========================
+# Environment & secrets
+# ===========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+.env.production
+auth.json
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================
+# Editor directories & files
+# ===========================
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===========================
+# OS-specific files
+# ===========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ===========================
+# Testing & coverage
+# ===========================
+coverage/
+*.lcov
+.nyc_output/
+.phpunit.result.cache
+
+# ===========================
+# Caches
+# ===========================
+.cache/
+.parcel-cache/
+.eslintcache
+.oxlintcache
+*.tsbuildinfo
+.vite/
+
+# ===========================
+# Laravel / PHP (backend legacy)
+# ===========================
 bootstrap/compiled.php
 app/storage/
-
-# Laravel 5 & Lumen specific
 public/storage
 public/hot
-
-# Laravel 5 & Lumen specific with changed public path
 public_html/storage
 public_html/hot
-
 storage/*.key
-.env
+/public/build
+/storage/pail
 Homestead.yaml
 Homestead.json
 /.vagrant
-.phpunit.result.cache
-
-/public/build
-/storage/pail
-.env.backup
-.env.production
 .phpactor.json
-auth.json
+=======
+﻿node_modules/
+.env
+uploads/
+>>>>>>> abd9876 (Fix database connection and setup product validation endpoint)
