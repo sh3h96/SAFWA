@@ -4,7 +4,8 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class TechnicalReport extends Model {
     static associate(models) {
-      // Define associations here
+      TechnicalReport.belongsTo(models.Appointment, { foreignKey: 'appointment_id' });
+      TechnicalReport.hasMany(models.RequiredPart, { foreignKey: 'technical_report_id', as: 'requestedParts' });
     }
   }
 
@@ -34,6 +35,26 @@ module.exports = (sequelize) => {
     },
     mechanic_notes: {
         "type": DataTypes.TEXT,
+        "allowNull": true
+    },
+    odometer: {
+        "type": DataTypes.INTEGER,
+        "allowNull": true
+    },
+    obd2_codes: {
+        "type": DataTypes.STRING,
+        "allowNull": true
+    },
+    visual_notes: {
+        "type": DataTypes.TEXT,
+        "allowNull": true
+    },
+    repair_plan: {
+        "type": DataTypes.TEXT,
+        "allowNull": true
+    },
+    urgency_level: {
+        "type": DataTypes.STRING,
         "allowNull": true
     }
   }, {
