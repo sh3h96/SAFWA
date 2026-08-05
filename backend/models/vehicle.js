@@ -33,6 +33,14 @@ module.exports = (sequelize) => {
         "type": DataTypes.STRING,
         "allowNull": false,
         "unique": true
+    },
+    year: {
+        "type": DataTypes.INTEGER,
+        "allowNull": true
+    },
+    vin: {
+        "type": DataTypes.STRING,
+        "allowNull": true
     }
   }, {
     sequelize,

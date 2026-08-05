@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const technicalReportController = require('../controllers/technicalReportController');
 
-// Define routes for technicalReport here
-// router.get('/', technicalReportController.getAll);
+const auth = require('../middleware/auth');
+
+router.post('/', auth, technicalReportController.createReport);
 
 module.exports = router;
