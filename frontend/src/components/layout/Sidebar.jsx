@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { sidebarNavGroups } from '../../constants/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 
 /**
@@ -7,10 +8,14 @@ import safwaLogo from '../../assets/images/safwa-logo.png';
  * Organized into categorized navigation groups with section titles.
  * Active state managed via react-router-dom NavLink.
  */
-export default function Sidebar() {
+export default function Sidebar({ navGroups }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
+    logout();
+    queryClient.clear();
     navigate('/login');
   };
 
@@ -40,10 +45,10 @@ export default function Sidebar() {
 
       {/* Grouped Navigation Links */}
       <nav className="flex-1 py-4 px-3 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar space-y-6">
-        {sidebarNavGroups.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.id} className="space-y-1">
             {/* Section Header */}
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 pb-2 select-none border-b border-white/5">
+            <h4 className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 mt-6 px-4 select-none">
               {group.title}
             </h4>
 
@@ -54,10 +59,10 @@ export default function Sidebar() {
                   key={item.id}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer w-full ${
                       isActive
-                        ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
-                        : 'text-surface-variant hover:bg-white/5 hover:text-white'
+                        ? 'bg-teal-700 text-white shadow-md'
+                        : 'text-slate-300 hover:bg-[#1a2938] hover:text-white'
                     }`
                   }
                 >
@@ -87,7 +92,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-white/10">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full text-surface-variant hover:text-danger-text hover:bg-white/5 px-4 py-3 rounded-lg transition-colors cursor-pointer"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer w-full text-slate-300 hover:text-red-400 hover:bg-red-400/10"
         >
           <span className="material-symbols-outlined">logout</span>
           <span className="font-medium">تسجيل الخروج</span>

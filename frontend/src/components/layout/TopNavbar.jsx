@@ -1,64 +1,57 @@
-import Avatar from '../common/Avatar';
-import { currentUser } from '../../mock/auth/user';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * TopNavbar — Top header bar with search, notifications, and user profile.
- * User data comes from mock; avatar shows initials when image is unavailable.
+ * Standalone version that does not depend on external mock data or Avatar component.
  */
 export default function TopNavbar() {
-  const user = currentUser;
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    queryClient.clear();
+    navigate('/login');
+  };
 
   return (
-    <header className="h-16 bg-white border-b border-outline-variant flex flex-row-reverse justify-between items-center px-8 w-full sticky top-0 z-40">
-      {/* Left side (visually): User menu + notifications */}
-      <div className="flex items-center gap-4">
-        {/* Notifications */}
-        <button
-          className="w-10 h-10 flex items-center justify-center text-secondary hover:bg-surface rounded-full"
-          aria-label="الإشعارات"
+    <header className="h-16 bg-white border-b border-outline-variant flex justify-end items-center px-8 w-full sticky top-0 z-40">
+      {/* User profile section */}
+      <div className="relative">
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
-
-        {/* Help */}
-        <button
-          className="w-10 h-10 flex items-center justify-center text-secondary hover:bg-surface rounded-full"
-          aria-label="المساعدة"
-        >
-          <span className="material-symbols-outlined">help</span>
-        </button>
-
-        {/* User profile */}
-        <div className="flex items-center gap-3 mr-2">
-          {/* Name & role */}
-          <div className="text-left leading-tight hidden md:block">
-            <p className="text-sm font-bold text-inverse-surface">
-              {user.name}
+          {/* Name */}
+          <div className="hidden md:block text-left">
+            <p className="text-sm font-bold text-inverse-surface m-0 leading-none">
+              {user?.name || 'مستخدم'}
             </p>
-            <p className="text-[11px] text-secondary">{user.role}</p>
           </div>
 
-          {/* Avatar */}
-          <Avatar 
-            src={user.avatar} 
-            name={user.name} 
-            initials={user.initials} 
-            size="md" 
-          />
+          {/* Simple Avatar Circle */}
+          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'م'}
+          </div>
         </div>
-      </div>
 
-      {/* Right side (visually): Search bar */}
-      <div className="flex-1 max-w-md relative">
-        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-sm">
-          search
-        </span>
-        <input
-          className="w-full bg-surface border-outline-variant rounded-lg pr-10 text-sm focus:ring-primary focus:border-primary"
-          placeholder="البحث عن رقم اللوحة، الفاتورة أو العميل..."
-          type="text"
-          aria-label="البحث"
-        />
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-lg py-1 z-50">
+            <button
+              onClick={handleLogout}
+              className="w-full text-right px-4 py-3 text-sm text-rose-500 hover:bg-rose-50 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+              تسجيل الخروج
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

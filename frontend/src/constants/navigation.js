@@ -1,99 +1,104 @@
-/**
- * Categorized Sidebar navigation items configuration.
- * Groups items logically into: Overview, Operations, Management, and System.
- */
-export const sidebarNavGroups = [
+export const adminNavGroups = [
   {
-    id: 'overview',
-    title: 'الرئيسية والعملاء',
+    id: 'admin_overview',
+    title: 'الإدارة والتشغيل',
     items: [
       {
-        id: 'dashboard',
-        icon: 'dashboard',
-        label: 'لوحة القيادة',
-        path: '/admin/dashboard',
+        id: 'admin_appointments',
+        icon: 'event_available',
+        label: 'التحكم بالمواعيد',
+        path: '/admin/appointments',
       },
       {
-        id: 'customer',
-        icon: 'person',
-        label: 'لوحة تحكم العميل',
-        path: '/admin/customer',
-      },
-    ],
-  },
-  {
-    id: 'operations',
-    title: 'عمليات الورشة والصيانة',
-    items: [
-      {
-        id: 'booking',
-        icon: 'edit_calendar',
-        label: 'حجز موعد جديد',
-        path: '/admin/booking',
+        id: 'admin_reviews',
+        icon: 'star_rate',
+        label: 'مراقبة الجودة',
+        path: '/admin/reviews',
       },
       {
-        id: 'workshop',
-        icon: 'precision_manufacturing',
-        label: 'ساحة الورشة',
-        path: '/admin/workshop',
-      },
-      {
-        id: 'technician',
-        icon: 'build',
-        label: 'طاولة عمل الفني',
-        path: '/admin/technician',
-      },
-      {
-        id: 'inspection',
-        icon: 'fact_check',
-        label: 'طلبات الفحص',
-        path: '/admin/inspection',
-      },
-      {
-        id: 'reports',
-        icon: 'garage',
-        label: 'مرآب وسجل الصيانة',
-        path: '/admin/reports',
-      },
-    ],
-  },
-  {
-    id: 'management',
-    title: 'الإدارة والمالية',
-    items: [
-      {
-        id: 'inventory',
+        id: 'admin_inventory',
         icon: 'inventory_2',
-        label: 'المخزن',
+        label: 'إدارة المخزون',
         path: '/admin/inventory',
       },
-      {
-        id: 'invoices',
-        icon: 'receipt_long',
-        label: 'الفواتير',
-        path: '/admin/invoices',
-      },
-      {
-        id: 'users',
-        icon: 'group',
-        label: 'المستخدمين',
-        path: '/admin/users',
-      },
     ],
   },
   {
-    id: 'system',
-    title: 'النظام والإعدادات',
+    id: 'admin_management',
+    title: 'المالية والنظام',
     items: [
       {
-        id: 'settings',
-        icon: 'settings',
-        label: 'الإعدادات',
-        path: '/admin/settings',
+        id: 'admin_financials',
+        icon: 'account_balance',
+        label: 'الإدارة المالية',
+        path: '/admin/financials',
+      },
+      {
+        id: 'admin_users',
+        icon: 'manage_accounts',
+        label: 'إدارة المستخدمين',
+        path: '/admin/users',
       },
     ],
   },
 ];
 
-// Flat export for backwards compatibility
-export const sidebarNavItems = sidebarNavGroups.flatMap((group) => group.items);
+export const clientNavGroups = [
+  {
+    id: 'client_main',
+    title: 'مركباتي ومواعيدي',
+    items: [
+      {
+        id: 'client_vehicles',
+        icon: 'directions_car',
+        label: 'إدارة المركبات',
+        path: '/client/vehicles',
+      },
+      {
+        id: 'client_appointments',
+        icon: 'history',
+        label: 'سجل المواعيد',
+        path: '/client/appointments',
+      },
+      {
+        id: 'client_booking',
+        icon: 'edit_calendar',
+        label: 'حجز موعد',
+        path: '/client/booking',
+      },
+    ],
+  },
+  {
+    id: 'client_financials',
+    title: 'الفواتير والتقييم',
+    items: [
+      {
+        id: 'client_billing',
+        icon: 'receipt_long',
+        label: 'الفواتير والمدفوعات',
+        path: '/client/billing',
+      },
+      {
+        id: 'client_reviews',
+        icon: 'rate_review',
+        label: 'التقييمات',
+        path: '/client/reviews',
+      },
+    ],
+  },
+];
+
+export const mechanicNavGroups = [
+  {
+    id: 'mechanic_tasks',
+    title: 'جدول العمل',
+    items: [
+      {
+        id: 'mechanic_assigned_tasks',
+        icon: 'assignment',
+        label: 'السيارات المخصصة',
+        path: '/mechanic/tasks',
+      }
+    ],
+  },
+];

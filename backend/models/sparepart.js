@@ -4,7 +4,7 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class SparePart extends Model {
     static associate(models) {
-      // Define associations here
+      SparePart.hasMany(models.RequiredPart, { foreignKey: 'part_id', as: 'requests' });
     }
   }
 
@@ -28,6 +28,14 @@ module.exports = (sequelize) => {
     },
     stock_quantity: {
         "type": DataTypes.INTEGER,
+        "allowNull": true
+    },
+    min_stock_level: {
+        "type": DataTypes.INTEGER,
+        "defaultValue": 5
+    },
+    brand: {
+        "type": DataTypes.STRING,
         "allowNull": true
     }
   }, {
