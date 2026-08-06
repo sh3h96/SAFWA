@@ -5,6 +5,7 @@ module.exports = (sequelize) => {
   class SparePart extends Model {
     static associate(models) {
       SparePart.hasMany(models.RequiredPart, { foreignKey: 'part_id', as: 'requests' });
+      SparePart.hasMany(models.InvoiceItem, { foreignKey: 'part_id', as: 'invoiceItems' });
     }
   }
 
