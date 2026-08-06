@@ -7,8 +7,14 @@ module.exports = {
   async up (queryInterface, Sequelize) {
     // 1. Users
     const clientsData = Array.from({ length: 5 }).map(() => factories.createFakeUser('client'));
+    // Ensure we have a known client for testing
+    clientsData[0].email = 'client@safwa.sa';
+
     const mechanicsData = Array.from({ length: 2 }).map(() => factories.createFakeUser('mechanic'));
+    
     const adminData = [factories.createFakeUser('admin')];
+    // Ensure we have a known admin for testing
+    adminData[0].email = 'admin@safwa.sa';
     
     await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
     const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);

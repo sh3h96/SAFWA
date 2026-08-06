@@ -11,6 +11,29 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+const userRoutes = require('./routes/userRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const customerRoutes = require('./routes/customerRoutes');
+const sparePartRoutes = require('./routes/sparePartRoutes');
+const vehicleRoutes = require('./routes/vehicleRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const technicalReportRoutes = require('./routes/technicalReportRoutes');
+const requiredPartRoutes = require('./routes/requiredPartRoutes');
+
+app.use('/api/auth', userRoutes); // POST /api/auth/login
+app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/inventory', sparePartRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/reports', technicalReportRoutes);
+app.use('/api/required-parts', requiredPartRoutes);
+
 app.get('/', (req, res) => {
   res.send('SAFWA Backend API is running...');
 });

@@ -1,289 +1,298 @@
-import { useState } from 'react';
-import DataTable from '../../components/common/DataTable';
-import AlertBanner from '../../components/common/AlertBanner';
-import StockProgress from '../../components/common/StockProgress';
-import StatusBadge from '../../components/common/StatusBadge';
-import Pagination from '../../components/common/Pagination';
-import SearchInput from '../../components/ui/SearchInput';
-import SelectInput from '../../components/ui/SelectInput';
-import StockAdjustmentModal from '../../components/inventory/StockAdjustmentModal';
-import AddPartModal from '../../components/inventory/AddPartModal';
-
-import { inventoryResponse } from '../../mock/admin/inventory';
-import { formatCurrency } from '../../utils/formatters';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { inventoryAPI } from '../../services/api';
+import PageLoader from '../../components/common/PageLoader';
+import ProductDetailsModal from '../../components/admin/ProductDetailsModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 export default function InventoryPage() {
-  const [items, setItems] = useState(inventoryResponse.items);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedManufacturer, setSelectedManufacturer] = useState('الكل');
+  const queryClient = useQueryClient();
 
-  // Stock Adjustment Modal state
-  const [adjustingItem, setAdjustingItem] = useState(null);
-  const [adjustQty, setAdjustQty] = useState(0);
-  const [adjustReason, setAdjustReason] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Add Part Modal state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newPartForm, setNewPartForm] = useState({
-    name: '',
-    sku: '',
-    category: 'فلاتر',
-    manufacturer: 'Toyota',
-    stock: 0,
-    maxStock: 50,
-    purchasePrice: 0,
-    salePrice: 0,
-    supplier: ''
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const { data: inventoryData, isLoading, isFetching, isError, error } = useQuery({
+    queryKey: ['inventory', debouncedSearch],
+    queryFn: () => inventoryAPI.getAll(debouncedSearch),
+    placeholderData: keepPreviousData
   });
 
-  // Filter items by search query & manufacturer
-  const filteredItems = items.filter((item) => {
-    const matchesSearch = 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesManufacturer = 
-      selectedManufacturer === 'الكل' || item.manufacturer === selectedManufacturer;
-
-    return matchesSearch && matchesManufacturer;
+  const createMutation = useMutation({
+    mutationFn: inventoryAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setIsModalOpen(false);
+      resetForm();
+    }
   });
 
-  // Open adjustment modal
-  const handleOpenAdjustment = (item) => {
-    setAdjustingItem(item);
-    setAdjustQty(item.stock);
-    setAdjustReason('');
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => inventoryAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setIsModalOpen(false);
+      resetForm();
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: inventoryAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    }
+  });
+
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  const handleDeleteClick = (e, id) => {
+    e.stopPropagation();
+    setItemToDelete(id);
   };
 
-  // Submit stock adjustment
-  const handleSaveAdjustment = () => {
-    if (!adjustingItem) return;
-    setItems(items.map(it => {
-      if (it.id === adjustingItem.id) {
-        const newStock = adjustQty;
-        const newStatus = newStock <= 10 ? 'low' : newStock <= 25 ? 'medium' : 'good';
-        return { ...it, stock: newStock, status: newStatus };
-      }
-      return it;
-    }));
-    setAdjustingItem(null);
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
   };
 
-  // Delete item handler
-  const handleDeleteItem = (id) => {
-    setItems(items.filter(it => it.id !== id));
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPart, setEditingPart] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Form State
+  const [name, setName] = useState('');
+  const [partNumber, setPartNumber] = useState('');
+  const [brand, setBrand] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('');
+  const [minStockLevel, setMinStockLevel] = useState('');
+  const [price, setPrice] = useState('');
+
+  const resetForm = () => {
+    setEditingPart(null);
+    setName(''); setPartNumber(''); setBrand(''); setStockQuantity(''); setMinStockLevel(''); setPrice('');
   };
 
-  // Add new part handler
-  const handleAddPartSubmit = () => {
-    if (!newPartForm.name.trim()) return;
+  const openModal = (part = null) => {
+    if (part) {
+      setEditingPart(part);
+      setName(part.name);
+      setPartNumber(part.sku || '');
+      setBrand(part.manufacturer || '');
+      setStockQuantity(part.stock || '');
+      setMinStockLevel(''); // Backend doesn't return this in list, leave blank or fetch details
+      setPrice(part.purchasePrice || '');
+    } else {
+      resetForm();
+    }
+    setIsModalOpen(true);
+  };
 
-    const newItem = {
-      id: `inv_${Date.now()}`,
-      name: newPartForm.name,
-      sku: newPartForm.sku || `SKU-${Date.now().toString().slice(-4)}`,
-      category: newPartForm.category,
-      categoryVariant: newPartForm.category === 'فرامل' ? 'success' : newPartForm.category === 'كهرباء' ? 'warning' : 'info',
-      manufacturer: newPartForm.manufacturer,
-      stock: newPartForm.stock,
-      maxStock: newPartForm.maxStock,
-      status: newPartForm.stock <= 10 ? 'low' : newPartForm.stock <= 25 ? 'medium' : 'good',
-      purchasePrice: newPartForm.purchasePrice,
-      salePrice: newPartForm.salePrice,
-      supplier: newPartForm.supplier || 'المورد المحلي',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD3C612AkONDbqQKqmccKg77yeCYb5WmdYkaRisC62asFbBAZ7WGoRAEl490ESP0sU2Liotnm47TqraBrTrSe-I58SvymzrPr4myuzJDvf_EZS6IgHbtXGM3DCYjLju5sjhIgpU377izPCxquRQ0A8jHMGAN4W6ZKap5iP9eeihT5RFz_wjA2D0dxU48Z_RqU7YapqTPlAMiMoyYlVZZKVHZnDmH1F_LYmIC57l7d4rAXUE2u4JMCZalDX6rEUOFi5PA6q9OoHE0_w'
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = {
+      name,
+      part_number: partNumber,
+      brand,
+      stock_quantity: Number(stockQuantity),
+      min_stock_level: Number(minStockLevel),
+      price: Number(price)
     };
 
-    setItems([newItem, ...items]);
-    setIsAddModalOpen(false);
-    setNewPartForm({
-      name: '',
-      sku: '',
-      category: 'فلاتر',
-      manufacturer: 'Toyota',
-      stock: 0,
-      maxStock: 50,
-      purchasePrice: 0,
-      salePrice: 0,
-      supplier: ''
-    });
+    if (editingPart) {
+      updateMutation.mutate({ id: editingPart.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
-  // Table columns definition
-  const columns = [
-    {
-      key: 'item',
-      label: 'القطعة',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded bg-surface-container border border-border-slate overflow-hidden shrink-0">
-            <img className="w-full h-full object-cover" src={row.image} alt={row.name} />
-          </div>
-          <span className="font-bold text-on-background text-sm">{row.name}</span>
-        </div>
-      )
-    },
-    {
-      key: 'sku',
-      label: 'رمز SKU',
-      render: (row) => (
-        <span className="data-mono text-xs bg-surface-container px-2 py-1 rounded border border-border-slate">
-          {row.sku}
-        </span>
-      )
-    },
-    {
-      key: 'category',
-      label: 'الفئة',
-      render: (row) => (
-        <StatusBadge variant={row.categoryVariant || 'info'} label={row.category} />
-      )
-    },
-    {
-      key: 'stock',
-      label: 'مستوى المخزون',
-      render: (row) => (
-        <StockProgress current={row.stock} max={row.maxStock} status={row.status} />
-      )
-    },
-    {
-      key: 'purchasePrice',
-      label: 'سعر الشراء',
-      render: (row) => (
-        <span className="data-mono text-sm">{formatCurrency(row.purchasePrice)}</span>
-      )
-    },
-    {
-      key: 'salePrice',
-      label: 'سعر البيع',
-      render: (row) => (
-        <span className="data-mono text-sm font-bold text-primary">{formatCurrency(row.salePrice)}</span>
-      )
-    },
-    {
-      key: 'supplier',
-      label: 'المورد',
-      render: (row) => (
-        <span className="text-sm text-on-surface-variant">{row.supplier}</span>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'الإجراءات',
-      render: (row) => (
-        <div className="flex gap-2">
-          <button 
-            onClick={() => handleOpenAdjustment(row)}
-            title="تعديل المخزون"
-            className="p-2 text-secondary hover:bg-secondary-container hover:text-on-secondary-container rounded-lg transition-all"
-          >
-            <span className="material-symbols-outlined text-lg">inventory_2</span>
-          </button>
-          <button 
-            title="تعديل"
-            className="p-2 text-secondary hover:bg-surface-variant rounded-lg transition-all"
-          >
-            <span className="material-symbols-outlined text-lg">edit</span>
-          </button>
-          <button 
-            onClick={() => handleDeleteItem(row.id)}
-            title="حذف"
-            className="p-2 text-danger-text hover:bg-danger-bg rounded-lg transition-all"
-          >
-            <span className="material-symbols-outlined text-lg">delete</span>
-          </button>
-        </div>
-      )
-    }
-  ];
+  if (isError) return <div className="text-center text-red-500 font-bold py-10">حدث خطأ أثناء تحميل البيانات: {error?.message}</div>;
 
-  const pagination = (
-    <Pagination 
-      total={inventoryResponse.pagination.total} 
-      currentStart={1} 
-      currentEnd={filteredItems.length} 
-      hasNext={true} 
-      hasPrev={false} 
-      onNext={() => {}} 
-      onPrev={() => {}} 
-    />
-  );
+  const inventoryItems = inventoryData?.items || [];
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto w-full">
-      {/* Low Stock Alert Banner */}
-      <AlertBanner 
-        variant="danger"
-        icon="warning"
-        message={inventoryResponse.lowStockAlert.message}
-        actionLabel="طلب من المورد"
-        actionIcon="shopping_cart_checkout"
-        onAction={() => console.log('Order from supplier clicked')}
-      />
-
-      {/* Inventory Header & Filtering Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-white p-6 rounded-xl border border-border-slate shadow-sm">
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-secondary">البحث عن قطعة</label>
-            <SearchInput 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث بالاسم أو SKU..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-secondary">الشركة المصنعة</label>
-            <SelectInput 
-              value={selectedManufacturer}
-              onChange={(e) => setSelectedManufacturer(e.target.value)}
-              options={inventoryResponse.filters.manufacturers}
-            />
-          </div>
-
-          <div className="space-y-2 flex items-end">
-            <button className="w-full bg-white border border-border-slate text-secondary px-4 py-2 rounded-lg hover:bg-surface-variant transition-all flex items-center justify-center gap-2 h-[40px]">
-              <span className="material-symbols-outlined text-lg">filter_list</span>
-              <span>تصفية متقدمة</span>
-            </button>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+      
+      {/* Row 1: Header & Primary Action */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">إدارة المخزون</h1>
+          <p className="text-slate-500 mt-2 text-sm">مراقبة كميات قطع الغيار وإدارة الأسعار وتنبيهات النواقص.</p>
         </div>
-
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-primary-container text-white px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-hover shadow-lg shadow-primary-container/20 transition-all h-[44px]"
+        <button
+          onClick={() => openModal()}
+          className="bg-primary text-white px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
         >
-          <span className="material-symbols-outlined text-lg">add_circle</span>
-          <span>إضافة قطعة جديدة</span>
+          <span className="material-symbols-outlined text-lg">add_box</span>
+          إضافة صنف جديد
         </button>
       </div>
 
-      {/* Main Table Container using reusable DataTable */}
-      <DataTable 
-        columns={columns}
-        data={filteredItems}
-        pagination={pagination}
-      />
+      {/* Row 2: Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        {/* Search Bar */}
+        <div className="relative w-full md:w-[400px]">
+          <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+            <span className="material-symbols-outlined text-[20px]">search</span>
+          </div>
+          <input 
+            type="text" 
+            placeholder="ابحث باسم القطعة، أو رقمها..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full pr-12 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700"
+          />
+        </div>
+      </div>
 
-      {/* Presentational Modals */}
-      <StockAdjustmentModal 
-        isOpen={!!adjustingItem}
-        item={adjustingItem}
-        qty={adjustQty}
-        reason={adjustReason}
-        onClose={() => setAdjustingItem(null)}
-        onQtyChange={setAdjustQty}
-        onReasonChange={setAdjustReason}
-        onSubmit={handleSaveAdjustment}
-      />
+      {/* Grid */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-4">
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm font-bold animate-pulse">جاري تحميل المخزون...</p>
+        </div>
+      ) : inventoryItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center mt-4">
+          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-4xl text-slate-300">inventory_2</span>
+          </div>
+          <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد نتائج</h3>
+          <p className="text-slate-500 text-sm max-w-xs">لم نتمكن من العثور على قطع غيار تطابق بحثك.</p>
+        </div>
+      ) : (
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-300 ${isFetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        {inventoryItems.map(part => {
+          const isLowStock = part.status === 'low' || part.status === 'medium';
+          return (
+            <div 
+              key={part.id} 
+              onClick={() => setSelectedProduct(part)}
+              className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] cursor-pointer transition-all duration-300 group flex flex-col"
+            >
+              
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openModal(part);
+                    }}
+                    className="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                  </button>
+                  <button 
+                    onClick={(e) => handleDeleteClick(e, part.id)}
+                    disabled={deleteMutation.isPending}
+                    className="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+                <span className="text-xs font-mono font-bold bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg shadow-sm">
+                  {part.sku || `P${part.id}`}
+                </span>
+              </div>
 
-      <AddPartModal 
-        isOpen={isAddModalOpen}
-        formData={newPartForm}
-        onClose={() => setIsAddModalOpen(false)}
-        onChange={(field, val) => setNewPartForm(prev => ({ ...prev, [field]: val }))}
-        onSubmit={handleAddPartSubmit}
+              <h3 className="font-bold text-slate-800 text-lg mb-1">{part.name}</h3>
+              <p className="text-xs text-slate-400 mb-6">{part.category} - {part.manufacturer}</p>
+
+              <div className="mt-auto grid grid-cols-2 gap-3">
+                <div className={`p-4 rounded-2xl border flex flex-col items-center justify-center ${isLowStock ? 'bg-rose-50 border-rose-100/50' : 'bg-slate-50 border-slate-100/50'}`}>
+                  <span className="text-xs text-slate-500 mb-1">الكمية</span>
+                  <div className="flex items-center gap-1.5">
+                    {isLowStock && <span className="material-symbols-outlined text-rose-500 text-[16px]">warning</span>}
+                    <span className={`text-xl font-bold font-mono ${isLowStock ? 'text-rose-600' : 'text-slate-800'}`}>
+                      {part.stock}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-2xl border border-slate-100/50 bg-slate-50 flex flex-col items-center justify-center">
+                  <span className="text-xs text-slate-500 mb-1">السعر</span>
+                  <span className="text-xl font-bold font-mono text-primary">
+                    {part.purchasePrice}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
+      )}
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <ProductDetailsModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-800">{editingPart ? 'تعديل صنف' : 'إضافة صنف'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100"><span className="material-symbols-outlined text-sm">close</span></button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2 col-span-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">اسم القطعة</label>
+                  <input required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">رقم القطعة (SKU)</label>
+                  <input required value={partNumber} onChange={e => setPartNumber(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">الشركة المصنعة</label>
+                  <input required value={brand} onChange={e => setBrand(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">السعر (ر.س)</label>
+                  <input required type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20 font-mono text-left" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">الكمية الحالية</label>
+                  <input required type="number" value={stockQuantity} onChange={e => setStockQuantity(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20 font-mono text-left" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">الحد الأدنى للتنبيه</label>
+                  <input type="number" value={minStockLevel} onChange={e => setMinStockLevel(e.target.value)} placeholder="اختياري عند التعديل" className="w-full px-4 py-3 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/20 font-mono text-left" />
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50"
+              >
+                {editingPart ? 'حفظ التعديلات' : 'إضافة الصنف'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={confirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من رغبتك في حذف هذا الصنف من المخزون؟ هذا الإجراء لا يمكن التراجع عنه."
+        confirmText="حذف الصنف"
+        isDanger={true}
       />
     </div>
   );
