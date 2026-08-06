@@ -3,11 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 
-/**
- * Sidebar — Fixed right-side navigation panel.
- * Organized into categorized navigation groups with section titles.
- * Active state managed via react-router-dom NavLink.
- */
+
 export default function Sidebar({ navGroups }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
