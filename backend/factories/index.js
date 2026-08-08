@@ -2,7 +2,7 @@ const { faker } = require('@faker-js/faker');
 
 // A pre-hashed password for 'password123' so we don't slow down seeding with bcrypt
 // This is typical for seeders.
-const defaultPasswordHash = '$2a$10$XU0nNq/pG2wV9G.9k9Q.A.U5P3dF3yv/9Jp2Z3G0T6K/Hl/QG4Y0e'; // password123
+const defaultPasswordHash = '$2b$10$4IitGBlTUeVQD39z3LVlFuqUzfQ/knLbevrijkORTxcoZzqHUZ042'; // password123
 
 const createFakeUser = (role = 'client') => ({
   name: faker.person.fullName(),

@@ -4,7 +4,8 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class InvoiceItem extends Model {
     static associate(models) {
-      // Define associations here
+      InvoiceItem.belongsTo(models.Invoice, { foreignKey: 'invoice_id', as: 'invoice' });
+      InvoiceItem.belongsTo(models.SparePart, { foreignKey: 'part_id', as: 'part' });
     }
   }
 

@@ -1,122 +1,100 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
+import PageLoader from './components/common/PageLoader';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Layouts
+import AdminLayout from './layouts/AdminLayout';
+import ClientLayout from './layouts/ClientLayout';
+import MechanicLayout from './layouts/MechanicLayout';
+
+// Create a client
+const queryClient = new QueryClient();
+
+// Auth Pages
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const PasswordResetPage = lazy(() => import('./pages/auth/PasswordResetPage'));
+
+// Admin Pages
+const AppointmentsControlPage = lazy(() => import('./pages/admin/AppointmentsControlPage'));
+const InventoryPage = lazy(() => import('./pages/admin/InventoryPage'));
+const FinancialsPage = lazy(() => import('./pages/admin/FinancialsPage'));
+const UsersManagementPage = lazy(() => import('./pages/admin/UsersManagementPage'));
+const ReviewsReportsPage = lazy(() => import('./pages/admin/ReviewsReportsPage'));
+
+// Client Pages
+const ClientVehiclesPage = lazy(() => import('./pages/client/ClientVehiclesPage'));
+const ClientAppointmentsPage = lazy(() => import('./pages/client/ClientAppointmentsPage'));
+const ClientBookingPage = lazy(() => import('./pages/client/ClientBookingPage'));
+const ClientBillingPage = lazy(() => import('./pages/client/ClientBillingPage'));
+const ClientReviewsPage = lazy(() => import('./pages/client/ClientReviewsPage'));
+
+// Mechanic Pages
+const MechanicTasksPage = lazy(() => import('./pages/mechanic/MechanicTasksPage'));
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Toaster position="top-center" />
+        <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+            {/* Default Landing Page -> Login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <div className="ticks"></div>
+            {/* Auth routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
+            <Route path="/reset-password" element={<PasswordResetPage />} />
+            <Route path="/auth/reset-password" element={<PasswordResetPage />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            {/* Admin Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="appointments" element={<AppointmentsControlPage />} />
+                <Route path="inventory" element={<InventoryPage />} />
+                <Route path="financials" element={<FinancialsPage />} />
+                <Route path="users" element={<UsersManagementPage />} />
+                <Route path="reviews" element={<ReviewsReportsPage />} />
+                {/* Fallback redirect */}
+                <Route path="*" element={<Navigate to="/admin/appointments" replace />} />
+              </Route>
+            </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            {/* Client Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['client']} />}>
+              <Route path="/client" element={<ClientLayout />}>
+                <Route path="vehicles" element={<ClientVehiclesPage />} />
+                <Route path="appointments" element={<ClientAppointmentsPage />} />
+                <Route path="booking" element={<ClientBookingPage />} />
+                <Route path="billing" element={<ClientBillingPage />} />
+                <Route path="reviews" element={<ClientReviewsPage />} />
+                {/* Fallback redirect */}
+                <Route path="*" element={<Navigate to="/client/vehicles" replace />} />
+              </Route>
+            </Route>
+
+            {/* Mechanic Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['mechanic']} />}>
+              <Route path="/mechanic" element={<MechanicLayout />}>
+                <Route path="tasks" element={<MechanicTasksPage />} />
+                {/* Fallback redirect */}
+                <Route path="*" element={<Navigate to="/mechanic/tasks" replace />} />
+              </Route>
+            </Route>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 }
 
-export default App
+export default App;

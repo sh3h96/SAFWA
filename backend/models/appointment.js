@@ -4,7 +4,11 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Appointment extends Model {
     static associate(models) {
-      // Define associations here
+      Appointment.belongsTo(models.User, { as: 'customer', foreignKey: 'client_id' });
+      Appointment.belongsTo(models.Vehicle, { as: 'vehicle', foreignKey: 'vehicle_id' });
+      Appointment.belongsTo(models.User, { as: 'mechanic', foreignKey: 'mechanic_id' });
+      Appointment.hasOne(models.Invoice, { foreignKey: 'appointment_id' });
+      Appointment.hasOne(models.TechnicalReport, { foreignKey: 'appointment_id', as: 'report' });
     }
   }
 
@@ -41,7 +45,7 @@ module.exports = (sequelize) => {
         "allowNull": false
     },
     status: {
-        "type": DataTypes.STRING,
+        type: DataTypes.ENUM('pending', 'awaiting_assignment', 'under_inspection', 'in_progress', 'waiting_parts', 'completed', 'cancelled'),
         "allowNull": true
     },
     scheduled_date: {
