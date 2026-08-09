@@ -5,7 +5,7 @@ module.exports = (sequelize) => {
   class RequiredPart extends Model {
     static associate(models) {
       RequiredPart.belongsTo(models.SparePart, { foreignKey: 'part_id', as: 'partDetails' });
-      RequiredPart.belongsTo(models.TechnicalReport, { foreignKey: 'technical_report_id' });
+      RequiredPart.belongsTo(models.TechnicalReport, { foreignKey: 'technical_report_id', as: 'technicalReport' });
     }
   }
 
