@@ -7,13 +7,10 @@ module.exports = {
   async up (queryInterface, Sequelize) {
     // 1. Users
     const clientsData = Array.from({ length: 5 }).map(() => factories.createFakeUser('client'));
-    // Ensure we have a known client for testing
     clientsData[0].email = 'client@safwa.sa';
 
     const mechanicsData = Array.from({ length: 2 }).map(() => factories.createFakeUser('mechanic'));
-    
     const adminData = [factories.createFakeUser('admin')];
-    // Ensure we have a known admin for testing
     adminData[0].email = 'admin@safwa.sa';
     
     await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
@@ -22,23 +19,22 @@ module.exports = {
     const clients = users.filter(u => u.role === 'client');
     const mechanics = users.filter(u => u.role === 'mechanic');
 
-    if (clients.length === 0 || mechanics.length === 0) return; // safety check
+    if (clients.length === 0 || mechanics.length === 0) return;
 
     // 2. Vehicles
     const vehiclesData = clients.map(client => factories.createFakeVehicle(client.id));
     await queryInterface.bulkInsert('vehicles', vehiclesData, {});
-    const [vehicles] = await queryInterface.sequelize.query(`SELECT id FROM vehicles;`);
+    const [vehicles] = await queryInterface.sequelize.query(`SELECT id, client_id FROM vehicles;`);
 
     // 3. Spare Parts
     const sparePartsData = Array.from({ length: 10 }).map(() => factories.createFakeSparePart());
     await queryInterface.bulkInsert('spare_parts', sparePartsData, {});
     const [parts] = await queryInterface.sequelize.query(`SELECT id FROM spare_parts;`);
 
-    // 4. Appointments
+    // 4. Appointments (Vehicle.client_id directly matched to Appointment.client_id)
     const appointmentsData = vehicles.map((vehicle, index) => {
-      const client = clients[index % clients.length];
       const mechanic = mechanics[index % mechanics.length];
-      return factories.createFakeAppointment(client.id, vehicle.id, mechanic.id);
+      return factories.createFakeAppointment(vehicle.client_id, vehicle.id, mechanic.id);
     });
     await queryInterface.bulkInsert('appointments', appointmentsData, {});
     const [appointments] = await queryInterface.sequelize.query(`SELECT id, mechanic_id, client_id FROM appointments;`);
@@ -60,7 +56,7 @@ module.exports = {
     // 7. Invoices
     const invoicesData = appointments.map(app => factories.createFakeInvoice(app.id));
     await queryInterface.bulkInsert('invoices', invoicesData, {});
-    const [invoices] = await queryInterface.sequelize.query(`SELECT id FROM invoices;`);
+    const [invoices] = await queryInterface.sequelize.query(`SELECT id, total_amount, status FROM invoices;`);
 
     // 8. Invoice Items
     const invoiceItemsData = invoices.flatMap(invoice => {
@@ -71,9 +67,21 @@ module.exports = {
     });
     await queryInterface.bulkInsert('invoice_items', invoiceItemsData, {});
 
-    // 9. Payments
-    const paymentsData = invoices.map(invoice => factories.createFakePayment(invoice.id));
-    await queryInterface.bulkInsert('payments', paymentsData, {});
+    // 9. Payments (Financial Business Logic Consistency)
+    const paymentsData = [];
+    invoices.forEach(invoice => {
+      const total = parseFloat(invoice.total_amount);
+      if (invoice.status === 'paid') {
+        paymentsData.push(factories.createFakePayment(invoice, total));
+      } else if (invoice.status === 'partially_paid') {
+        const partial = Math.round((total * 0.5) * 100) / 100;
+        paymentsData.push(factories.createFakePayment(invoice, partial));
+      }
+      // 'unpaid' receives no payment record
+    });
+    if (paymentsData.length > 0) {
+      await queryInterface.bulkInsert('payments', paymentsData, {});
+    }
 
     // 10. Reviews
     const reviewsData = appointments.map(app => factories.createFakeReview(app.id, app.client_id));
@@ -81,7 +89,6 @@ module.exports = {
   },
 
   async down (queryInterface, Sequelize) {
-    // Delete in reverse order of dependencies
     await queryInterface.bulkDelete('reviews', null, {});
     await queryInterface.bulkDelete('payments', null, {});
     await queryInterface.bulkDelete('invoice_items', null, {});

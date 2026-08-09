@@ -1,7 +1,6 @@
 const { faker } = require('@faker-js/faker');
 
 // A pre-hashed password for 'password123' so we don't slow down seeding with bcrypt
-// This is typical for seeders.
 const defaultPasswordHash = '$2b$10$4IitGBlTUeVQD39z3LVlFuqUzfQ/knLbevrijkORTxcoZzqHUZ042'; // password123
 
 const createFakeUser = (role = 'client') => ({
@@ -10,6 +9,7 @@ const createFakeUser = (role = 'client') => ({
   password: defaultPasswordHash,
   phone: faker.phone.number(),
   role: role,
+  status: 'active',
   created_at: new Date(),
   updated_at: new Date(),
 });
@@ -19,6 +19,8 @@ const createFakeVehicle = (clientId) => ({
   make: faker.vehicle.manufacturer(),
   model: faker.vehicle.model(),
   license_plate: faker.vehicle.vrm(),
+  year: faker.number.int({ min: 2015, max: 2025 }),
+  vin: faker.vehicle.vin(),
   created_at: new Date(),
   updated_at: new Date(),
 });
@@ -28,6 +30,8 @@ const createFakeSparePart = () => ({
   part_number: faker.string.alphanumeric(10).toUpperCase(),
   price: parseFloat(faker.commerce.price({ min: 10, max: 500 })),
   stock_quantity: faker.number.int({ min: 0, max: 100 }),
+  min_stock_level: faker.number.int({ min: 2, max: 10 }),
+  brand: faker.company.name(),
   created_at: new Date(),
   updated_at: new Date(),
 });
@@ -37,7 +41,15 @@ const createFakeAppointment = (clientId, vehicleId, mechanicId) => ({
   vehicle_id: vehicleId,
   mechanic_id: mechanicId,
   problem_description: faker.lorem.sentence(),
-  status: faker.helpers.arrayElement(['pending', 'in-progress', 'completed', 'cancelled']),
+  status: faker.helpers.arrayElement([
+    'pending',
+    'awaiting_assignment',
+    'under_inspection',
+    'in_progress',
+    'waiting_parts',
+    'completed',
+    'cancelled'
+  ]),
   scheduled_date: faker.date.future(),
   created_at: new Date(),
   updated_at: new Date(),
@@ -48,6 +60,11 @@ const createFakeTechnicalReport = (appointmentId, mechanicId) => ({
   mechanic_id: mechanicId,
   diagnostics: faker.lorem.paragraph(),
   mechanic_notes: faker.lorem.sentences(2),
+  odometer: faker.number.int({ min: 10000, max: 250000 }),
+  obd2_codes: faker.helpers.arrayElement(['P0300', 'P0420', 'P0171', 'P0301', null]),
+  visual_notes: faker.lorem.sentence(),
+  repair_plan: faker.lorem.paragraph(),
+  urgency_level: faker.helpers.arrayElement(['low', 'medium', 'high', 'critical']),
   created_at: new Date(),
   updated_at: new Date(),
 });
@@ -81,9 +98,9 @@ const createFakeInvoiceItem = (invoiceId, partId) => ({
   updated_at: new Date(),
 });
 
-const createFakePayment = (invoiceId) => ({
-  invoice_id: invoiceId,
-  amount: parseFloat(faker.commerce.price({ min: 50, max: 500 })),
+const createFakePayment = (invoice, amount) => ({
+  invoice_id: invoice.id,
+  amount: amount !== undefined ? amount : invoice.total_amount,
   payment_method: faker.helpers.arrayElement(['cash', 'credit_card', 'bank_transfer']),
   transaction_id: faker.string.uuid(),
   paid_at: faker.date.recent(),
