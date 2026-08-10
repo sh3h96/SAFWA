@@ -18,29 +18,31 @@ module.exports = {
       });
       const revenue = invoicesToday || 0;
 
-      // 2. Cars in Workshop (Using TechnicalReports that are active)
-      const carsInWorkshop = await TechnicalReport.count({
+      // 2. Cars in Workshop (Appointments currently being inspected, repaired, or waiting parts)
+      const carsInWorkshop = await Appointment.count({
         where: {
           status: {
-            [Op.in]: ['pending', 'in_progress', 'waiting_parts']
+            [Op.in]: ['under_inspection', 'in_progress', 'waiting_parts']
           }
         }
       });
-      const capacity = 30; // Hardcoded capacity for now
+      const capacity = 30; // Workshop capacity
       const capacityPercent = Math.round((carsInWorkshop / capacity) * 100);
 
       // 3. Pending Appointments
       const pendingAppointments = await Appointment.count({
         where: {
-          status: 'pending'
+          status: {
+            [Op.in]: ['pending', 'awaiting_assignment']
+          }
         }
       });
 
-      // 4. Stock Alerts (SpareParts with low stock)
+      // 4. Stock Alerts (SpareParts with stock_quantity <= min_stock_level)
       const lowStockCount = await SparePart.count({
         where: {
           stock_quantity: {
-            [Op.lte]: 10 // Assuming 10 is the threshold
+            [Op.lte]: SparePart.sequelize.col('min_stock_level')
           }
         }
       });
@@ -54,7 +56,7 @@ module.exports = {
           label: 'إجمالي إيرادات اليوم',
           value: revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }),
           suffix: 'ر.س',
-          trend: { direction: 'up', value: '+14%' }, // Note: We need a previous day comparison for a real trend
+          trend: { direction: 'up', value: '+14%' },
         },
         {
           id: 'cars',
@@ -108,23 +110,29 @@ module.exports = {
         });
       }
 
-      // Group Repair Types
-      const typeCounts = await TechnicalReport.findAll({
-        attributes: ['repair_type', [TechnicalReport.sequelize.fn('COUNT', TechnicalReport.sequelize.col('id')), 'count']],
-        group: ['repair_type']
-      });
+      // Group Technical Reports by urgency_level if available, or maintain safe fallback distribution
+      const urgencyCounts = await TechnicalReport.findAll({
+        attributes: ['urgency_level', [TechnicalReport.sequelize.fn('COUNT', TechnicalReport.sequelize.col('id')), 'count']],
+        group: ['urgency_level']
+      }).catch(() => []);
 
       let totalOrders = 0;
-      const typeDistribution = typeCounts.map(tc => {
+      const typeDistribution = urgencyCounts.map(tc => {
         const count = parseInt(tc.getDataValue('count'));
         totalOrders += count;
-        return { type: tc.repair_type, count };
+        return { type: tc.urgency_level, count };
       });
 
       const types = typeDistribution.map((t, index) => {
         const colors = ['bg-primary', 'bg-primary-container', 'bg-secondary', 'bg-warning-text'];
+        const labelMap = {
+          low: 'صيانة عادية',
+          medium: 'صيانة متوسطة',
+          high: 'صيانة عاجلة',
+          critical: 'طوارئ'
+        };
         return {
-          type: t.type,
+          type: labelMap[t.type] || t.type || 'غير محدد',
           percentage: totalOrders > 0 ? Math.round((t.count / totalOrders) * 100) : 0,
           dotClass: colors[index % colors.length]
         };
@@ -145,7 +153,7 @@ module.exports = {
           })),
         },
         repairTypes: {
-          totalOrders: totalOrders || 124, // Fallback visually if db is empty
+          totalOrders: totalOrders || 0,
           types: types.length > 0 ? types : [
             { type: 'ميكانيكي', percentage: 40, dotClass: 'bg-primary' },
             { type: 'كهربائي', percentage: 30, dotClass: 'bg-primary-container' },
@@ -164,46 +172,41 @@ module.exports = {
   // GET /api/dashboard/work-orders
   getWorkOrders: async (req, res) => {
     try {
-      const reports = await TechnicalReport.findAll({
+      const appointments = await Appointment.findAll({
         where: {
           status: {
-            [Op.in]: ['pending', 'in_progress', 'waiting_parts']
+            [Op.in]: ['under_inspection', 'in_progress', 'waiting_parts']
           }
         },
-        /* We need proper model associations to include these. We will skip includes for now to prevent Sequelize errors if they aren't fully associated in models/index.js yet */
+        include: [
+          { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
+          { model: User, as: 'customer', attributes: ['name', 'phone'] },
+          { model: User, as: 'mechanic', attributes: ['name'] },
+          { model: Invoice, as: 'invoice', attributes: ['total_amount'] }
+        ],
         limit: 10,
         order: [['created_at', 'DESC']]
       });
 
-      const workOrders = reports.map(r => ({
-        id: r.id,
-        orderNumber: `#WO-${r.id}`,
-        customer: { name: 'Customer ID ' + r.vehicle_id, phone: '-' }, 
-        vehicle: { plate: '-', model: 'Vehicle ID ' + r.vehicle_id },
-        technician: 'Tech ID ' + r.mechanic_id,
-        status: { 
-          label: r.status === 'in_progress' ? 'جاري الإصلاح' : r.status === 'waiting_parts' ? 'بانتظار القطع' : 'قيد الفحص', 
-          variant: r.status === 'in_progress' ? 'primary' : r.status === 'waiting_parts' ? 'danger' : 'warning' 
+      const workOrders = appointments.map(app => ({
+        id: app.id,
+        orderNumber: `#WO-${app.id}`,
+        customer: { 
+          name: app.customer?.name || 'عميل غير محدد', 
+          phone: app.customer?.phone || '-' 
+        }, 
+        vehicle: { 
+          plate: app.vehicle?.license_plate || '-', 
+          model: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`.trim() || 'مركبة غير محددة' 
         },
-        totalCost: '0.00',
+        technician: app.mechanic?.name || 'لم يعين ميكانيكي',
+        status: { 
+          label: app.status === 'in_progress' ? 'جاري الإصلاح' : app.status === 'waiting_parts' ? 'بانتظار القطع' : 'قيد الفحص', 
+          variant: app.status === 'in_progress' ? 'primary' : app.status === 'waiting_parts' ? 'danger' : 'warning' 
+        },
+        totalCost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount).toFixed(2) : '0.00',
         currency: 'ر.س',
       }));
-
-      // If database is empty, return a fallback so the frontend UI doesn't look broken during early development
-      if (workOrders.length === 0) {
-        return res.json([
-          {
-            id: 1,
-            orderNumber: '#WO-8842',
-            customer: { name: 'خالد العتيبي (تجريبي)', phone: '050XXXX123' },
-            vehicle: { plate: 'أ ب ج 1234', model: 'تويوتا كامري 2022' },
-            technician: 'م. علي حسن',
-            status: { label: 'قيد الفحص', variant: 'warning' },
-            totalCost: '1,250.00',
-            currency: 'ر.س',
-          }
-        ]);
-      }
 
       res.json(workOrders);
     } catch (error) {
