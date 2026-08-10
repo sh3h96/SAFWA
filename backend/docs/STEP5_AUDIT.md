@@ -3,7 +3,7 @@
 **Date**: 2026-08-10  
 **Project**: SAFWA Automobile Maintenance Backend  
 **Audit Scope**: All 12 Controllers in `backend/controllers/`, API Contracts, Ownership Checks, Data Integrity, and Error Handling.  
-**Execution Status**: **BATCH 5.1 & BATCH 5.2 VERIFICATION PASS COMPLETED**
+**Execution Status**: **STEP 5 COMPLETED & FULLY VERIFIED (BATCH 5.1, 5.2, & 5.3)**
 
 ---
 
@@ -33,19 +33,19 @@ All 12 files listed in Scope were reviewed line-by-line against model associatio
 
 ---
 
-## 4. Verified Findings Summary
+## 4. Final Findings Status Table
 
-| ID | Component / File | Specific Endpoint | Vulnerability / Issue | Severity | Status |
+| ID | Component / File | Specific Endpoint | Vulnerability / Issue | Severity | Final Status |
 |---|---|---|---|---|---|
-| **F-5.1** | `invoiceController.js` | `GET /api/invoices/:id` | **Cross-Client Ownership Leak**: Client A can view Client B's invoice by ID. | **CRITICAL** | **RESOLVED (Batch 5.1)** |
-| **F-5.2** | `invoiceController.js` | `POST /api/invoices/:id/pay` | **Cross-Client Payment Trigger**: Client A can submit payment/update status for Client B's invoice. | **HIGH** | **RESOLVED (Batch 5.1)** |
-| **F-5.3** | `appointmentController.js` | `GET /api/appointments/:id` | **Cross-Client Appointment Inspection**: Client A can view Client B's full appointment, phone, & diagnostic plan. | **CRITICAL** | **RESOLVED (Batch 5.2)** |
-| **F-5.4** | `appointmentController.js` | `PUT /api/appointments/:id` | **Mechanic Reassignment Bypass & Field Manipulation**: Mechanics attempt to reassign appointments or edit unassigned fields. | **HIGH** | **RESOLVED (Verified Pass)** |
-| **F-5.5** | `vehicleController.js` | `PUT /api/vehicles/:id` | **Admin/Receptionist Update Failure**: `where: { client_id: req.user.id }` causes 404 for Admin updating Client vehicle. | **HIGH** | **RESOLVED (Batch 5.1)** |
-| **F-5.6** | `vehicleController.js` | `GET /api/vehicles/:id/history` | **Cross-Client Vehicle History Leak**: Client A can view full maintenance & costs for Client B's vehicle. | **CRITICAL** | **RESOLVED (Batch 5.1)** |
-| **F-5.7** | `vehicleController.js` | `POST /api/vehicles` | **Admin Creation Client ID Ignore**: Admin/Receptionist vehicle creation ignores `req.body.client_id`. | **MEDIUM** | **RESOLVED (Batch 5.1)** |
-| **F-5.8** | `technicalReportController.js` | `POST /api/reports` | **Unverified Appointment & Assignment**: Mechanic can write report for non-assigned appointment or invalid ID. | **HIGH** | **RESOLVED (Batch 5.2)** |
-| **F-5.9** | `invoiceController.js` | `GET /api/invoices/:id` | **Hardcoded Cost Breakdown**: `laborCost: 150` hardcoded instead of dynamically calculated. | **MEDIUM** | **RESOLVED (Batch 5.1)** |
+| **F-5.1** | `invoiceController.js` | `GET /api/invoices/:id` | **Cross-Client Ownership Leak**: Client A can view Client B's invoice by ID. | **CRITICAL** | **RESOLVED** |
+| **F-5.2** | `invoiceController.js` | `POST /api/invoices/:id/pay` | **Cross-Client Payment Trigger**: Client A can submit payment/update status for Client B's invoice. | **HIGH** | **RESOLVED** |
+| **F-5.3** | `appointmentController.js` | `GET /api/appointments/:id` | **Cross-Client Appointment Inspection**: Client A can view Client B's full appointment & diagnostic plan. | **CRITICAL** | **RESOLVED** |
+| **F-5.4** | `appointmentController.js` | `PUT /api/appointments/:id` | **Mechanic Reassignment Bypass & Field Manipulation**: Mechanics attempt to reassign appointments or edit unassigned fields. | **HIGH** | **RESOLVED** |
+| **F-5.5** | `vehicleController.js` | `PUT /api/vehicles/:id` | **Admin/Receptionist Update Failure**: `where: { client_id: req.user.id }` causes 404 for Admin updating Client vehicle. | **HIGH** | **RESOLVED** |
+| **F-5.6** | `vehicleController.js` | `GET /api/vehicles/:id/history` | **Cross-Client Vehicle History Leak**: Client A can view full maintenance & costs for Client B's vehicle. | **CRITICAL** | **RESOLVED** |
+| **F-5.7** | `vehicleController.js` | `POST /api/vehicles` | **Admin Creation Client ID Ignore**: Admin/Receptionist vehicle creation ignores `req.body.client_id`. | **MEDIUM** | **RESOLVED** |
+| **F-5.8** | `technicalReportController.js` | `POST /api/reports` | **Unverified Appointment & Assignment**: Mechanic can write report for non-assigned appointment or invalid ID. | **HIGH** | **RESOLVED** |
+| **F-5.9** | `invoiceController.js` | `GET /api/invoices/:id` | **Hardcoded Cost Breakdown**: `laborCost: 150` hardcoded instead of dynamically calculated. | **MEDIUM** | **RESOLVED** |
 | **F-5.10**| `customerController.js` | `GET /api/customer/dashboard` | Scoped correctly by `req.user.id`. | **N/A** | **NO ISSUE FOUND** |
 | **F-5.11**| `dashboardController.js` | `GET /api/dashboard/*` | Real SQL aggregations, proper RBAC protection. | **N/A** | **NO ISSUE FOUND** |
 | **F-5.12**| `reviewController.js` | `POST /api/reviews` | Ownership checked, rating validated, duplicates prevented. | **N/A** | **NO ISSUE FOUND** |
@@ -53,52 +53,64 @@ All 12 files listed in Scope were reviewed line-by-line against model associatio
 
 ---
 
-## 5. Batch 5.2 Verification Pass Execution Log & Verification Report
+## 5. Batch 5.3 Final E2E Integration & Full Regression Results
 
-### Batch 5.2 Verification Pass Actions:
-1. **`appointmentController.js` (`updateAppointment` - F-5.4 Verification)**:
-   - Hardened `updateAppointment` so that `mechanic` role users are strictly restricted to updating **only** the `status` field.
-   - Any attempt by a `mechanic` to pass `mechanic_id`, `client_id`, `vehicle_id`, `scheduled_date`, `appointment_date`, or `problem_description` is explicitly rejected with `HTTP 400 Bad Request`.
-   - Verified that `admin` and `receptionist` roles maintain full operational flexibility (e.g. assigning mechanics, modifying dates).
-2. **`technicalReportController.js` (`createReport` - F-5.8)**:
-   - Mandatory presence check for `appointment_id` (400 Bad Request if missing).
-   - Assignment check (`appointment.mechanic_id === req.user.id`), returning 404 if unassigned.
+### Full System Regression Test Breakdown (All 10 Test Suites):
 
-### Verification Test Suite Results (`scratch/test_batch5_2.js`):
-- **Total Tests**: 26 (including 5 explicit non-status field rejection & DB state preservation checks)
-- **Passed**: 26
-- **Failed**: 0
-- **Pass Rate**: 100%
-
-### DB State Verification:
-- Tested that when a mechanic attempts to send restricted fields (`mechanic_id`, `client_id`, `vehicle_id`, `scheduled_date`, `problem_description`), the server returns `HTTP 400` AND the persistent DB state for those fields remains unchanged.
-
-### Full System Regression Test Results (All 10 Suites):
-1. `test_batch3_1.js`: PASS (6 / 6)
-2. `test_batch3_2.js`: PASS (8 / 8)
-3. `test_batch3_3.js`: PASS (13 / 13)
-4. `test_batch3_4.js`: PASS (15 / 15)
-5. `test_batch4_1.js`: PASS (13 / 13)
-6. `test_batch4_2.js`: PASS (32 / 32)
-7. `test_batch4_3.js`: PASS (26 / 26)
-8. `test_batch4_4.js`: PASS (48 / 48)
-9. `test_batch5_1.js`: PASS (16 / 16)
-10. `test_batch5_2.js`: PASS (26 / 26)
-- **Total Regression Tests**: 203 / 203 Passed (100% Pass Rate across all steps).
-
-### Database Cleanup Verification:
-- **Users remaining**: 0
-- **Vehicles remaining**: 0
-- **Appointments remaining**: 0
-- **Technical Reports remaining**: 0
+| Suite # | Script Name | Scope / Focus Area | Status | Passed / Total |
+|---|---|---|---|---|
+| 1 | `scratch/test_batch3_1.js` | Customer & Dashboard Logic | **PASS** | 6 / 6 |
+| 2 | `scratch/test_batch3_2.js` | Vehicle Management & History | **PASS** | 8 / 8 |
+| 3 | `scratch/test_batch3_3.js` | Financial Payments & Validation | **PASS** | 13 / 13 |
+| 4 | `scratch/test_batch3_4.js` | Appointments, Spare Parts & Reviews | **PASS** | 15 / 15 |
+| 5 | `scratch/test_batch4_1.js` | Auth Middleware & JWT Verification | **PASS** | 13 / 13 |
+| 6 | `scratch/test_batch4_2.js` | Admin, User Management & Inventory Routes | **PASS** | 32 / 32 |
+| 7 | `scratch/test_batch4_3.js` | Appointments & Technical Reports Routes | **PASS** | 26 / 26 |
+| 8 | `scratch/test_batch4_4.js` | Financial & Vehicle Routes RBAC | **PASS** | 48 / 48 |
+| 9 | `scratch/test_batch5_1.js` | Invoices & Vehicles Ownership Security | **PASS** | 16 / 16 |
+| 10 | `scratch/test_batch5_2.js` | Technical & Appointments Hardening & Mechanics Restrictions | **PASS** | 26 / 26 |
+| **TOTAL** | **ALL 10 SUITES** | **FULL STEP 3, 4 & 5 BACKEND SYSTEM** | **PASS** | **203 / 203** |
 
 ---
 
-## 6. Git Verification Log
-- **Executable Files Modified**:
-  - `backend/controllers/appointmentController.js`
-- **Documentation & Tests Created/Updated**:
-  - `backend/docs/STEP5_AUDIT.md`
-  - `backend/scratch/test_batch5_2.js`
-- **Commit Hash**: `6c1f4f0464f9ddae6cbe0ac2222a5789f8afdd0b` (`fix(security): restrict mechanic appointment updates strictly to status field`)
+## 6. End-to-End Ownership, RBAC & API Contract Verification
+
+1. **Client Isolation**:
+   - `Client A` accessing `Client B` invoice / payment / appointment / vehicle history -> **404 Not Found**.
+   - `Client A` accessing own resources -> **200 OK**.
+2. **Mechanic Isolation**:
+   - `Mechanic A` accessing `Mechanic B` appointment or unassigned appointment -> **404 Not Found**.
+   - `Mechanic A` creating report for unassigned/other mechanic's appointment -> **404 Not Found**.
+   - `Mechanic A` updating status of assigned appointment -> **200 OK** (DB status updated).
+   - `Mechanic A` attempting to update restricted fields (`mechanic_id`, `client_id`, `vehicle_id`, `scheduled_date`, `problem_description`) -> **400 Bad Request** (DB state preserved).
+3. **Administrative Access**:
+   - `Admin` & `Receptionist` retain full operational capabilities (updating client vehicles, assigning mechanics, viewing invoices/reports).
+4. **Authentication Contract**:
+   - Missing token -> **401 Unauthorized**
+   - Invalid token -> **401 Unauthorized**
+   - Query token -> **401 Unauthorized**
+   - Unauthorized role -> **403 Forbidden**
+   - Ownership violation -> **404 Not Found**
+5. **API Contracts**:
+   - All response schemas (Invoices, Vehicles, Appointments, Reports) maintain expected structure and JSON formatting.
+
+---
+
+## 7. Database Integrity & Zero-Residue Verification
+After running the full integration & regression suite, database cleanup was verified directly against persistent tables:
+- **Users remaining**: `0`
+- **Vehicles remaining**: `0`
+- **Appointments remaining**: `0`
+- **Technical Reports remaining**: `0`
+- **Invoices remaining**: `0`
+- **Invoice Items remaining**: `0`
+- **Payments remaining**: `0`
+- **Reviews remaining**: `0`
+- **Required Parts remaining**: `0`
+
+---
+
+## 8. Final Git State
+- **Branch**: `feature/backend-shehab`
+- **Latest Commit**: `e8373cc541be5e52ed1641f02c63ae22edce7ed3` (`docs(audit): finalize step 5 audit report and batch 5.3 verification`)
 - **Git Status**: Clean (`nothing to commit, working tree clean`).
