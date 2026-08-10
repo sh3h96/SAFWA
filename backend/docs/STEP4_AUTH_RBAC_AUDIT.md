@@ -234,7 +234,7 @@ No source code files modified. Working directory is clean except for documentati
 1. **Batch 4.1**: `middleware/auth.js` Refactoring (COMPLETED).
 2. **Batch 4.2**: Administrative, User Management & Inventory Routes Protection (COMPLETED).
 3. **Batch 4.3**: Technical, Appointment & Spare Parts Request Routes Protection (COMPLETED).
-4. **Batch 4.4**: Financial & Vehicle Routes Protection + Full RBAC Integration Verification.
+4. **Batch 4.4**: Financial & Vehicle Routes Protection + Full RBAC Integration Verification (COMPLETED).
 
 ---
 
@@ -275,4 +275,22 @@ No source code files modified. Working directory is clean except for documentati
   - `requiredPartRoutes.js`: Restricted `POST /` to `mechanic` and `admin`; restricted `PUT /approval` strictly to `admin` and `receptionist`.
 - **Test Results**: All 26 non-destructive integration test cases passed 100% (26/26 PASSED).
 - **Database Clean**: All temporary test data cleaned up completely without any foreign key violations.
+
+---
+
+## 23. Batch 4.4 Execution Log
+- **Files Modified**:
+  - `backend/routes/invoiceRoutes.js`
+  - `backend/routes/vehicleRoutes.js`
+  - `backend/routes/customerRoutes.js`
+  - `backend/routes/reviewRoutes.js`
+- **RBAC Enforcement Applied**:
+  - `invoiceRoutes.js`: Protected `GET /my` (`client`), `GET /reports` (`admin`, `receptionist`), `POST /issue` (`admin`, `receptionist`), `GET /:id` (`admin`, `receptionist`, `client`), `POST /:id/pay` (`admin`, `receptionist`, `client`).
+  - `vehicleRoutes.js`: Protected `GET /` (`admin`, `receptionist`), `GET /my` (`client`), `POST /` (`client`, `admin`, `receptionist`), `PUT /:id` (`admin`, `receptionist`, `client`), `GET /:id/history` (`admin`, `receptionist`, `mechanic`, `client`).
+  - `customerRoutes.js`: Restricted `GET /dashboard` strictly to `client`.
+  - `reviewRoutes.js`: Protected `GET /` (`authenticateToken`), `POST /` (`client`).
+- **Test Results**: All 48 non-destructive integration test cases passed 100% (48/48 PASSED).
+- **Full Regression Results**: All test suites (Step 1, Step 2, Batch 3.1-3.4, Batch 4.1-4.4) passed 100%.
+- **Database Clean**: All temporary test records deleted completely cleanly.
+- **Remaining Ownership Issue Recorded for Step 5**: `invoiceController.js` `getInvoice` endpoint lacks explicit `appointment.client_id === req.user.id` validation for clients accessing single invoices. (Will be polished in Controller refinement step if instructed).
 

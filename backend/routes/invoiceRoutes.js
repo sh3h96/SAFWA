@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoiceController');
-const auth = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
-router.get('/my', auth, invoiceController.getMyInvoices);
-router.get('/reports', auth, invoiceController.getPendingReports);
-router.post('/issue', auth, invoiceController.issueInvoice);
-router.get('/:id', auth, invoiceController.getInvoice);
-router.post('/:id/pay', auth, invoiceController.payInvoice);
+// Protected Invoice routes (RBAC Restricted)
+router.get('/my', authenticateToken, requireRole('client'), invoiceController.getMyInvoices);
+router.get('/reports', authenticateToken, requireRole('admin', 'receptionist'), invoiceController.getPendingReports);
+router.post('/issue', authenticateToken, requireRole('admin', 'receptionist'), invoiceController.issueInvoice);
+router.get('/:id', authenticateToken, requireRole('admin', 'receptionist', 'client'), invoiceController.getInvoice);
+router.post('/:id/pay', authenticateToken, requireRole('admin', 'receptionist', 'client'), invoiceController.payInvoice);
 
 module.exports = router;
