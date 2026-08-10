@@ -264,6 +264,13 @@ module.exports = {
         return res.status(404).json({ message: 'Appointment not found' });
       }
 
+      // Assignment Verification: Mechanics can only update appointments assigned to them
+      if (req.user && req.user.role === 'mechanic') {
+        if (appointment.mechanic_id !== req.user.id) {
+          return res.status(404).json({ message: 'Appointment not found' });
+        }
+      }
+
       const { status, mechanic_id } = req.body;
       
       if (status !== undefined) {
@@ -274,6 +281,11 @@ module.exports = {
       }
 
       if (mechanic_id !== undefined) {
+        // Mechanics are not allowed to reassign appointments to other mechanics
+        if (req.user && req.user.role === 'mechanic' && mechanic_id !== req.user.id) {
+          return res.status(400).json({ message: 'Mechanics cannot reassign appointments' });
+        }
+
         if (mechanic_id !== null) {
           const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic' } });
           if (!mechanic) {
@@ -318,6 +330,20 @@ module.exports = {
 
       if (!appointment) {
         return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      // Ownership Verification: Client can only view their own appointment
+      if (req.user && req.user.role === 'client') {
+        if (appointment.client_id !== req.user.id) {
+          return res.status(404).json({ message: 'Appointment not found' });
+        }
+      }
+
+      // Assignment Verification: Mechanic can only view appointments assigned to them
+      if (req.user && req.user.role === 'mechanic') {
+        if (appointment.mechanic_id !== req.user.id) {
+          return res.status(404).json({ message: 'Appointment not found' });
+        }
       }
 
       let requestedParts = [];
