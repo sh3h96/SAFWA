@@ -17,13 +17,13 @@
 - **[x] Step 6: Server Startup & Environment Refactoring**
   - **[x] Step 6 Audit**: Documented in `docs/STEP6_AUDIT.md`
   - **[x] Batch 6.1**: Refactored `server.js` with module export (`module.exports = app`), `require.main === module` guard, DB authentication test, fallback 404 JSON handler, and global error middleware. (Commit `fb2469f`)
-- **[ ] Step 7: End-to-End Testing & Final Verification**
+- **[/] Step 7: End-to-End Testing & Final Verification**
+  - **[x] Step 7.1**: Audit & E2E Test Planning (Documented in `docs/STEP7_AUDIT.md`)
+  - **[ ] Step 7.2**: Master E2E Golden Thread Execution & Full System Regression Verification
 
 ---
 
-### Step 6 Resolved Findings (`docs/STEP6_AUDIT.md`)
-1. **F-6.1 (App Export)**: Exported `app` in `server.js` via `module.exports = app`.
-2. **F-6.2 (Prevent Auto Startup on Require)**: Server port binding & DB sync guarded with `if (require.main === module)`.
-3. **F-6.3 (DB Connection Check)**: Startup sequence checks `sequelize.authenticate()` before `sequelize.sync()`.
-4. **F-6.4 (Global Error Middleware)**: Added Express 4-parameter error handler returning JSON HTTP 500.
-5. **F-6.5 (JSON 404 Fallback)**: Added fallback handler for unmatched API routes returning HTTP 404 JSON.
+### Step 7.1 Audit & Test Plan Summary (`docs/STEP7_AUDIT.md`)
+1. **Existing Test Inventory**: 209 tests across 11 test suites (100% pass rate).
+2. **E2E Coverage Matrix**: Complete coverage across Auth, RBAC, Resource Ownership, Vehicle/Appointment/Report/Invoice/Review lifecycles, Server Startup, and Database Integrity.
+3. **Identified Gap**: Unified Master E2E Golden Thread test suite (`scratch/test_batch7_1.js`) validating the contiguous multi-role repair order lifecycle from registration to final review in a single flow.
