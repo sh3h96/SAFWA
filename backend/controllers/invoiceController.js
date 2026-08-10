@@ -1,11 +1,10 @@
-const { Invoice, InvoiceItem, Payment, User, Vehicle, Appointment, TechnicalReport } = require('../models');
+const { Invoice, InvoiceItem, Payment, User, Vehicle, Appointment, TechnicalReport, RequiredPart, SparePart, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 module.exports = {
   // GET /api/invoices/reports
   getPendingReports: async (req, res) => {
     try {
-      const { RequiredPart, SparePart } = require('../models');
-      const { Op } = require('sequelize');
       const { search } = req.query;
 
       const whereClause = {};
@@ -16,9 +15,7 @@ module.exports = {
           { '$vehicle.license_plate$': { [Op.like]: `%${search}%` } }
         ];
         
-        // Only search by ID if it's a number to avoid DB casting errors
         if (!isNaN(search) && search.trim() !== '') {
-          // You could also parse 'REP-69' into '69' if needed:
           const numericId = search.replace(/\D/g, '');
           if (numericId) {
             searchConditions.push({ id: numericId });
@@ -35,13 +32,12 @@ module.exports = {
         whereClause[Op.or] = searchConditions;
       }
       
-      // Find all appointments that have a technical report
       const appointments = await Appointment.findAll({
         where: whereClause,
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
           { model: User, as: 'customer', attributes: ['name', 'phone'] },
-          { model: Invoice, as: 'Invoice' },
+          { model: Invoice, as: 'invoice' },
           { 
             model: TechnicalReport, 
             as: 'report',
@@ -63,10 +59,10 @@ module.exports = {
         let approvedPartsCost = 0;
         let invoice_id = null;
         
-        if (app.Invoice) {
+        if (app.invoice) {
           status = 'invoiced';
-          amount = parseFloat(app.Invoice.total_amount);
-          invoice_id = app.Invoice.id;
+          amount = parseFloat(app.invoice.total_amount);
+          invoice_id = app.invoice.id;
         }
 
         if (app.report && app.report.requestedParts) {
@@ -81,7 +77,7 @@ module.exports = {
         return {
           id: `REP-${app.id}`,
           appointment_id: app.id,
-          vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`,
+          vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`.trim(),
           client: app.customer?.name || 'غير معروف',
           date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
           status,
@@ -90,14 +86,6 @@ module.exports = {
           invoice_id
         };
       });
-
-      // If empty DB, fallback to mock data
-      if (reports.length === 0) {
-        return res.json([
-          { id: 'REP-1022', appointment_id: 1022, vehicle: 'هيونداي سوناتا', client: 'عمر خالد', date: 'اليوم', status: 'pending_invoice' },
-          { id: 'REP-1019', appointment_id: 1019, vehicle: 'فورد تورس', client: 'علي محمد', date: 'أمس', status: 'invoiced', amount: 850, invoice_id: '1019' },
-        ]);
-      }
 
       res.json(reports);
     } catch (error) {
@@ -110,7 +98,29 @@ module.exports = {
   issueInvoice: async (req, res) => {
     try {
       const { appointment_id, labor_cost, parts_cost } = req.body;
-      const total_amount = Number(labor_cost) + Number(parts_cost);
+
+      if (!appointment_id) {
+        return res.status(400).json({ message: 'appointment_id is required' });
+      }
+
+      const appointment = await Appointment.findByPk(appointment_id);
+      if (!appointment) {
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      // Check if invoice already exists for this appointment
+      const existingInvoice = await Invoice.findOne({ where: { appointment_id } });
+      if (existingInvoice) {
+        return res.status(400).json({ message: 'Invoice already exists for this appointment', invoice: existingInvoice });
+      }
+
+      const laborCostNum = Math.max(0, parseFloat(labor_cost) || 0);
+      const partsCostNum = Math.max(0, parseFloat(parts_cost) || 0);
+      const total_amount = laborCostNum + partsCostNum;
+
+      if (total_amount <= 0) {
+        return res.status(400).json({ message: 'Invoice total amount must be greater than zero' });
+      }
 
       const invoice = await Invoice.create({
         appointment_id,
@@ -119,7 +129,7 @@ module.exports = {
         issued_at: new Date()
       });
 
-      res.json({ message: 'Invoice issued successfully', invoice });
+      res.status(201).json({ message: 'Invoice issued successfully', invoice });
     } catch (error) {
       console.error('Error issuing invoice:', error);
       res.status(500).json({ message: 'Server error' });
@@ -129,77 +139,86 @@ module.exports = {
   // GET /api/invoices/:id
   getInvoice: async (req, res) => {
     try {
-      const invoice = await Invoice.findByPk(req.params.id);
+      const invoice = await Invoice.findByPk(req.params.id, {
+        include: [
+          {
+            model: Appointment,
+            as: 'appointment',
+            include: [
+              { model: User, as: 'customer', attributes: ['name', 'phone'] },
+              { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] }
+            ]
+          },
+          {
+            model: InvoiceItem,
+            as: 'items',
+            include: [{ model: SparePart, as: 'part' }]
+          },
+          {
+            model: Payment,
+            as: 'payments'
+          }
+        ]
+      });
 
       if (!invoice) {
-        // Fallback for empty DB during development
-        return res.json({
-          invoiceId: req.params.id,
-          status: 'غير مسددة',
-          vatId: '300012345600003',
-          qrCodeText: 'SAFWA SECURE PAY',
-          customer: { name: 'محمد العتيبي (وهمي)', address: 'الرياض', city: 'الرياض', phone: '+966 50 XXX XXXX' },
-          vehicle: { make: 'Lexus', model: 'ES350 - 2024', plateNumber: 'أ ب ج 1234' },
-          costs: {
-            laborCost: 250,
-            partsCost: 180,
-            discount: 10,
-            discountAmount: 43
-          },
-          totalAmount: 387,
-          items: [
-            { id: 'item_1', name: 'زيت محرك', description: 'تغيير كامل', quantity: 4, unitPrice: 45.00 }
-          ],
-          vatRate: 0.15,
-          loyaltyPoints: 13,
-          transactionRef: '#TX-55291-AZ',
-          transactionDate: new Date().toISOString().split('T')[0]
-        });
+        return res.status(404).json({ message: 'Invoice not found' });
       }
 
-      // Normally we would query InvoiceItems related to this invoice
-      const invoiceItems = await InvoiceItem.findAll({ where: { invoice_id: invoice.id } }).catch(() => []);
+      const totalPaid = (invoice.payments || []).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const totalAmount = parseFloat(invoice.total_amount);
+      const remainingBalance = Math.max(0, totalAmount - totalPaid);
 
-      // Fetch appointment to get customer and vehicle details
-      const appointment = await Appointment.findByPk(invoice.appointment_id, {
-        include: [
-          { model: User, as: 'customer', attributes: ['name', 'phone'] },
-          { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] }
-        ]
-      }).catch(() => null);
+      const statusMap = {
+        paid: 'مدفوعة',
+        partially_paid: 'مدفوعة جزئياً',
+        unpaid: 'غير مسددة'
+      };
 
+      const appointment = invoice.appointment;
       const invoiceData = {
         invoiceId: invoice.id,
-        status: invoice.status === 'paid' ? 'مدفوعة' : 'غير مسددة',
+        status: statusMap[invoice.status] || 'غير مسددة',
+        rawStatus: invoice.status,
         vatId: '300012345600003',
         qrCodeText: 'SAFWA SECURE PAY',
         customer: {
-          name: appointment && appointment.customer ? appointment.customer.name : 'عميل غير محدد',
+          name: appointment?.customer?.name || 'عميل غير محدد',
           address: 'العنوان غير محدد',
           city: 'المدينة غير محددة',
-          phone: appointment && appointment.customer ? appointment.customer.phone : '-'
+          phone: appointment?.customer?.phone || '-'
         },
         vehicle: {
-          make: appointment && appointment.vehicle ? appointment.vehicle.make : 'غير محدد',
-          model: appointment && appointment.vehicle ? appointment.vehicle.model : 'غير محدد',
-          plateNumber: appointment && appointment.vehicle ? appointment.vehicle.license_plate : 'غير محدد'
+          make: appointment?.vehicle?.make || 'غير محدد',
+          model: appointment?.vehicle?.model || 'غير محدد',
+          plateNumber: appointment?.vehicle?.license_plate || 'غير محدد'
         },
         costs: {
           laborCost: 150,
-          partsCost: parseFloat(invoice.total_amount) - 150 + 30, // dummy logic
-          discount: 10,
-          discountAmount: 30
+          partsCost: Math.max(0, totalAmount - 150),
+          discount: 0,
+          discountAmount: 0
         },
-        totalAmount: parseFloat(invoice.total_amount),
-        items: invoiceItems.map(item => ({
+        totalAmount,
+        totalPaid,
+        remainingBalance,
+        items: (invoice.items || []).map(item => ({
           id: item.id,
           name: item.description,
-          description: '-',
+          description: item.part?.name || '-',
           quantity: item.quantity,
-          unitPrice: parseFloat(item.unit_price)
+          unitPrice: parseFloat(item.unit_price),
+          totalPrice: parseFloat(item.total_price)
+        })),
+        payments: (invoice.payments || []).map(p => ({
+          id: p.id,
+          amount: parseFloat(p.amount),
+          paymentMethod: p.payment_method,
+          transactionId: p.transaction_id,
+          paidAt: p.paid_at
         })),
         vatRate: 0.15,
-        loyaltyPoints: Math.floor(parseFloat(invoice.total_amount) / 100),
+        loyaltyPoints: Math.floor(totalAmount / 100),
         transactionRef: `#TX-${invoice.id}`,
         transactionDate: new Date(invoice.created_at).toISOString().split('T')[0]
       };
@@ -214,24 +233,71 @@ module.exports = {
   // POST /api/invoices/:id/pay
   payInvoice: async (req, res) => {
     try {
-      const { amount_paid, payment_method } = req.body;
-      const invoice = await Invoice.findByPk(req.params.id);
+      const paymentInput = req.body.amount !== undefined ? req.body.amount : req.body.amount_paid;
+      const paymentAmount = parseFloat(paymentInput);
+
+      if (isNaN(paymentAmount) || !isFinite(paymentAmount) || paymentAmount <= 0) {
+        return res.status(400).json({ message: 'Invalid payment amount. Amount must be a positive number.' });
+      }
+
+      const invoice = await Invoice.findByPk(req.params.id, {
+        include: [{ model: Payment, as: 'payments' }]
+      });
 
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
       }
 
-      await Payment.create({
-        invoice_id: invoice.id,
-        amount_paid: amount_paid || invoice.total_amount,
-        payment_method: payment_method || 'credit_card',
-        payment_date: new Date()
-      });
+      const existingPaid = (invoice.payments || []).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const totalAmount = parseFloat(invoice.total_amount);
+      const remainingBalance = Math.max(0, totalAmount - existingPaid);
 
-      invoice.status = 'paid';
-      await invoice.save();
+      if (remainingBalance <= 0.001) {
+        return res.status(400).json({ message: 'Invoice is already fully paid' });
+      }
 
-      res.json({ message: 'Payment processed successfully', invoice });
+      if (paymentAmount > remainingBalance + 0.01) {
+        return res.status(400).json({ 
+          message: `Payment amount (${paymentAmount}) exceeds remaining balance (${remainingBalance.toFixed(2)})`,
+          remainingBalance
+        });
+      }
+
+      const payment_method = req.body.payment_method || 'credit_card';
+
+      // Perform inside Sequelize Transaction for financial safety
+      const t = await sequelize.transaction();
+      try {
+        const newPayment = await Payment.create({
+          invoice_id: invoice.id,
+          amount: paymentAmount,
+          payment_method,
+          paid_at: new Date()
+        }, { transaction: t });
+
+        const newTotalPaid = existingPaid + paymentAmount;
+        let newStatus = 'unpaid';
+        if (newTotalPaid >= totalAmount - 0.01) {
+          newStatus = 'paid';
+        } else if (newTotalPaid > 0) {
+          newStatus = 'partially_paid';
+        }
+
+        await invoice.update({ status: newStatus }, { transaction: t });
+        await t.commit();
+
+        return res.json({
+          message: 'Payment processed successfully',
+          payment: newPayment,
+          invoiceStatus: newStatus,
+          totalAmount,
+          totalPaid: newTotalPaid,
+          remainingBalance: Math.max(0, totalAmount - newTotalPaid)
+        });
+      } catch (err) {
+        await t.rollback();
+        throw err;
+      }
     } catch (error) {
       console.error('Error processing payment:', error);
       res.status(500).json({ message: 'Server error' });
@@ -244,6 +310,7 @@ module.exports = {
       const invoices = await Invoice.findAll({
         include: [{
           model: Appointment,
+          as: 'appointment',
           required: true,
           where: { client_id: req.user.id },
           include: [{
@@ -256,8 +323,8 @@ module.exports = {
       });
 
       const formattedInvoices = invoices.map(inv => {
-        const vehicle = inv.Appointment && inv.Appointment.vehicle 
-          ? `${inv.Appointment.vehicle.make} ${inv.Appointment.vehicle.model}` 
+        const vehicle = inv.appointment && inv.appointment.vehicle 
+          ? `${inv.appointment.vehicle.make} ${inv.appointment.vehicle.model}` 
           : 'مركبة غير محددة';
           
         return {
@@ -265,8 +332,8 @@ module.exports = {
           originalId: inv.id,
           date: new Date(inv.created_at).toLocaleDateString('ar-SA'),
           amount: parseFloat(inv.total_amount),
-          status: inv.status, // 'unpaid' or 'paid'
-          description: 'صيانة دورية وإصلاح', // mock description for now
+          status: inv.status,
+          description: inv.appointment?.problem_description || 'صيانة دورية وإصلاح',
           vehicle
         };
       });

@@ -326,4 +326,45 @@ Batch 3.4: Appointments, Inventory, Reviews & User Controllers Polish
 - **Ownership Verification**: Owner update succeeded (200 OK); unauthorized client update rejected (404 Not Found).
 - **Regression Check**: Batch 3.1 endpoints (`getDashboard`, `getMetrics`) passed 100%.
 
+---
+
+## 16. Batch 3.3 Execution & Verification Log
+
+### Files Modified
+- `backend/controllers/invoiceController.js`
+
+### Changes Implemented
+1. **`invoiceController.payInvoice`**:
+   - Replaced invalid column names (`amount_paid`, `payment_date`) with correct DB schema columns (`amount`, `paid_at`).
+   - Implemented dynamic calculation of existing payments (`SUM(payments.amount)`).
+   - Enforced strict financial validation: rejected `NaN`, negative, zero, and overpayment (`paymentAmount > remainingBalance`) with HTTP 400.
+   - Enforced accurate status logic: `unpaid`, `partially_paid`, `paid`.
+   - Preserved all historical payments without overwriting or deleting old payments.
+   - Wrapped `Payment.create()` and `Invoice.update()` in a Sequelize Transaction (`sequelize.transaction()`).
+2. **`invoiceController.getInvoice`**:
+   - Replaced mock Lexus invoice fallback with HTTP 404 when invoice does not exist.
+   - Corrected model associations (`as: 'appointment'`, `as: 'items'`, `as: 'payments'`).
+3. **`invoiceController.getPendingReports`**:
+   - Fixed uppercase alias `as: 'Invoice'` to lowercase `as: 'invoice'`.
+   - Removed mock fallbacks (`REP-1022`, `REP-1019`).
+4. **`invoiceController.getMyInvoices`**:
+   - Fixed missing alias `as: 'appointment'` in `include`.
+   - Enforced customer data scoping (`client_id: req.user.id`).
+5. **`invoiceController.issueInvoice`**:
+   - Added check for existing invoice for the appointment and validation of total amount > 0.
+
+### Test Execution & Results
+- **TEST 1 (Get existing invoice)**: 200 OK with real costs, payments, and remaining balance.
+- **TEST 2 (Non-existing invoice)**: HTTP 404.
+- **TEST 3 & 4 (Pending reports)**: Returned 6 real records, no mock fallback.
+- **TEST 5 & 7 (Partial payments)**: Processed 200 SAR then 100 SAR on 500 SAR invoice. Status transitioned to `partially_paid`, old payments preserved.
+- **TEST 6 (Final balance payment)**: Remaining 200 SAR paid. Status transitioned to `paid`.
+- **TEST 8 & 9 (Invalid amounts 0 / negative)**: Rejected with HTTP 400.
+- **TEST 10 (Overpayment)**: 600 SAR payment on 500 SAR invoice rejected with HTTP 400.
+- **TEST 11 (Non-existent invoice payment)**: HTTP 404.
+- **TEST 12 (getMyInvoices)**: Executed without AssociationError.
+- **TEST 13 (Financial Consistency Check)**: Verified `SUM(payments.amount) <= total_amount` across ALL invoices in DB.
+- **Regression Check**: Step 1, Step 2, Batch 3.1, Batch 3.2 endpoints ALL PASSED.
+
+
 
