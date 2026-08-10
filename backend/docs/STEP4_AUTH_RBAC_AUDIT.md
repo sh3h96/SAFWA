@@ -232,7 +232,7 @@ No source code files modified. Working directory is clean except for documentati
 
 ## 19. Recommended Step 4 Implementation Batches
 1. **Batch 4.1**: `middleware/auth.js` Refactoring (COMPLETED).
-2. **Batch 4.2**: Administrative, User Management & Inventory Routes Protection.
+2. **Batch 4.2**: Administrative, User Management & Inventory Routes Protection (COMPLETED).
 3. **Batch 4.3**: Technical, Appointment & Spare Parts Request Routes Protection.
 4. **Batch 4.4**: Financial & Vehicle Routes Protection + Full RBAC Integration Verification.
 
@@ -247,4 +247,18 @@ No source code files modified. Working directory is clean except for documentati
   - Implemented `requireRole(...allowedRoles)` middleware helper, returning HTTP 403 `{ "message": "Access forbidden: insufficient permissions" }` for insufficient roles.
   - Preserved backward compatibility so `const auth = require('../middleware/auth')` continues to function seamlessly across all existing route files.
 - **Test Results**: All 13 non-destructive test cases passed 100%.
+
+---
+
+## 21. Batch 4.2 Execution Log
+- **Files Modified**:
+  - `backend/routes/userRoutes.js`
+  - `backend/routes/dashboardRoutes.js`
+  - `backend/routes/sparePartRoutes.js`
+- **RBAC Enforcement Applied**:
+  - `userRoutes.js`: Protected `GET /` (`admin`, `receptionist`), `POST /` (`admin`), `PUT /:id` (`admin`), `PUT /:id/status` (`admin`).
+  - `dashboardRoutes.js`: Restricted `GET /metrics`, `GET /charts`, and `GET /work-orders` strictly to `admin` and `receptionist`.
+  - `sparePartRoutes.js`: Restricted `GET /` to `admin`, `receptionist`, `mechanic`; restricted `POST /` and `PUT /:id` strictly to `admin`.
+- **Test Results**: All 32 non-destructive integration test cases passed 100% (32/32 PASSED).
+- **Database Clean**: All temporary test data cleaned up completely.
 
