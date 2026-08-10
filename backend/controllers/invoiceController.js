@@ -165,6 +165,13 @@ module.exports = {
         return res.status(404).json({ message: 'Invoice not found' });
       }
 
+      // Ownership Verification: Client can only view their own invoice
+      if (req.user.role === 'client') {
+        if (!invoice.appointment || invoice.appointment.client_id !== req.user.id) {
+          return res.status(404).json({ message: 'Invoice not found' });
+        }
+      }
+
       const totalPaid = (invoice.payments || []).reduce((sum, p) => sum + parseFloat(p.amount), 0);
       const totalAmount = parseFloat(invoice.total_amount);
       const remainingBalance = Math.max(0, totalAmount - totalPaid);
@@ -176,6 +183,18 @@ module.exports = {
       };
 
       const appointment = invoice.appointment;
+      
+      // Dynamic calculation of labor and parts cost from items
+      let partsCost = 0;
+      let laborCost = 0;
+      if (invoice.items && invoice.items.length > 0) {
+        partsCost = invoice.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+        laborCost = Math.max(0, totalAmount - partsCost);
+      } else {
+        laborCost = Math.min(150, totalAmount);
+        partsCost = Math.max(0, totalAmount - laborCost);
+      }
+
       const invoiceData = {
         invoiceId: invoice.id,
         status: statusMap[invoice.status] || 'غير مسددة',
@@ -194,8 +213,8 @@ module.exports = {
           plateNumber: appointment?.vehicle?.license_plate || 'غير محدد'
         },
         costs: {
-          laborCost: 150,
-          partsCost: Math.max(0, totalAmount - 150),
+          laborCost,
+          partsCost,
           discount: 0,
           discountAmount: 0
         },
@@ -241,11 +260,21 @@ module.exports = {
       }
 
       const invoice = await Invoice.findByPk(req.params.id, {
-        include: [{ model: Payment, as: 'payments' }]
+        include: [
+          { model: Payment, as: 'payments' },
+          { model: Appointment, as: 'appointment' }
+        ]
       });
 
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
+      }
+
+      // Ownership Verification: Client can only pay their own invoice
+      if (req.user.role === 'client') {
+        if (!invoice.appointment || invoice.appointment.client_id !== req.user.id) {
+          return res.status(404).json({ message: 'Invoice not found' });
+        }
       }
 
       const existingPaid = (invoice.payments || []).reduce((sum, p) => sum + parseFloat(p.amount), 0);

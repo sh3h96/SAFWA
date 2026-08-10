@@ -35,6 +35,11 @@ module.exports = {
         return res.status(404).json({ message: 'Vehicle not found' });
       }
 
+      // Ownership Verification: Client can only view history of their own vehicle
+      if (req.user.role === 'client' && vehicle.client_id !== req.user.id) {
+        return res.status(404).json({ message: 'Vehicle not found' });
+      }
+
       const appointments = await Appointment.findAll({
         where: { 
           vehicle_id: req.params.id, 
@@ -101,9 +106,21 @@ module.exports = {
   // POST /api/vehicles
   createVehicle: async (req, res) => {
     try {
-      const { make, model, year, license_plate, vin } = req.body;
+      const { make, model, year, license_plate, vin, client_id } = req.body;
+      
+      let targetClientId = req.user.id;
+      if (req.user.role === 'admin' || req.user.role === 'receptionist') {
+        if (client_id !== undefined && client_id !== null) {
+          const targetClient = await User.findByPk(client_id);
+          if (!targetClient) {
+            return res.status(400).json({ message: 'Target client user not found' });
+          }
+          targetClientId = client_id;
+        }
+      }
+
       const newVehicle = await Vehicle.create({
-        client_id: req.user.id,
+        client_id: targetClientId,
         make,
         model,
         year,
@@ -123,9 +140,14 @@ module.exports = {
       const { id } = req.params;
       const { make, model, year, license_plate, vin } = req.body;
       
-      const vehicle = await Vehicle.findOne({ where: { id, client_id: req.user.id } });
+      const whereClause = { id };
+      if (req.user.role === 'client') {
+        whereClause.client_id = req.user.id;
+      }
+
+      const vehicle = await Vehicle.findOne({ where: whereClause });
       if (!vehicle) {
-        return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+        return res.status(404).json({ message: 'Vehicle not found' });
       }
 
       await vehicle.update({ make, model, year, license_plate, vin });
