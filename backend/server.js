@@ -38,14 +38,45 @@ app.get('/', (req, res) => {
   res.send('SAFWA Backend API is running...');
 });
 
-// Database sync and server start
-sequelize.sync()
-  .then(() => {
-    console.log('Database synced successfully');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error('Error syncing database:', error);
+// Route for testing global error handler in test environment
+if (process.env.NODE_ENV === 'test') {
+  app.get('/api/test-error', (req, res, next) => {
+    next(new Error('Simulated internal server failure'));
   });
+}
+
+// Unmatched Route 404 Fallback (JSON response)
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Centralized Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Express Error:', err);
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// Only start DB connection sync and listen when executed directly via 'node server.js'
+if (require.main === module) {
+  sequelize.authenticate()
+    .then(() => {
+      console.log('Database connection authenticated successfully');
+      return sequelize.sync();
+    })
+    .then(() => {
+      console.log('Database synced successfully');
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error('Error starting server or connecting to database:', error);
+      process.exit(1);
+    });
+}
+
+module.exports = app;
