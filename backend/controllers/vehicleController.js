@@ -5,37 +5,20 @@ module.exports = {
   getAllVehicles: async (req, res) => {
     try {
       const vehicles = await Vehicle.findAll({
-        include: [{ model: User, as: 'owner', attributes: ['name'] }] // requires model association
+        include: [{ model: User, as: 'owner', attributes: ['name'] }]
       });
 
       const formattedVehicles = vehicles.map(v => ({
         id: v.id,
-        name: `${v.make} ${v.model} ${v.year}`,
+        name: `${v.make} ${v.model} ${v.year || ''}`.trim(),
         plateNumber: v.license_plate,
         addedDate: new Date(v.created_at).toLocaleDateString('ar-SA'),
-        isActive: true, // Needs logic based on active technical reports
+        isActive: true,
         vin: v.vin || '-',
-        odometer: '-', // Would come from last inspection
-        lastServiceDate: '-', // Would come from last completed appointment
+        odometer: '-',
+        lastServiceDate: '-',
         image: null
       }));
-
-      // Fallback for empty DB
-      if (formattedVehicles.length === 0) {
-        return res.json([
-          {
-            id: 'veh_1',
-            name: 'تويوتا كامري 2024 (لا يوجد بيانات)',
-            plateNumber: 'KSA 4432',
-            addedDate: '02/01/2024',
-            isActive: true,
-            vin: '4T1BF1FK0NU623451',
-            odometer: '85,000 كم',
-            lastServiceDate: '12 أبريل',
-            image: null
-          }
-        ]);
-      }
 
       res.json(formattedVehicles);
     } catch (error) {
@@ -47,49 +30,42 @@ module.exports = {
   // GET /api/vehicles/:id/history
   getVehicleHistory: async (req, res) => {
     try {
-      const reports = await TechnicalReport.findAll({
-        where: { vehicle_id: req.params.id, status: 'completed' },
+      const vehicle = await Vehicle.findByPk(req.params.id);
+      if (!vehicle) {
+        return res.status(404).json({ message: 'Vehicle not found' });
+      }
+
+      const appointments = await Appointment.findAll({
+        where: { 
+          vehicle_id: req.params.id, 
+          status: 'completed' 
+        },
         include: [
-          { model: User, as: 'technician', attributes: ['name'] }
+          { model: User, as: 'mechanic', attributes: ['name'] },
+          { model: TechnicalReport, as: 'report' },
+          { model: Invoice, as: 'invoice', attributes: ['total_amount', 'status'] }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['scheduled_date', 'DESC']]
       });
 
-      const history = reports.map(r => ({
-        id: r.id,
-        vehicleId: req.params.id,
-        title: `صيانة ${r.repair_type}`,
-        serviceType: r.repair_type,
-        year: new Date(r.created_at).getFullYear().toString(),
-        date: new Date(r.created_at).toLocaleDateString('ar-SA'),
-        technician: r.technician ? r.technician.name : 'غير محدد',
-        cost: 0, // Would link to invoice
-        status: 'completed',
-        statusLabel: 'مكتمل',
-        hasInvoice: true,
-        partsTitle: 'القطع المرفقة:',
-        partsPhotos: [],
-        extraPartsCount: 0
-      }));
-
-      // Fallback for empty DB
-      if (history.length === 0) {
-        return res.json([
-          {
-            id: 'node_1',
-            vehicleId: req.params.id,
-            title: 'صيانة 80,000 كم (وهمي)',
-            serviceType: 'صيانة دورية',
-            year: '2026',
-            date: '12 أبريل 2026',
-            technician: 'م. محمد علي',
-            cost: 650,
-            status: 'completed',
-            statusLabel: 'مكتمل',
-            hasInvoice: true
-          }
-        ]);
-      }
+      const history = appointments.map(app => {
+        return {
+          id: app.id,
+          vehicleId: req.params.id,
+          title: app.problem_description ? `صيانة - ${app.problem_description}` : 'صيانة دورية',
+          serviceType: app.problem_description || 'صيانة دورية',
+          year: new Date(app.scheduled_date || app.created_at).getFullYear().toString(),
+          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+          technician: app.mechanic?.name || 'غير محدد',
+          cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
+          status: 'completed',
+          statusLabel: 'مكتمل',
+          hasInvoice: !!app.invoice,
+          partsTitle: 'القطع المرفقة:',
+          partsPhotos: [],
+          extraPartsCount: 0
+        };
+      });
 
       res.json(history);
     } catch (error) {

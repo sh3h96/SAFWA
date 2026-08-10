@@ -298,3 +298,32 @@ Batch 3.4: Appointments, Inventory, Reviews & User Controllers Polish
 - **Dashboard Metrics & Charts**: All metrics and urgency counts calculated without SQL errors.
 - **Dashboard Work Orders**: Returned clean DB records or `[]` when empty.
 
+---
+
+## 15. Batch 3.2 Execution & Verification Log
+
+### Files Modified
+- `backend/controllers/vehicleController.js`
+
+### Changes Implemented
+1. **`vehicleController.getAllVehicles`**:
+   - Removed fallback mock vehicle (`veh_1`). Returns empty list `[]` when DB has 0 vehicles.
+   - Preserved `owner` association (`as: 'owner'`).
+2. **`vehicleController.getVehicleHistory`**:
+   - Replaced invalid query on `TechnicalReport.vehicle_id` and `status` with clean `Appointment` join (`vehicle_id: req.params.id`, `status: 'completed'`).
+   - Corrected mechanic association alias from `as: 'technician'` to `as: 'mechanic'`.
+   - Joined `TechnicalReport (as: 'report')` and `Invoice (as: 'invoice')`.
+   - Returned `404 Vehicle not found` if vehicle ID does not exist in DB.
+   - Removed fallback mock history (`node_1`). Returns `[]` when no history records exist.
+3. **`vehicleController.updateVehicle`**:
+   - Verified strict vehicle ownership check (`client_id: req.user.id`). Unauthorized updates return `404 Vehicle not found or unauthorized`.
+
+### Test Execution & Results
+- **`getAllVehicles`**: Returned 5 vehicles from DB without errors or mock fallback.
+- **`getMyVehicles`**: Returned 1 vehicle for client ID 73.
+- **`getVehicleHistory`**: Successfully queried vehicle 6. Returned `[]` when no completed appointments existed.
+- **Non-existent Vehicle ID**: Returned HTTP `404`.
+- **Ownership Verification**: Owner update succeeded (200 OK); unauthorized client update rejected (404 Not Found).
+- **Regression Check**: Batch 3.1 endpoints (`getDashboard`, `getMetrics`) passed 100%.
+
+
