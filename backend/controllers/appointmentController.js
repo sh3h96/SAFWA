@@ -269,6 +269,13 @@ module.exports = {
         if (appointment.mechanic_id !== req.user.id) {
           return res.status(404).json({ message: 'Appointment not found' });
         }
+
+        // Mechanics can ONLY update status. Any attempt to modify restricted fields (ownership, vehicle, date, etc.) is rejected.
+        const restrictedFields = ['mechanic_id', 'client_id', 'vehicle_id', 'scheduled_date', 'appointment_date', 'problem_description'];
+        const hasRestrictedAttempt = restrictedFields.some(field => req.body[field] !== undefined);
+        if (hasRestrictedAttempt) {
+          return res.status(400).json({ message: 'Mechanics can only update appointment status' });
+        }
       }
 
       const { status, mechanic_id } = req.body;
@@ -281,11 +288,6 @@ module.exports = {
       }
 
       if (mechanic_id !== undefined) {
-        // Mechanics are not allowed to reassign appointments to other mechanics
-        if (req.user && req.user.role === 'mechanic' && mechanic_id !== req.user.id) {
-          return res.status(400).json({ message: 'Mechanics cannot reassign appointments' });
-        }
-
         if (mechanic_id !== null) {
           const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic' } });
           if (!mechanic) {

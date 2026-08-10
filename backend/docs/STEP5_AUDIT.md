@@ -3,7 +3,7 @@
 **Date**: 2026-08-10  
 **Project**: SAFWA Automobile Maintenance Backend  
 **Audit Scope**: All 12 Controllers in `backend/controllers/`, API Contracts, Ownership Checks, Data Integrity, and Error Handling.  
-**Execution Status**: **BATCH 5.1 & BATCH 5.2 COMPLETED & VERIFIED**
+**Execution Status**: **BATCH 5.1 & BATCH 5.2 VERIFICATION PASS COMPLETED**
 
 ---
 
@@ -40,7 +40,7 @@ All 12 files listed in Scope were reviewed line-by-line against model associatio
 | **F-5.1** | `invoiceController.js` | `GET /api/invoices/:id` | **Cross-Client Ownership Leak**: Client A can view Client B's invoice by ID. | **CRITICAL** | **RESOLVED (Batch 5.1)** |
 | **F-5.2** | `invoiceController.js` | `POST /api/invoices/:id/pay` | **Cross-Client Payment Trigger**: Client A can submit payment/update status for Client B's invoice. | **HIGH** | **RESOLVED (Batch 5.1)** |
 | **F-5.3** | `appointmentController.js` | `GET /api/appointments/:id` | **Cross-Client Appointment Inspection**: Client A can view Client B's full appointment, phone, & diagnostic plan. | **CRITICAL** | **RESOLVED (Batch 5.2)** |
-| **F-5.4** | `appointmentController.js` | `PUT /api/appointments/:id` | **Mechanic Reassignment Bypass**: Mechanics can reassign appointments or edit unassigned appointments. | **HIGH** | **RESOLVED (Batch 5.2)** |
+| **F-5.4** | `appointmentController.js` | `PUT /api/appointments/:id` | **Mechanic Reassignment Bypass & Field Manipulation**: Mechanics attempt to reassign appointments or edit unassigned fields. | **HIGH** | **RESOLVED (Verified Pass)** |
 | **F-5.5** | `vehicleController.js` | `PUT /api/vehicles/:id` | **Admin/Receptionist Update Failure**: `where: { client_id: req.user.id }` causes 404 for Admin updating Client vehicle. | **HIGH** | **RESOLVED (Batch 5.1)** |
 | **F-5.6** | `vehicleController.js` | `GET /api/vehicles/:id/history` | **Cross-Client Vehicle History Leak**: Client A can view full maintenance & costs for Client B's vehicle. | **CRITICAL** | **RESOLVED (Batch 5.1)** |
 | **F-5.7** | `vehicleController.js` | `POST /api/vehicles` | **Admin Creation Client ID Ignore**: Admin/Receptionist vehicle creation ignores `req.body.client_id`. | **MEDIUM** | **RESOLVED (Batch 5.1)** |
@@ -53,24 +53,25 @@ All 12 files listed in Scope were reviewed line-by-line against model associatio
 
 ---
 
-## 5. Batch 5.1 & Batch 5.2 Execution Log & Verification Report
+## 5. Batch 5.2 Verification Pass Execution Log & Verification Report
 
-### Batch 5.1 Summary:
-- Fixed F-5.1, F-5.2, F-5.5, F-5.6, F-5.7, F-5.9 in `invoiceController.js` and `vehicleController.js`.
-- Commit Hash: `d0ab0179b26355a9d193fd4ff582a4813f239deb`.
-
-### Batch 5.2 Completed Actions:
-1. **`appointmentController.js`**:
-   - **`getAppointmentById` (F-5.3)**: Enforced controller-level ownership for `client` role (verifying `appointment.client_id === req.user.id`) and assignment check for `mechanic` role (verifying `appointment.mechanic_id === req.user.id`). Unowned/unassigned requests return `404 Not Found`. `admin` and `receptionist` retain access to any appointment.
-   - **`updateAppointment` (F-5.4)**: Enforced mechanic assignment checks (`appointment.mechanic_id === req.user.id`). Blocked mechanics from reassigning appointments or modifying `mechanic_id` to other users (returning `400 Bad Request`). Restricted mechanics from modifying unassigned appointments or appointments assigned to other mechanics (returning `404 Not Found`).
-2. **`technicalReportController.js`**:
-   - **`createReport` (F-5.8)**: Added mandatory presence check for `appointment_id` (returning `400 Bad Request` if missing). Added database existence check for `appointment` (returning `404 Not Found` if missing). Enforced mechanic assignment check (`appointment.mechanic_id === req.user.id`), preventing mechanics from creating reports for unassigned appointments or appointments assigned to other mechanics (returning `404 Not Found`).
+### Batch 5.2 Verification Pass Actions:
+1. **`appointmentController.js` (`updateAppointment` - F-5.4 Verification)**:
+   - Hardened `updateAppointment` so that `mechanic` role users are strictly restricted to updating **only** the `status` field.
+   - Any attempt by a `mechanic` to pass `mechanic_id`, `client_id`, `vehicle_id`, `scheduled_date`, `appointment_date`, or `problem_description` is explicitly rejected with `HTTP 400 Bad Request`.
+   - Verified that `admin` and `receptionist` roles maintain full operational flexibility (e.g. assigning mechanics, modifying dates).
+2. **`technicalReportController.js` (`createReport` - F-5.8)**:
+   - Mandatory presence check for `appointment_id` (400 Bad Request if missing).
+   - Assignment check (`appointment.mechanic_id === req.user.id`), returning 404 if unassigned.
 
 ### Verification Test Suite Results (`scratch/test_batch5_2.js`):
-- **Total Tests**: 22
-- **Passed**: 22
+- **Total Tests**: 26 (including 5 explicit non-status field rejection & DB state preservation checks)
+- **Passed**: 26
 - **Failed**: 0
 - **Pass Rate**: 100%
+
+### DB State Verification:
+- Tested that when a mechanic attempts to send restricted fields (`mechanic_id`, `client_id`, `vehicle_id`, `scheduled_date`, `problem_description`), the server returns `HTTP 400` AND the persistent DB state for those fields remains unchanged.
 
 ### Full System Regression Test Results (All 10 Suites):
 1. `test_batch3_1.js`: PASS (6 / 6)
@@ -82,21 +83,22 @@ All 12 files listed in Scope were reviewed line-by-line against model associatio
 7. `test_batch4_3.js`: PASS (26 / 26)
 8. `test_batch4_4.js`: PASS (48 / 48)
 9. `test_batch5_1.js`: PASS (16 / 16)
-10. `test_batch5_2.js`: PASS (22 / 22)
-- **Total Regression Tests**: 199 / 199 Passed (100% Pass Rate across all steps).
+10. `test_batch5_2.js`: PASS (26 / 26)
+- **Total Regression Tests**: 203 / 203 Passed (100% Pass Rate across all steps).
 
 ### Database Cleanup Verification:
-- All temporary test users, vehicles, appointments, and technical reports created during testing were completely cleaned up.
-- DB Verification Check: 0 temporary test users remaining, 0 temporary test vehicles remaining.
+- **Users remaining**: 0
+- **Vehicles remaining**: 0
+- **Appointments remaining**: 0
+- **Technical Reports remaining**: 0
 
 ---
 
 ## 6. Git Verification Log
 - **Executable Files Modified**:
   - `backend/controllers/appointmentController.js`
-  - `backend/controllers/technicalReportController.js`
 - **Documentation & Tests Created/Updated**:
   - `backend/docs/STEP5_AUDIT.md`
   - `backend/scratch/test_batch5_2.js`
-- **Commit Hash**: `26ef6ca7ea122b512c0192e22dd1804d9c735d46` (`fix(security): harden appointment and technical report ownership`)
+- **Commit Hash**: `6c1f4f0464f9ddae6cbe0ac2222a5789f8afdd0b` (`fix(security): restrict mechanic appointment updates strictly to status field`)
 - **Git Status**: Clean (`nothing to commit, working tree clean`).

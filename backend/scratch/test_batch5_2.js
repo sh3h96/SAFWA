@@ -171,7 +171,7 @@ async function setupTestData() {
     client_id: clientA.id,
     vehicle_id: vehicleA.id,
     mechanic_id: mechanicA.id,
-    scheduled_date: new Date(),
+    scheduled_date: new Date('2026-08-10T10:00:00Z'),
     status: 'in_progress',
     problem_description: 'Engine Noise Check'
   });
@@ -180,7 +180,7 @@ async function setupTestData() {
     client_id: clientB.id,
     vehicle_id: vehicleB.id,
     mechanic_id: mechanicB.id,
-    scheduled_date: new Date(),
+    scheduled_date: new Date('2026-08-10T12:00:00Z'),
     status: 'in_progress',
     problem_description: 'Transmission Fluid Leak'
   });
@@ -189,7 +189,7 @@ async function setupTestData() {
     client_id: clientA.id,
     vehicle_id: vehicleA.id,
     mechanic_id: null,
-    scheduled_date: new Date(),
+    scheduled_date: new Date('2026-08-10T14:00:00Z'),
     status: 'pending',
     problem_description: 'Unassigned Oil Change'
   });
@@ -224,7 +224,20 @@ async function cleanupTestData() {
       }
       await User.destroy({ where: { id: userIds } });
     }
-    console.log('✔ Database clean: Temporary test data deleted successfully.');
+
+    // Verify DB count
+    const remainingUsers = await User.count({ where: { email: { [require('sequelize').Op.like]: '%_b52_%' } } });
+    const remainingVehicles = await Vehicle.count({ where: { license_plate: { [require('sequelize').Op.like]: '%B52%' } } });
+    const remainingAppts = await Appointment.count({ where: { problem_description: ['Engine Noise Check', 'Transmission Fluid Leak', 'Unassigned Oil Change'] } });
+    const remainingReports = await TechnicalReport.count({ where: { id: reportCreatedIds } });
+
+    console.log('\n--- DB CLEANUP VERIFICATION METRICS ---');
+    console.log(`Users remaining: ${remainingUsers}`);
+    console.log(`Vehicles remaining: ${remainingVehicles}`);
+    console.log(`Appointments remaining: ${remainingAppts}`);
+    console.log(`Technical Reports remaining: ${remainingReports}`);
+    console.log('----------------------------------------');
+
   } catch (err) {
     console.error('Cleanup warning:', err.message);
   }
@@ -276,26 +289,58 @@ async function runTests() {
     if (r7.statusCode !== 404) throw new Error(`TEST 7 Failed: Mechanic A accessing unassigned appointment returned ${r7.statusCode}`);
     console.log('✔ TEST 7 PASSED: Mechanic A requesting unassigned appointment returned HTTP 404 Not Found');
 
-    // SECTION 2: APPOINTMENT UPDATE (PUT /api/appointments/:id)
+    // SECTION 2: APPOINTMENT UPDATE & MECHANIC FIELD RESTRICTIONS (PUT /api/appointments/:id)
     // TEST 8: Client -> PUT appointment -> 403 (RBAC)
     const r8 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, clientAToken, { status: 'completed' });
     if (r8.statusCode !== 403) throw new Error(`TEST 8 Failed: Client PUT appointment returned ${r8.statusCode}`);
     console.log('✔ TEST 8 PASSED: Client attempting PUT appointment rejected with HTTP 403 Forbidden');
 
-    // TEST 9: Assigned Mechanic A -> PUT own assigned appointment -> 200
-    const r9 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { status: 'ready_for_pickup' });
+    // TEST 9: Assigned Mechanic A -> PUT status to 'completed' -> 200 & DB Verification
+    const r9 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { status: 'completed' });
     if (r9.statusCode !== 200) throw new Error(`TEST 9 Failed: Assigned Mechanic A PUT appointment returned ${r9.statusCode}`);
-    console.log('✔ TEST 9 PASSED: Assigned Mechanic A updating own assigned appointment returned HTTP 200');
+    let fresh9 = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (fresh9.status !== 'completed') throw new Error(`TEST 9 Failed: DB status was ${fresh9.status}, expected completed`);
+    console.log('✔ TEST 9 PASSED: Assigned Mechanic A updating status returned HTTP 200 and updated DB status');
 
     // TEST 10: Mechanic A -> PUT appointment B (assigned to Mechanic B) -> 404
     const r10 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentB.id}`, mechanicAToken, { status: 'completed' });
     if (r10.statusCode !== 404) throw new Error(`TEST 10 Failed: Mechanic A updating Mechanic B appointment returned ${r10.statusCode}`);
     console.log('✔ TEST 10 PASSED: Mechanic A updating appointment assigned to Mechanic B returned HTTP 404 Not Found');
 
-    // TEST 11: Mechanic A -> Attempt changing mechanic_id to Mechanic B -> 400 (Denied)
-    const r11 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { mechanic_id: mechanicB.id });
-    if (r11.statusCode !== 400) throw new Error(`TEST 11 Failed: Mechanic reassigning appointment returned ${r11.statusCode}`);
-    console.log('✔ TEST 11 PASSED: Mechanic attempting to reassign appointment to another mechanic rejected with HTTP 400');
+    // TEST 11a: Mechanic A -> Attempt changing mechanic_id to Mechanic B -> 400 & DB Unchanged
+    const r11a = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { mechanic_id: mechanicB.id });
+    if (r11a.statusCode !== 400) throw new Error(`TEST 11a Failed: Mechanic reassigning appointment returned ${r11a.statusCode}`);
+    let fresh11a = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (fresh11a.mechanic_id !== mechanicA.id) throw new Error(`TEST 11a Failed: DB mechanic_id changed after blocked update attempt`);
+    console.log('✔ TEST 11a PASSED: Mechanic attempting to change mechanic_id rejected with HTTP 400 and DB mechanic_id preserved');
+
+    // TEST 11b: Mechanic A -> Attempt changing client_id to Client B -> 400 & DB Unchanged
+    const r11b = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { client_id: clientB.id });
+    if (r11b.statusCode !== 400) throw new Error(`TEST 11b Failed: Mechanic changing client_id returned ${r11b.statusCode}`);
+    let fresh11b = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (fresh11b.client_id !== clientA.id) throw new Error(`TEST 11b Failed: DB client_id changed after blocked update attempt`);
+    console.log('✔ TEST 11b PASSED: Mechanic attempting to change client_id rejected with HTTP 400 and DB client_id preserved');
+
+    // TEST 11c: Mechanic A -> Attempt changing vehicle_id to Vehicle B -> 400 & DB Unchanged
+    const r11c = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { vehicle_id: vehicleB.id });
+    if (r11c.statusCode !== 400) throw new Error(`TEST 11c Failed: Mechanic changing vehicle_id returned ${r11c.statusCode}`);
+    let fresh11c = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (fresh11c.vehicle_id !== vehicleA.id) throw new Error(`TEST 11c Failed: DB vehicle_id changed after blocked update attempt`);
+    console.log('✔ TEST 11c PASSED: Mechanic attempting to change vehicle_id rejected with HTTP 400 and DB vehicle_id preserved');
+
+    // TEST 11d: Mechanic A -> Attempt changing scheduled_date -> 400 & DB Unchanged
+    const r11d = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { scheduled_date: '2030-01-01T00:00:00Z' });
+    if (r11d.statusCode !== 400) throw new Error(`TEST 11d Failed: Mechanic changing scheduled_date returned ${r11d.statusCode}`);
+    let fresh11d = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (new Date(fresh11d.scheduled_date).getFullYear() === 2030) throw new Error(`TEST 11d Failed: DB scheduled_date changed after blocked update attempt`);
+    console.log('✔ TEST 11d PASSED: Mechanic attempting to change scheduled_date rejected with HTTP 400 and DB date preserved');
+
+    // TEST 11e: Mechanic A -> Attempt changing problem_description -> 400 & DB Unchanged
+    const r11e = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, mechanicAToken, { problem_description: 'Hacked issue' });
+    if (r11e.statusCode !== 400) throw new Error(`TEST 11e Failed: Mechanic changing problem_description returned ${r11e.statusCode}`);
+    let fresh11e = await Appointment.findOne({ where: { id: appointmentA.id }, raw: true });
+    if (fresh11e.problem_description !== 'Engine Noise Check') throw new Error(`TEST 11e Failed: DB problem_description changed after blocked update attempt`);
+    console.log('✔ TEST 11e PASSED: Mechanic attempting to change problem_description rejected with HTTP 400 and DB issue preserved');
 
     // TEST 12: Admin -> PUT appointment -> 200
     const r12 = await makeRequest(app, 'PUT', `/api/appointments/${appointmentA.id}`, adminToken, { status: 'completed' });
@@ -329,8 +374,7 @@ async function runTests() {
     console.log('✔ TEST 16 PASSED: Mechanic A creating technical report for assigned appointment returned HTTP 201');
     reportCreatedIds.push(r16.body.report.id);
 
-    // TEST 17: Mechanic A -> appointment B (assigned to Mechanic B / A) -> 404
-    // (Note: Appointment B was reassigned to Mechanic A in test 13, let's create a new unassigned or check appointmentUnassigned)
+    // TEST 17: Mechanic A -> unassigned appointment -> 404
     const r17 = await makeRequest(app, 'POST', '/api/reports', mechanicAToken, {
       appointment_id: appointmentUnassigned.id,
       diagnostics: 'Unassigned appointment'
@@ -378,7 +422,7 @@ async function runTests() {
     await cleanupTestData();
   }
 
-  console.log('\n=== ALL BATCH 5.2 TESTS PASSED SUCCESSFULLY! ===');
+  console.log('\n=== ALL BATCH 5.2 TESTS (INCLUDING MECHANIC FIELD RESTRICTIONS & DB VERIFICATION) PASSED SUCCESSFULLY! ===');
   process.exit(0);
 }
 
