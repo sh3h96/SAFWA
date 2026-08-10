@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const technicalReportController = require('../controllers/technicalReportController');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
-const auth = require('../middleware/auth');
-
-router.post('/', auth, technicalReportController.createReport);
+// Protected Technical Report routes (RBAC Restricted)
+router.post('/', authenticateToken, requireRole('mechanic', 'admin'), technicalReportController.createReport);
 
 module.exports = router;
