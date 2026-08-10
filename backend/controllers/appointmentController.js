@@ -1,6 +1,17 @@
 const { Appointment, User, Vehicle } = require('../models');
 const { Op } = require('sequelize');
 
+const VALID_STATUSES = [
+  'pending', 
+  'awaiting_assignment', 
+  'under_inspection', 
+  'in_progress', 
+  'waiting_parts', 
+  'ready_for_pickup', 
+  'completed', 
+  'cancelled'
+];
+
 module.exports = {
   // GET /api/appointments/slots
   getAvailableSlots: async (req, res) => {
@@ -17,14 +28,17 @@ module.exports = {
         });
       }
 
-      // Get all vehicles for demo purposes (in real app, filter by customer)
-      const vehicles = await Vehicle.findAll();
-      const formattedVehicles = vehicles.map(v => ({
-        id: v.id,
-        model: `${v.make} ${v.model}`,
-        plateNumber: v.license_plate,
-        lastServiceDate: '2023-10-01' // Mock date for demo
-      }));
+      // Fetch customer vehicles if user is authenticated, else []
+      let formattedVehicles = [];
+      if (req.user && req.user.id) {
+        const vehicles = await Vehicle.findAll({ where: { client_id: req.user.id } });
+        formattedVehicles = vehicles.map(v => ({
+          id: v.id,
+          model: `${v.make} ${v.model}`,
+          plateNumber: v.license_plate,
+          lastServiceDate: new Date(v.created_at).toLocaleDateString('ar-SA')
+        }));
+      }
 
       const slotsData = {
         vehicles: formattedVehicles,
@@ -55,11 +69,24 @@ module.exports = {
     try {
       const { vehicle_id, appointment_date, description } = req.body;
       
+      if (!vehicle_id) {
+        return res.status(400).json({ message: 'vehicle_id is required' });
+      }
+
+      // Ownership Verification: Check if vehicle belongs to current user
+      const vehicle = await Vehicle.findOne({
+        where: { id: vehicle_id, client_id: req.user.id }
+      });
+
+      if (!vehicle) {
+        return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+      }
+
       const newAppointment = await Appointment.create({
         client_id: req.user.id,
         vehicle_id,
-        scheduled_date: appointment_date,
-        problem_description: description,
+        scheduled_date: appointment_date || new Date(),
+        problem_description: description || 'صيانة عامة',
         status: 'pending'
       });
       
@@ -99,7 +126,7 @@ module.exports = {
         let requestedParts = [];
         if (app.report && app.report.requestedParts) {
           requestedParts = app.report.requestedParts.map(rp => ({
-            id: rp.id, // RequiredPart ID
+            id: rp.id,
             part_id: rp.part_id,
             name: rp.partDetails?.name || 'قطعة غير معروفة',
             quantity: rp.quantity,
@@ -110,8 +137,8 @@ module.exports = {
 
         return {
           id: app.id,
-          date: new Date(app.scheduled_date).toLocaleDateString('ar-SA'),
-          time: new Date(app.scheduled_date).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+          time: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
           vehicleMake: app.vehicle?.make || 'غير معروف',
           vehicleModel: app.vehicle?.model || '',
           plateNumber: app.vehicle?.license_plate || '',
@@ -157,7 +184,7 @@ module.exports = {
         let requestedParts = [];
         if (app.report && app.report.requestedParts) {
           requestedParts = app.report.requestedParts.map(rp => ({
-            id: rp.id, // RequiredPart ID
+            id: rp.id,
             part_id: rp.part_id,
             name: rp.partDetails?.name || 'قطعة غير معروفة',
             quantity: rp.quantity,
@@ -169,7 +196,7 @@ module.exports = {
         return {
           id: `APP-${app.id}`,
           appointment_id: app.id,
-          vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`,
+          vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`.trim(),
           plate: app.vehicle?.license_plate || '',
           clientIssue: app.problem_description,
           status: app.status,
@@ -215,11 +242,11 @@ module.exports = {
       const formatted = appointments.map(app => ({
         id: app.id.toString(),
         clientName: app.customer?.name || 'غير معروف',
-        car: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''} - ${app.vehicle?.license_plate || ''}`,
+        car: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''} - ${app.vehicle?.license_plate || ''}`.trim(),
         issue: app.problem_description,
-        time: new Date(app.scheduled_date).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date(app.scheduled_date).toLocaleDateString('ar-SA'),
-        status: app.status // pending, confirmed, repairing, ready
+        time: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+        status: app.status
       }));
 
       res.json(formatted);
@@ -229,6 +256,7 @@ module.exports = {
     }
   },
 
+  // PUT /api/appointments/:id
   updateAppointment: async (req, res) => {
     try {
       const appointment = await Appointment.findByPk(req.params.id);
@@ -237,8 +265,23 @@ module.exports = {
       }
 
       const { status, mechanic_id } = req.body;
-      if (status !== undefined) appointment.status = status;
-      if (mechanic_id !== undefined) appointment.mechanic_id = mechanic_id;
+      
+      if (status !== undefined) {
+        if (!VALID_STATUSES.includes(status)) {
+          return res.status(400).json({ message: `Invalid status: ${status}. Valid statuses: ${VALID_STATUSES.join(', ')}` });
+        }
+        appointment.status = status;
+      }
+
+      if (mechanic_id !== undefined) {
+        if (mechanic_id !== null) {
+          const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic' } });
+          if (!mechanic) {
+            return res.status(400).json({ message: 'Mechanic not found or invalid role' });
+          }
+        }
+        appointment.mechanic_id = mechanic_id;
+      }
 
       await appointment.save();
       res.json({ message: 'Appointment updated successfully', appointment });
@@ -293,16 +336,16 @@ module.exports = {
         id: appointment.id,
         clientName: appointment.customer?.name || 'غير معروف',
         clientPhone: appointment.customer?.phone || '',
-        car: `${appointment.vehicle?.make || ''} ${appointment.vehicle?.model || ''} - ${appointment.vehicle?.license_plate || ''}`,
+        car: `${appointment.vehicle?.make || ''} ${appointment.vehicle?.model || ''} - ${appointment.vehicle?.license_plate || ''}`.trim(),
         issue: appointment.problem_description,
-        time: new Date(appointment.scheduled_date).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date(appointment.scheduled_date).toLocaleDateString('ar-SA'),
+        time: new Date(appointment.scheduled_date || appointment.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(appointment.scheduled_date || appointment.created_at).toLocaleDateString('ar-SA'),
         status: appointment.status,
-        mechanicName: appointment.mechanic?.name,
+        mechanicName: appointment.mechanic?.name || 'غير محدد',
         report: appointment.report ? {
           odometer: appointment.report.odometer,
           obd2_codes: appointment.report.obd2_codes,
-          visual_inspection_notes: appointment.report.visual_inspection_notes,
+          visual_notes: appointment.report.visual_notes,
           repair_plan: appointment.report.repair_plan
         } : null,
         requestedParts

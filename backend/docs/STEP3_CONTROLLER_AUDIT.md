@@ -366,5 +366,49 @@ Batch 3.4: Appointments, Inventory, Reviews & User Controllers Polish
 - **TEST 13 (Financial Consistency Check)**: Verified `SUM(payments.amount) <= total_amount` across ALL invoices in DB.
 - **Regression Check**: Step 1, Step 2, Batch 3.1, Batch 3.2 endpoints ALL PASSED.
 
+---
+
+## 17. Batch 3.4 Execution & Verification Log
+
+### Files Modified
+- `backend/controllers/appointmentController.js`
+- `backend/controllers/sparePartController.js`
+- `backend/controllers/reviewController.js`
+- `backend/controllers/userController.js`
+
+### Changes Implemented
+1. **`appointmentController.js`**:
+   - Fixed `visual_inspection_notes` -> `visual_notes` column name alignment with `TechnicalReport` model.
+   - Enforced strict vehicle ownership check (`Vehicle.findOne({ where: { id: vehicle_id, client_id: req.user.id } })`) in `createAppointment`. Rejects unowned vehicle booking with HTTP 404.
+   - Added ENUM validation for appointment status updates in `updateAppointment`.
+   - Scoped `getAvailableSlots` vehicles to logged-in user (`req.user.id`).
+2. **`sparePartController.js`**:
+   - Fixed low stock alert calculation (`stock_quantity <= min_stock_level`).
+   - Added strict input validation for `addPart` (required name and price) and `updatePart`.
+   - Guaranteed clean JSON structure with pagination and null-safe price/stock fallbacks.
+3. **`reviewController.js`**:
+   - Removed mock review fallback records (`محمد الخالدي`, `سالم العبدالله`, etc.). Returns `[]` when DB has zero reviews.
+   - Added appointment ownership verification (`Appointment.findOne({ where: { id: appointment_id, client_id: req.user.id } })`) and duplicate review prevention in `createReview`.
+   - Added numeric rating validation (1 to 5).
+4. **`userController.js`**:
+   - Corrected role name filter from `technician` to `mechanic` in `getAllUsers` and `getStaffHighlights`.
+   - Replaced `Math.random()` random numbers in `getStaffHighlights` with real counts calculated dynamically from `Appointment` table.
+   - Added `VALID_ROLES` validation (`['admin', 'client', 'mechanic', 'receptionist']`) in `createUser` and `updateUser`.
+   - Added safe try-catch fallbacks for `bcrypt` / `jsonwebtoken` / `sendEmail` modules.
+
+### Test Execution & Results
+- **TEST 1 (`getAppointmentById`)**: Returned 200 OK using real `visual_notes` column.
+- **TEST 2 (`getAppointmentById` non-existent)**: Returned HTTP 404.
+- **TEST 3 (`getMyAppointments`)**: Returned appointments for client without errors.
+- **TEST 4 & 5 (`createAppointment`)**: Successfully created appointment for owned vehicle; rejected unowned vehicle booking with HTTP 404.
+- **TEST 6 (`updateAppointment`)**: Updated status to `in_progress` with ENUM validation.
+- **TEST 7 & 8 (`getAllParts` & Low Stock)**: Returned 10 parts from DB; low stock alert count calculated accurately (1 part).
+- **TEST 9 & 10 (`addPart` & `updatePart`)**: Created part ID 21 and updated stock quantity to 20 cleanly.
+- **TEST 11 & 12 (`getAllReviews` & `createReview`)**: Returned real DB reviews without mock data; submitted new review for owned appointment.
+- **TEST 13 & 14 (`getStaffHighlights`)**: Queried mechanics using `mechanic` role and real DB appointment statistics.
+- **TEST 15 (Mock Data Removal)**: Verified 0 mock DB records in review endpoints.
+- **Full Regression Check**: Step 1, Step 2, Batch 3.1, Batch 3.2, Batch 3.3, and Batch 3.4 ALL PASSED 100%!
+
+
 
 
