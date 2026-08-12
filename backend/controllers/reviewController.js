@@ -1,6 +1,7 @@
 const { Review, User, Appointment } = require('../models');
 
 module.exports = {
+  // GET /api/reviews
   getAllReviews: async (req, res) => {
     try {
       const reviews = await Review.findAll({
@@ -15,22 +16,13 @@ module.exports = {
         order: [['created_at', 'DESC']]
       });
 
-      if (reviews.length === 0) {
-        return res.json([
-          { id: 1, client: 'محمد الخالدي', rating: 5, date: 'قبل يومين', comment: 'خدمة ممتازة وسريعة، والمهندس محمد كان في قمة الاحترافية.', mechanic: 'محمد الميكانيكي' },
-          { id: 2, client: 'سالم العبدالله', rating: 4, date: 'قبل أسبوع', comment: 'العمل جيد ولكن استغرق وقتاً أطول من المتوقع بقليل.', mechanic: 'أحمد صالح' },
-          { id: 3, client: 'عبدالعزيز الفهد', rating: 5, date: 'قبل أسبوعين', comment: 'أفضل ورشة تعاملت معها، شفافية في الأسعار.', mechanic: 'محمد الميكانيكي' },
-          { id: 4, client: 'فهد عبدالله', rating: 3, date: 'قبل شهر', comment: 'لا بأس، لكن لم يتم غسيل السيارة بعد الصيانة.', mechanic: 'يوسف العلي' },
-        ]);
-      }
-
       const formatted = reviews.map(r => ({
         id: r.id,
         client: r.client?.name || 'غير معروف',
         rating: r.rating,
         date: new Date(r.created_at).toLocaleDateString('ar-SA'),
         comment: r.comment || '',
-        mechanic: r.appointment?.mechanic?.name || 'غير معروف'
+        mechanic: r.appointment?.mechanic?.name || 'غير محدد'
       }));
 
       res.json(formatted);
@@ -40,15 +32,42 @@ module.exports = {
     }
   },
 
+  // POST /api/reviews
   createReview: async (req, res) => {
     try {
       const { appointment_id, rating, comment } = req.body;
+
+      if (!appointment_id || !rating) {
+        return res.status(400).json({ message: 'appointment_id and rating are required' });
+      }
+
+      const numericRating = parseInt(rating);
+      if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+        return res.status(400).json({ message: 'Rating must be an integer between 1 and 5' });
+      }
+
+      // Ownership Verification: Check if appointment belongs to current client
+      const appointment = await Appointment.findOne({
+        where: { id: appointment_id, client_id: req.user.id }
+      });
+
+      if (!appointment) {
+        return res.status(404).json({ message: 'Appointment not found or unauthorized' });
+      }
+
+      // Check if review already exists for this appointment
+      const existingReview = await Review.findOne({ where: { appointment_id } });
+      if (existingReview) {
+        return res.status(400).json({ message: 'Review already submitted for this appointment' });
+      }
+
       const review = await Review.create({
         client_id: req.user.id,
         appointment_id,
-        rating,
-        comment
+        rating: numericRating,
+        comment: comment || ''
       });
+
       res.status(201).json({ message: 'Review submitted successfully', review });
     } catch (error) {
       console.error('Error creating review:', error);

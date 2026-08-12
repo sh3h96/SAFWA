@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customerController');
-const auth = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
-router.get('/dashboard', auth, customerController.getDashboard);
+// Protected Customer routes (RBAC Restricted)
+router.get('/dashboard', authenticateToken, requireRole('client'), customerController.getDashboard);
 
 module.exports = router;

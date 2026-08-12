@@ -15,6 +15,22 @@ module.exports = {
         urgency_level
       } = req.body;
 
+      if (!appointment_id) {
+        return res.status(400).json({ message: 'appointment_id is required' });
+      }
+
+      const appointment = await Appointment.findByPk(appointment_id);
+      if (!appointment) {
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      // Assignment Verification: Mechanic can only create technical report for their assigned appointment
+      if (req.user && req.user.role === 'mechanic') {
+        if (appointment.mechanic_id !== req.user.id) {
+          return res.status(404).json({ message: 'Appointment not found' });
+        }
+      }
+
       const report = await TechnicalReport.create({
         appointment_id,
         mechanic_id: req.user.id,

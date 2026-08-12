@@ -1,4 +1,5 @@
-const { User, Vehicle, TechnicalReport, Invoice } = require('../models');
+const { User, Vehicle, Appointment, TechnicalReport, Invoice } = require('../models');
+const { Op } = require('sequelize');
 
 module.exports = {
   // GET /api/customer/dashboard
@@ -23,43 +24,57 @@ module.exports = {
         plateNumber: v.license_plate
       }));
 
-      // 3. Get Active Repair
-      // Find the most recent active technical report for this customer's vehicles
-      const vehicleIds = vehicles.map(v => v.id);
-      let activeRepair = null;
-      
-      if (vehicleIds.length > 0) {
-        const report = await TechnicalReport.findOne({
-          where: { vehicle_id: vehicleIds, status: ['pending', 'in_progress', 'waiting_parts'] },
-          order: [['created_at', 'DESC']]
-        });
+      // 3. Get Active Repair for this customer
+      const activeAppointment = await Appointment.findOne({
+        where: {
+          client_id: req.user.id,
+          status: {
+            [Op.in]: ['pending', 'awaiting_assignment', 'under_inspection', 'in_progress', 'waiting_parts']
+          }
+        },
+        include: [
+          { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
+          { model: TechnicalReport, as: 'report' }
+        ],
+        order: [['created_at', 'DESC']]
+      });
 
-        if (report) {
-          activeRepair = {
-            repairNumber: `#REP-${report.id}`,
-            steps: [
-              { id: 1, title: 'تم الاستلام', time: 'مكتمل', status: 'completed' },
-              { id: 2, title: 'قيد الفحص', time: report.status === 'pending' ? 'نشط' : 'مكتمل', status: report.status === 'pending' ? 'active' : 'completed' },
-              { id: 3, title: 'قيد الإصلاح', time: report.status === 'in_progress' ? 'نشط' : (report.status === 'pending' ? 'قيد الانتظار' : 'مكتمل'), status: report.status === 'in_progress' ? 'active' : (report.status === 'pending' ? 'pending' : 'completed') },
-              { id: 4, title: 'جاهزة للاستلام', time: 'قيد الانتظار', status: 'pending' }
-            ]
-          };
-        }
+      let activeRepair = null;
+      if (activeAppointment) {
+        const status = activeAppointment.status;
+        activeRepair = {
+          repairNumber: `#REP-${activeAppointment.id}`,
+          vehicle: `${activeAppointment.vehicle?.make || ''} ${activeAppointment.vehicle?.model || ''}`.trim(),
+          status: status,
+          problemDescription: activeAppointment.problem_description,
+          steps: [
+            { id: 1, title: 'تم الاستلام', time: 'مكتمل', status: 'completed' },
+            { id: 2, title: 'قيد الفحص', time: ['under_inspection', 'in_progress', 'waiting_parts', 'completed'].includes(status) ? 'مكتمل' : (status === 'awaiting_assignment' || status === 'pending' ? 'نشط' : 'pending'), status: ['under_inspection', 'in_progress', 'waiting_parts', 'completed'].includes(status) ? 'completed' : 'active' },
+            { id: 3, title: 'قيد الإصلاح', time: status === 'in_progress' ? 'نشط' : (status === 'completed' ? 'مكتمل' : 'قيد الانتظار'), status: status === 'in_progress' ? 'active' : (status === 'completed' ? 'completed' : 'pending') },
+            { id: 4, title: 'جاهزة للاستلام', time: status === 'completed' ? 'جاهز' : 'قيد الانتظار', status: status === 'completed' ? 'completed' : 'pending' }
+          ]
+        };
       }
 
-      // 4. Get Recent Invoices
+      // 4. Get Recent Invoices for this customer
       const invoices = await Invoice.findAll({
-        where: { client_id: req.user.id },
+        include: [{
+          model: Appointment,
+          as: 'appointment',
+          required: true,
+          where: { client_id: req.user.id },
+          include: [{ model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] }]
+        }],
         order: [['created_at', 'DESC']],
         limit: 3
       });
 
       const formattedInvoices = invoices.map(i => ({
         id: `INV-${i.id}`,
-        service: 'خدمات صيانة شاملة', // You'd join with TechnicalReport for actual service title
+        service: i.appointment?.problem_description || 'خدمات صيانة شاملة',
         date: new Date(i.created_at).toLocaleDateString('ar-SA'),
         amount: parseFloat(i.total_amount),
-        statusLabel: i.status === 'paid' ? 'مدفوع' : 'غير مدفوع'
+        statusLabel: i.status === 'paid' ? 'مدفوع' : (i.status === 'partially_paid' ? 'مدفوع جزئياً' : 'غير مدفوع')
       }));
 
       const customerData = {
@@ -68,7 +83,7 @@ module.exports = {
           avatar: null
         },
         vehicles: formattedVehicles,
-        activeRepair: activeRepair || null, // UI handles null if no active repairs
+        activeRepair,
         recentInvoices: formattedInvoices
       };
       

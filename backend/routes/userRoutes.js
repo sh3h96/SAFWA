@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const auth = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
-// Auth routes (Usually you might have a separate authRoutes.js, but keeping it simple here)
+// Public Auth routes
 router.post('/login', userController.login);
 router.post('/register', userController.register);
 
 // Protected User routes
-router.get('/me', auth, userController.getMe);
-router.get('/', auth, userController.getAllUsers);
-router.post('/', auth, userController.createUser);
-router.get('/staff-highlights', auth, userController.getStaffHighlights);
-router.put('/:id', auth, userController.updateUser);
-router.put('/:id/status', auth, userController.updateUserStatus);
+router.get('/me', authenticateToken, userController.getMe);
+router.get('/staff-highlights', authenticateToken, userController.getStaffHighlights);
+
+// Administrative User routes (RBAC Restricted)
+router.get('/', authenticateToken, requireRole('admin', 'receptionist'), userController.getAllUsers);
+router.post('/', authenticateToken, requireRole('admin'), userController.createUser);
+router.put('/:id', authenticateToken, requireRole('admin'), userController.updateUser);
+router.put('/:id/status', authenticateToken, requireRole('admin'), userController.updateUserStatus);
 
 module.exports = router;

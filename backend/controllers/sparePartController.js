@@ -2,7 +2,7 @@ const { SparePart } = require('../models');
 const { Op } = require('sequelize');
 
 module.exports = {
-  // GET /api/inventory
+  // GET /api/inventory (GET /api/spare-parts)
   getAllParts: async (req, res) => {
     try {
       const { page = 1, pageSize = 10, search } = req.query;
@@ -28,13 +28,16 @@ module.exports = {
       });
 
       const items = rows.map(part => {
+        const stockQty = part.stock_quantity !== null && part.stock_quantity !== undefined ? part.stock_quantity : 0;
+        const minStock = part.min_stock_level !== null && part.min_stock_level !== undefined ? part.min_stock_level : 5;
+        
         let status = 'good';
         let categoryVariant = 'success';
         
-        if (part.stock_quantity <= part.min_stock_level) {
+        if (stockQty <= minStock) {
           status = 'low';
           categoryVariant = 'danger';
-        } else if (part.stock_quantity <= part.min_stock_level + 5) {
+        } else if (stockQty <= minStock + 5) {
           status = 'medium';
           categoryVariant = 'warning';
         }
@@ -42,17 +45,16 @@ module.exports = {
         return {
           id: part.id,
           name: part.name,
-          sku: part.part_number,
-          category: 'عام', // Can be expanded with a category column later
+          sku: part.part_number || '-',
+          category: 'قطع غيار',
           categoryVariant,
           manufacturer: part.brand || 'غير محدد',
-          stock: part.stock_quantity,
-          minStock: part.min_stock_level,
+          stock: stockQty,
+          minStock,
           createdAt: part.created_at || part.createdAt,
-          maxStock: 100, // Placeholder
           status,
-          purchasePrice: parseFloat(part.price),
-          salePrice: parseFloat(part.price) * 1.2, // Mocking markup for sale price
+          purchasePrice: parseFloat(part.price || 0),
+          salePrice: parseFloat(part.price || 0) * 1.2,
           supplier: 'مورد معتمد',
           image: null
         };
@@ -68,10 +70,10 @@ module.exports = {
           total: count, 
           page: parseInt(page), 
           pageSize: limit, 
-          currentStart: offset + 1, 
+          currentStart: count > 0 ? offset + 1 : 0, 
           currentEnd: Math.min(offset + limit, count) 
         },
-        filters: { manufacturers: ['الكل'] }, // Could aggregate distinct brands here
+        filters: { manufacturers: ['الكل'] },
         lowStockAlert: { count: lowStockCount, message: `تنبيه: ${lowStockCount} قطع وصلت إلى حد الطلب الأدنى` }
       };
 
@@ -82,13 +84,24 @@ module.exports = {
     }
   },
 
-  // POST /api/inventory
+  // POST /api/inventory (POST /api/spare-parts)
   addPart: async (req, res) => {
     try {
       const { name, part_number, brand, price, stock_quantity, min_stock_level } = req.body;
+      
+      if (!name || price === undefined) {
+        return res.status(400).json({ message: 'Name and price are required' });
+      }
+
       const newPart = await SparePart.create({
-        name, part_number, brand, price, stock_quantity, min_stock_level
+        name, 
+        part_number, 
+        brand, 
+        price: parseFloat(price), 
+        stock_quantity: stock_quantity !== undefined ? parseInt(stock_quantity) : 0, 
+        min_stock_level: min_stock_level !== undefined ? parseInt(min_stock_level) : 5
       });
+
       res.status(201).json({ message: 'Part added successfully', part: newPart });
     } catch (error) {
       console.error('Error adding part:', error);
@@ -96,7 +109,7 @@ module.exports = {
     }
   },
 
-  // PUT /api/inventory/:id
+  // PUT /api/inventory/:id (PUT /api/spare-parts/:id)
   updatePart: async (req, res) => {
     try {
       const part = await SparePart.findByPk(req.params.id);
@@ -104,9 +117,14 @@ module.exports = {
         return res.status(404).json({ message: 'Part not found' });
       }
       
-      const { stock_quantity, price } = req.body;
-      if (stock_quantity !== undefined) part.stock_quantity = stock_quantity;
-      if (price !== undefined) part.price = price;
+      const { name, part_number, brand, stock_quantity, price, min_stock_level } = req.body;
+      
+      if (name !== undefined) part.name = name;
+      if (part_number !== undefined) part.part_number = part_number;
+      if (brand !== undefined) part.brand = brand;
+      if (stock_quantity !== undefined) part.stock_quantity = parseInt(stock_quantity);
+      if (price !== undefined) part.price = parseFloat(price);
+      if (min_stock_level !== undefined) part.min_stock_level = parseInt(min_stock_level);
       
       await part.save();
       res.json({ message: 'Part updated successfully', part });

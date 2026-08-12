@@ -7,8 +7,9 @@ module.exports = (sequelize) => {
       Appointment.belongsTo(models.User, { as: 'customer', foreignKey: 'client_id' });
       Appointment.belongsTo(models.Vehicle, { as: 'vehicle', foreignKey: 'vehicle_id' });
       Appointment.belongsTo(models.User, { as: 'mechanic', foreignKey: 'mechanic_id' });
-      Appointment.hasOne(models.Invoice, { foreignKey: 'appointment_id' });
+      Appointment.hasOne(models.Invoice, { foreignKey: 'appointment_id', as: 'invoice' });
       Appointment.hasOne(models.TechnicalReport, { foreignKey: 'appointment_id', as: 'report' });
+      Appointment.hasOne(models.Review, { foreignKey: 'appointment_id', as: 'review' });
     }
   }
 
