@@ -10,12 +10,14 @@ module.exports = {
     clientsData[0].email = 'client@safwa.sa';
 
     const mechanicsData = Array.from({ length: 2 }).map(() => factories.createFakeUser('mechanic'));
-    const adminData = [factories.createFakeUser('admin')];
-    adminData[0].email = 'admin@safwa.sa';
-    
-    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
+    mechanicsData[0].email = 'mechanic@safwa.sa';
+
+    const adminData = [factories.createFakeUser('admin', { email: 'admin@safwa.sa' })];
+    const receptionistData = [factories.createFakeUser('receptionist', { email: 'receptionist@safwa.sa' })];
+
+    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...receptionistData], {});
     const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);
-    
+
     const clients = users.filter(u => u.role === 'client');
     const mechanics = users.filter(u => u.role === 'mechanic');
 
