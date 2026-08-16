@@ -27,15 +27,20 @@ export default function TopNavbar() {
           className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          {/* Name */}
+          {/* Name & Role */}
           <div className="hidden md:block text-left">
             <p className="text-sm font-bold text-inverse-surface m-0 leading-none">
               {user?.name || 'مستخدم'}
             </p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md mt-1 inline-block bg-slate-100 text-slate-600">
+              {user?.role === 'super_admin' ? 'سوبر أدمن' : user?.role === 'admin' ? 'مدير النظام' : user?.role === 'mechanic' ? 'ميكانيكي' : 'عميل'}
+            </span>
           </div>
 
           {/* Simple Avatar Circle */}
-          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+            user?.role === 'super_admin' ? 'bg-purple-700' : 'bg-teal-700'
+          }`}>
             {user?.name ? user.name.charAt(0).toUpperCase() : 'م'}
           </div>
         </div>

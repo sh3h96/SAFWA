@@ -48,6 +48,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isMechanic = user?.role === 'mechanic';
+  const isClient = user?.role === 'client';
+
   return (
     <AuthContext.Provider
       value={{
@@ -55,6 +60,10 @@ export const AuthProvider = ({ children }) => {
         token,
         isAuthenticated: !!token,
         isLoading,
+        isSuperAdmin,
+        isAdmin,
+        isMechanic,
+        isClient,
         login,
         logout,
       }}

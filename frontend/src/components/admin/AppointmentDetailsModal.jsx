@@ -93,13 +93,26 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }) {
                     <p className="text-sm font-bold text-slate-800">{details.car}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wide block mb-1">الميكانيكي المكلف</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
-                        {details.mechanicName?.charAt(0) || 'م'}
+                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wide block mb-1">الفنيون المكلفون</span>
+                    {Array.isArray(details.mechanics) && details.mechanics.length > 0 ? (
+                      <div className="space-y-1.5 mt-1">
+                        {details.mechanics.map((m) => (
+                          <div key={m.id} className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                              {m.name?.charAt(0) || 'م'}
+                            </div>
+                            <p className="text-sm font-bold text-indigo-800">{m.name}</p>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm font-bold text-indigo-800">{details.mechanicName || 'غير محدد'}</p>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                          {details.mechanicName?.charAt(0) || 'م'}
+                        </div>
+                        <p className="text-sm font-bold text-indigo-800">{details.mechanicName || 'غير محدد'}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

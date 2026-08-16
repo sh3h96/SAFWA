@@ -58,8 +58,8 @@ function App() {
             <Route path="/reset-password" element={<PasswordResetPage />} />
             <Route path="/auth/reset-password" element={<PasswordResetPage />} />
 
-            {/* Admin & Receptionist Dashboard */}
-            <Route element={<ProtectedRoute allowedRoles={['admin', 'receptionist']} />}>
+            {/* Admin & Super Admin Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="appointments" element={<AppointmentsControlPage />} />
                 <Route path="inventory" element={<InventoryPage />} />

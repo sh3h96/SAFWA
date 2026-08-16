@@ -61,9 +61,11 @@ export default function AppointmentsControlPage() {
     const mechId = selectedMechanics[app.id];
     if (!mechId) return;
     
+    const mechanicIds = Array.isArray(mechId) ? mechId.map(id => parseInt(id, 10)) : [parseInt(mechId, 10)];
+
     // We update to under_inspection so the mechanic first sees "تقرير الفحص" (Waiting for Inspection).
     updateStatusMutation.mutate(
-      { id: app.id, data: { status: 'under_inspection', mechanic_id: mechId } },
+      { id: app.id, data: { status: 'under_inspection', mechanic_ids: mechanicIds } },
       {
         onSuccess: () => {
           setSelectedMechanics(prev => {
@@ -211,20 +213,29 @@ export default function AppointmentsControlPage() {
                       <p className="text-sm text-slate-700 font-medium leading-relaxed line-clamp-3">{app.issue}</p>
                     </div>
                     
-                    {/* Assigned Mechanic */}
-                    {(app.status === 'in_progress' || app.status === 'under_inspection' || app.status === 'waiting_parts' || app.status === 'completed') && app.mechanic_id && (
-                      <div className="bg-indigo-50/50 rounded-xl p-3 flex items-center justify-between border border-indigo-100/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
-                            {mechanics.find(m => m.id == app.mechanic_id)?.name?.charAt(0) || 'م'}
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-indigo-400 font-bold block mb-0.5">الميكانيكي المكلف</span>
+                    {/* Assigned Mechanic / Mechanics */}
+                    {(app.status === 'in_progress' || app.status === 'under_inspection' || app.status === 'waiting_parts' || app.status === 'completed') && (app.mechanic_id || (app.mechanics && app.mechanics.length > 0)) && (
+                      <div className="bg-indigo-50/50 rounded-xl p-3 flex flex-col gap-2 border border-indigo-100/50">
+                        <span className="text-[10px] text-indigo-400 font-bold block mb-0.5">الفنيون المكلفون</span>
+                        {Array.isArray(app.mechanics) && app.mechanics.length > 0 ? (
+                          app.mechanics.map(m => (
+                            <div key={m.id} className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">
+                                {m.name?.charAt(0) || 'م'}
+                              </div>
+                              <span className="text-xs text-indigo-700 font-bold">{m.name}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                              {mechanics.find(m => m.id == app.mechanic_id)?.name?.charAt(0) || 'م'}
+                            </div>
                             <span className="text-sm text-indigo-700 font-bold">
                               {mechanics.find(m => m.id == app.mechanic_id)?.name || 'فني'}
                             </span>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
 

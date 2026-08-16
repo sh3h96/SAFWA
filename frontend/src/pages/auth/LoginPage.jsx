@@ -30,7 +30,7 @@ export default function LoginPage() {
       } else if (data.user.role === 'mechanic') {
         navigate('/mechanic/tasks');
       } else {
-        // admin or receptionist
+        // super_admin or admin
         navigate('/admin/appointments');
       }
     },
