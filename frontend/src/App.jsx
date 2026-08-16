@@ -22,6 +22,7 @@ const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 
 // Admin Pages
 const AppointmentsControlPage = lazy(() => import('./pages/admin/AppointmentsControlPage'));
+const AdminVehiclesPage = lazy(() => import('./pages/admin/AdminVehiclesPage'));
 const InventoryPage = lazy(() => import('./pages/admin/InventoryPage'));
 const FinancialsPage = lazy(() => import('./pages/admin/FinancialsPage'));
 const UsersManagementPage = lazy(() => import('./pages/admin/UsersManagementPage'));
@@ -62,6 +63,7 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="appointments" element={<AppointmentsControlPage />} />
+                <Route path="vehicles" element={<AdminVehiclesPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="financials" element={<FinancialsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />

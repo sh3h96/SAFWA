@@ -94,6 +94,25 @@ export const usersAPI = {
   },
 };
 
+export const vehiclesAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/vehicles', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/vehicles/${id}`);
+    return response.data;
+  },
+  getHistory: async (id) => {
+    const response = await api.get(`/vehicles/${id}/history`);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/vehicles/${id}`);
+    return response.data;
+  }
+};
+
 export const inventoryAPI = {
   getAll: async (search = '') => {
     const response = await api.get('/inventory', { params: { search } });

@@ -16,6 +16,12 @@ export const adminNavGroups = [
         path: '/admin/reviews',
       },
       {
+        id: 'admin_vehicles',
+        icon: 'directions_car',
+        label: 'إدارة المركبات',
+        path: '/admin/vehicles',
+      },
+      {
         id: 'admin_inventory',
         icon: 'inventory_2',
         label: 'إدارة المخزون',
