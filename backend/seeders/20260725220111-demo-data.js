@@ -15,19 +15,30 @@ module.exports = {
 
     const adminData = [factories.createFakeUser('admin', { email: 'admin@safwa.sa' })];
     
-    // Primary Super Admin (Shehab)
-    const superAdminData = [
-      factories.createFakeUser('super_admin', {
-        name: 'Shehab',
-        email: 'shehabshawgi@gmail.com',
-        phone: '777537842',
-        password: superAdminPasswordHash,
-        is_email_verified: true,
-        status: 'active'
-      })
-    ];
+    // Primary Super Admin (Shehab) - Idempotent Handling
+    const [existingSuperAdmin] = await queryInterface.sequelize.query(
+      `SELECT id FROM users WHERE email = 'shehabshawgi@gmail.com' LIMIT 1;`
+    );
 
-    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...superAdminData], {});
+    if (existingSuperAdmin.length > 0) {
+      await queryInterface.sequelize.query(
+        `UPDATE users SET name = 'Shehab', phone = '777537842', role = 'super_admin', status = 'active', is_email_verified = true, password = '${superAdminPasswordHash}', updated_at = NOW() WHERE email = 'shehabshawgi@gmail.com';`
+      );
+      await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
+    } else {
+      const superAdminData = [
+        factories.createFakeUser('super_admin', {
+          name: 'Shehab',
+          email: 'shehabshawgi@gmail.com',
+          phone: '777537842',
+          password: superAdminPasswordHash,
+          is_email_verified: true,
+          status: 'active'
+        })
+      ];
+      await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...superAdminData], {});
+    }
+
     const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);
 
     const clients = users.filter(u => u.role === 'client');
@@ -54,14 +65,47 @@ module.exports = {
     const [appointments] = await queryInterface.sequelize.query(`SELECT id, mechanic_id, client_id FROM appointments;`);
 
     // 4b. Multi-Mechanic Sync (appointment_mechanics)
-    const appointmentMechanicsData = appointments.map(app => ({
-      appointment_id: app.id,
-      mechanic_id: app.mechanic_id,
-      assigned_at: new Date(),
-      created_at: new Date(),
-      updated_at: new Date()
-    }));
-    await queryInterface.bulkInsert('appointment_mechanics', appointmentMechanicsData, {});
+    const appointmentMechanicsData = [];
+    const createdPairs = new Set();
+
+    appointments.forEach((app, idx) => {
+      // Primary mechanic assignment
+      if (app.mechanic_id) {
+        const pairKey = `${app.id}_${app.mechanic_id}`;
+        if (!createdPairs.has(pairKey)) {
+          createdPairs.add(pairKey);
+          appointmentMechanicsData.push({
+            appointment_id: app.id,
+            mechanic_id: app.mechanic_id,
+            assigned_at: new Date(),
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+        }
+      }
+
+      // Additional mechanic for multi-mechanic seed demonstration
+      if (idx === 0 && mechanics.length > 1) {
+        const secondMech = mechanics.find(m => m.id !== app.mechanic_id);
+        if (secondMech) {
+          const pairKey2 = `${app.id}_${secondMech.id}`;
+          if (!createdPairs.has(pairKey2)) {
+            createdPairs.add(pairKey2);
+            appointmentMechanicsData.push({
+              appointment_id: app.id,
+              mechanic_id: secondMech.id,
+              assigned_at: new Date(),
+              created_at: new Date(),
+              updated_at: new Date()
+            });
+          }
+        }
+      }
+    });
+
+    if (appointmentMechanicsData.length > 0) {
+      await queryInterface.bulkInsert('appointment_mechanics', appointmentMechanicsData, {});
+    }
 
     // 5. Technical Reports
     const reportsData = appointments.map(app => factories.createFakeTechnicalReport(app.id, app.mechanic_id));

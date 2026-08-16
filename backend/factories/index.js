@@ -3,22 +3,33 @@ const { faker } = require('@faker-js/faker');
 // A pre-hashed password for 'password123' so we don't slow down seeding with bcrypt
 const defaultPasswordHash = '$2b$10$4IitGBlTUeVQD39z3LVlFuqUzfQ/knLbevrijkORTxcoZzqHUZ042'; // password123
 
-const createFakeUser = (role = 'client', options = {}) => ({
-  name: options.name || faker.person.fullName(),
-  email: options.email || faker.internet.email(),
-  password: options.password || defaultPasswordHash,
-  phone: options.phone !== undefined ? options.phone : faker.phone.number(),
-  role: role,
-  status: options.status || 'active',
-  is_email_verified: options.is_email_verified !== undefined ? options.is_email_verified : true,
-  verification_token_hash: options.verification_token_hash || null,
-  verification_token_expires_at: options.verification_token_expires_at || null,
-  reset_token_hash: options.reset_token_hash || null,
-  reset_token_expires_at: options.reset_token_expires_at || null,
-  token_version: options.token_version !== undefined ? options.token_version : 1,
-  created_at: options.created_at || new Date(),
-  updated_at: options.updated_at || new Date(),
-});
+const ALLOWED_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
+
+const createFakeUser = (role = 'client', options = {}) => {
+  let targetRole = role;
+  if (targetRole === 'receptionist') {
+    targetRole = 'admin';
+  } else if (!ALLOWED_ROLES.includes(targetRole)) {
+    targetRole = 'client';
+  }
+
+  return {
+    name: options.name || faker.person.fullName(),
+    email: options.email || faker.internet.email(),
+    password: options.password || defaultPasswordHash,
+    phone: options.phone !== undefined ? options.phone : faker.phone.number(),
+    role: targetRole,
+    status: options.status || 'active',
+    is_email_verified: options.is_email_verified !== undefined ? options.is_email_verified : true,
+    verification_token_hash: options.verification_token_hash || null,
+    verification_token_expires_at: options.verification_token_expires_at || null,
+    reset_token_hash: options.reset_token_hash || null,
+    reset_token_expires_at: options.reset_token_expires_at || null,
+    token_version: options.token_version !== undefined ? options.token_version : 1,
+    created_at: options.created_at || new Date(),
+    updated_at: options.updated_at || new Date(),
+  };
+};
 
 const createFakeVehicle = (clientId) => ({
   client_id: clientId,
