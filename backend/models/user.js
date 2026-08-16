@@ -7,6 +7,7 @@ module.exports = (sequelize) => {
       User.hasMany(models.Vehicle, { foreignKey: 'client_id', as: 'vehicles' });
       User.hasMany(models.Appointment, { foreignKey: 'client_id', as: 'clientAppointments' });
       User.hasMany(models.Appointment, { foreignKey: 'mechanic_id', as: 'mechanicAppointments' });
+      User.belongsToMany(models.Appointment, { through: models.AppointmentMechanic, as: 'assignedAppointments', foreignKey: 'mechanic_id', otherKey: 'appointment_id' });
       User.hasMany(models.TechnicalReport, { foreignKey: 'mechanic_id', as: 'reports' });
       User.hasMany(models.Review, { foreignKey: 'client_id', as: 'reviews' });
     }

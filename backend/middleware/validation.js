@@ -18,7 +18,7 @@ const handleValidation = (req, res, next) => {
   });
 };
 
-const VALID_ROLES = ['admin', 'client', 'mechanic', 'receptionist'];
+const VALID_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 const VALID_APPOINTMENT_STATUSES = ['pending', 'confirmed', 'under_inspection', 'in_progress', 'waiting_parts', 'completed', 'cancelled'];
 const VALID_PART_APPROVAL_STATUSES = ['approved', 'rejected', 'pending'];
 const VALID_PAYMENT_METHODS = ['cash', 'card', 'credit_card', 'online', 'bank_transfer'];

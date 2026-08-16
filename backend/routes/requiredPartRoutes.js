@@ -9,6 +9,6 @@ const {
 
 // Protected Required Parts routes (RBAC Restricted)
 router.post('/', authenticateToken, requireRole('mechanic', 'admin'), createRequiredPartValidation, requiredPartController.submitRequest);
-router.put('/approval', authenticateToken, requireRole('admin', 'receptionist'), updateApprovalValidation, requiredPartController.updateApproval);
+router.put('/approval', authenticateToken, requireRole('admin'), updateApprovalValidation, requiredPartController.updateApproval);
 
 module.exports = router;

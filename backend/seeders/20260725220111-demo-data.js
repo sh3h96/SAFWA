@@ -1,6 +1,7 @@
 'use strict';
 
 const factories = require('../factories');
+const superAdminPasswordHash = '$2b$10$TgZ2fKyCjDx9jnfQd081H.WfjgPUrScJZjGMQwaN5ec.XQspEiDBC'; // password1234
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -13,9 +14,20 @@ module.exports = {
     mechanicsData[0].email = 'mechanic@safwa.sa';
 
     const adminData = [factories.createFakeUser('admin', { email: 'admin@safwa.sa' })];
-    const receptionistData = [factories.createFakeUser('receptionist', { email: 'receptionist@safwa.sa' })];
+    
+    // Primary Super Admin (Shehab)
+    const superAdminData = [
+      factories.createFakeUser('super_admin', {
+        name: 'Shehab',
+        email: 'shehabshawgi@gmail.com',
+        phone: '777537842',
+        password: superAdminPasswordHash,
+        is_email_verified: true,
+        status: 'active'
+      })
+    ];
 
-    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...receptionistData], {});
+    await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...superAdminData], {});
     const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);
 
     const clients = users.filter(u => u.role === 'client');
@@ -33,13 +45,23 @@ module.exports = {
     await queryInterface.bulkInsert('spare_parts', sparePartsData, {});
     const [parts] = await queryInterface.sequelize.query(`SELECT id FROM spare_parts;`);
 
-    // 4. Appointments (Vehicle.client_id directly matched to Appointment.client_id)
+    // 4. Appointments
     const appointmentsData = vehicles.map((vehicle, index) => {
       const mechanic = mechanics[index % mechanics.length];
       return factories.createFakeAppointment(vehicle.client_id, vehicle.id, mechanic.id);
     });
     await queryInterface.bulkInsert('appointments', appointmentsData, {});
     const [appointments] = await queryInterface.sequelize.query(`SELECT id, mechanic_id, client_id FROM appointments;`);
+
+    // 4b. Multi-Mechanic Sync (appointment_mechanics)
+    const appointmentMechanicsData = appointments.map(app => ({
+      appointment_id: app.id,
+      mechanic_id: app.mechanic_id,
+      assigned_at: new Date(),
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+    await queryInterface.bulkInsert('appointment_mechanics', appointmentMechanicsData, {});
 
     // 5. Technical Reports
     const reportsData = appointments.map(app => factories.createFakeTechnicalReport(app.id, app.mechanic_id));
@@ -79,7 +101,6 @@ module.exports = {
         const partial = Math.round((total * 0.5) * 100) / 100;
         paymentsData.push(factories.createFakePayment(invoice, partial));
       }
-      // 'unpaid' receives no payment record
     });
     if (paymentsData.length > 0) {
       await queryInterface.bulkInsert('payments', paymentsData, {});
@@ -97,6 +118,7 @@ module.exports = {
     await queryInterface.bulkDelete('invoices', null, {});
     await queryInterface.bulkDelete('required_parts', null, {});
     await queryInterface.bulkDelete('technical_reports', null, {});
+    await queryInterface.bulkDelete('appointment_mechanics', null, {});
     await queryInterface.bulkDelete('appointments', null, {});
     await queryInterface.bulkDelete('spare_parts', null, {});
     await queryInterface.bulkDelete('vehicles', null, {});

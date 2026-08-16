@@ -70,7 +70,10 @@ const requireRole = (...allowedRoles) => {
       return res.status(401).json({ message: 'Authentication token missing or invalid' });
     }
 
-    if (!req.user.role || !allowedRoles.includes(req.user.role)) {
+    const userRole = req.user.role;
+    const isAllowed = allowedRoles.includes(userRole) || (userRole === 'super_admin' && allowedRoles.includes('admin'));
+
+    if (!isAllowed) {
       return res.status(403).json({ message: 'Access forbidden: insufficient permissions' });
     }
 

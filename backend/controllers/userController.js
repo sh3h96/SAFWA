@@ -17,7 +17,7 @@ const getJwtSecret = () => {
   return secret;
 };
 
-const VALID_ROLES = ['admin', 'client', 'mechanic', 'receptionist'];
+const VALID_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 
 module.exports = {
   // POST /api/auth/register
@@ -213,14 +213,12 @@ module.exports = {
   // GET /api/users/staff-highlights
   getStaffHighlights: async (req, res) => {
     try {
-      // Corrected role name from 'technician' to 'mechanic'
       const mechanics = await User.findAll({
         where: { role: 'mechanic' },
         attributes: ['id', 'name', 'role'],
         limit: 5
       });
       
-      // Compute REAL performance metrics from Appointment model instead of Math.random()
       const highlights = await Promise.all(mechanics.map(async (mechanic) => {
         const activeVehicles = await Appointment.count({
           where: {
@@ -264,7 +262,17 @@ module.exports = {
         return res.status(400).json({ message: 'Name and email are required' });
       }
 
-      const userRole = role && VALID_ROLES.includes(role) ? role : 'client';
+      const targetRole = role && VALID_ROLES.includes(role) ? role : 'client';
+
+      // Super Admin Creation Protection: No user may create a new super_admin account
+      if (targetRole === 'super_admin') {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن إنشاء حساب Super Admin جديد' });
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can create Admin accounts
+      if (targetRole === 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'غير مصرح: إنشاء وتجهيز حسابات المدراء محصور بـ Super Admin فقط' });
+      }
 
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
@@ -277,8 +285,9 @@ module.exports = {
         name,
         email,
         password: hashedPassword,
-        role: userRole,
-        phone
+        role: targetRole,
+        phone,
+        is_email_verified: true
       });
 
       const userWithoutPassword = newUser.toJSON();
@@ -300,6 +309,28 @@ module.exports = {
       const user = await User.findByPk(id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Super Admin Immutability Protection: Super Admin cannot be updated by normal admins
+      if (user.role === 'super_admin') {
+        if (req.user.id !== user.id && req.user.role !== 'super_admin') {
+          return res.status(403).json({ message: 'غير مصرح: لا يمكن تعديل حساب Super Admin' });
+        }
+        if (role && role !== 'super_admin') {
+          return res.status(403).json({ message: 'غير مصرح: لا يمكن إزالة صلاحيات Super Admin' });
+        }
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can edit other Admin accounts or change user role to/from admin
+      if (user.role === 'admin' && user.id !== req.user.id) {
+        if (req.user.role !== 'super_admin') {
+          return res.status(403).json({ message: 'غير مصرح: تعديل حسابات المدراء محصور بـ Super Admin فقط' });
+        }
+      }
+
+      // Prevent promotion of any user to super_admin
+      if (role === 'super_admin' && user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن ترقية حساب إلى Super Admin' });
       }
 
       // Check email uniqueness if changing email
@@ -338,6 +369,16 @@ module.exports = {
       const user = await User.findByPk(id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Super Admin Immutability Protection: Super Admin cannot be suspended
+      if (user.role === 'super_admin') {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن إيقاف أو تعطيل حساب Super Admin' });
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can suspend/activate Admin accounts
+      if (user.role === 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'غير مصرح: إيقاف أو تفعيل حسابات المدراء محصور بـ Super Admin فقط' });
       }
 
       // Toggle status between active and suspended

@@ -8,7 +8,7 @@ const {
 } = require('../middleware/validation');
 
 // Inventory / Spare Parts routes (RBAC Restricted)
-router.get('/', authenticateToken, requireRole('admin', 'receptionist', 'mechanic'), sparePartController.getAllParts);
+router.get('/', authenticateToken, requireRole('admin', 'mechanic'), sparePartController.getAllParts);
 router.post('/', authenticateToken, requireRole('admin'), createSparePartValidation, sparePartController.addPart);
 router.put('/:id', authenticateToken, requireRole('admin'), updateSparePartValidation, sparePartController.updatePart);
 

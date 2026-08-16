@@ -158,11 +158,25 @@ module.exports = {
   // GET /api/appointments/assigned
   getAssignedTasks: async (req, res) => {
     try {
-      const { TechnicalReport, RequiredPart, SparePart } = require('../models');
-      const appointments = await Appointment.findAll({
+      const { TechnicalReport, RequiredPart, SparePart, AppointmentMechanic } = require('../models');
+      
+      // Fetch appointment IDs assigned to mechanic via join table
+      const assignedMechRecords = await AppointmentMechanic.findAll({
         where: { mechanic_id: req.user.id },
+        attributes: ['appointment_id']
+      });
+      const assignedAppIds = assignedMechRecords.map(am => am.appointment_id);
+
+      const appointments = await Appointment.findAll({
+        where: {
+          [Op.or]: [
+            { mechanic_id: req.user.id },
+            { id: { [Op.in]: assignedAppIds.length > 0 ? assignedAppIds : [0] } }
+          ]
+        },
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
+          { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone'], through: { attributes: [] } },
           { 
             model: TechnicalReport, 
             as: 'report',
@@ -234,7 +248,9 @@ module.exports = {
         where: whereClause,
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
-          { model: User, as: 'customer', attributes: ['name', 'phone'] }
+          { model: User, as: 'customer', attributes: ['name', 'phone'] },
+          { model: User, as: 'mechanic', attributes: ['id', 'name'] },
+          { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } }
         ],
         order: [['scheduled_date', 'ASC']]
       });
@@ -246,7 +262,8 @@ module.exports = {
         issue: app.problem_description,
         time: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
         date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
-        status: app.status
+        status: app.status,
+        mechanics: app.mechanics && app.mechanics.length > 0 ? app.mechanics : (app.mechanic ? [app.mechanic] : [])
       }));
 
       res.json(formatted);
@@ -259,26 +276,37 @@ module.exports = {
   // PUT /api/appointments/:id
   updateAppointment: async (req, res) => {
     try {
+      const { AppointmentMechanic } = require('../models');
       const appointment = await Appointment.findByPk(req.params.id);
       if (!appointment) {
         return res.status(404).json({ message: 'Appointment not found' });
       }
 
-      // Assignment Verification: Mechanics can only update appointments assigned to them
+      // Check if current user is assigned to this appointment
+      let isAssignedMechanic = false;
       if (req.user && req.user.role === 'mechanic') {
-        if (appointment.mechanic_id !== req.user.id) {
+        if (appointment.mechanic_id === req.user.id) {
+          isAssignedMechanic = true;
+        } else {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appointment.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssignedMechanic = true;
+        }
+
+        if (!isAssignedMechanic) {
           return res.status(404).json({ message: 'Appointment not found' });
         }
 
-        // Mechanics can ONLY update status. Any attempt to modify restricted fields (ownership, vehicle, date, etc.) is rejected.
-        const restrictedFields = ['mechanic_id', 'client_id', 'vehicle_id', 'scheduled_date', 'appointment_date', 'problem_description'];
+        // Mechanics can ONLY update status. Any attempt to modify restricted fields is rejected.
+        const restrictedFields = ['mechanic_id', 'mechanic_ids', 'client_id', 'vehicle_id', 'scheduled_date', 'appointment_date', 'problem_description'];
         const hasRestrictedAttempt = restrictedFields.some(field => req.body[field] !== undefined);
         if (hasRestrictedAttempt) {
           return res.status(400).json({ message: 'Mechanics can only update appointment status' });
         }
       }
 
-      const { status, mechanic_id } = req.body;
+      const { status, mechanic_id, mechanic_ids } = req.body;
       
       if (status !== undefined) {
         if (!VALID_STATUSES.includes(status)) {
@@ -287,18 +315,60 @@ module.exports = {
         appointment.status = status;
       }
 
-      if (mechanic_id !== undefined) {
+      // Handle Multi-Mechanic assignment array
+      if (mechanic_ids !== undefined && Array.isArray(mechanic_ids)) {
+        // Validate all mechanic IDs
+        if (mechanic_ids.length > 0) {
+          const validMechanics = await User.findAll({
+            where: { id: mechanic_ids, role: 'mechanic' }
+          });
+          if (validMechanics.length !== mechanic_ids.length) {
+            return res.status(400).json({ message: 'One or more mechanic IDs are invalid or not mechanics' });
+          }
+        }
+
+        // Clear existing mechanics and bulk insert new assignments
+        await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
+        if (mechanic_ids.length > 0) {
+          const amRecords = mechanic_ids.map(mId => ({
+            appointment_id: appointment.id,
+            mechanic_id: mId,
+            assigned_at: new Date()
+          }));
+          await AppointmentMechanic.bulkCreate(amRecords);
+          appointment.mechanic_id = mechanic_ids[0]; // Legacy fallback sync
+        } else {
+          appointment.mechanic_id = null;
+        }
+      } else if (mechanic_id !== undefined) {
+        // Single mechanic update legacy handling
         if (mechanic_id !== null) {
           const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic' } });
           if (!mechanic) {
             return res.status(400).json({ message: 'Mechanic not found or invalid role' });
           }
+          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
+          await AppointmentMechanic.create({
+            appointment_id: appointment.id,
+            mechanic_id,
+            assigned_at: new Date()
+          });
+        } else {
+          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
         }
         appointment.mechanic_id = mechanic_id;
       }
 
       await appointment.save();
-      res.json({ message: 'Appointment updated successfully', appointment });
+      
+      // Fetch updated appointment with mechanics
+      const updatedAppointment = await Appointment.findByPk(appointment.id, {
+        include: [
+          { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } }
+        ]
+      });
+
+      res.json({ message: 'Appointment updated successfully', appointment: updatedAppointment });
     } catch (error) {
       console.error('Error updating appointment:', error);
       res.status(500).json({ message: 'Server error' });
@@ -308,12 +378,13 @@ module.exports = {
   // GET /api/appointments/:id
   getAppointmentById: async (req, res) => {
     try {
-      const { TechnicalReport, RequiredPart, SparePart } = require('../models');
+      const { TechnicalReport, RequiredPart, SparePart, AppointmentMechanic } = require('../models');
       const appointment = await Appointment.findByPk(req.params.id, {
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
           { model: User, as: 'customer', attributes: ['name', 'phone'] },
-          { model: User, as: 'mechanic', attributes: ['name'] },
+          { model: User, as: 'mechanic', attributes: ['id', 'name'] },
+          { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone'], through: { attributes: [] } },
           { 
             model: TechnicalReport, 
             as: 'report',
@@ -343,7 +414,14 @@ module.exports = {
 
       // Assignment Verification: Mechanic can only view appointments assigned to them
       if (req.user && req.user.role === 'mechanic') {
-        if (appointment.mechanic_id !== req.user.id) {
+        let isAssigned = appointment.mechanic_id === req.user.id;
+        if (!isAssigned) {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appointment.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssigned = true;
+        }
+        if (!isAssigned) {
           return res.status(404).json({ message: 'Appointment not found' });
         }
       }
@@ -369,7 +447,8 @@ module.exports = {
         time: new Date(appointment.scheduled_date || appointment.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
         date: new Date(appointment.scheduled_date || appointment.created_at).toLocaleDateString('ar-SA'),
         status: appointment.status,
-        mechanicName: appointment.mechanic?.name || 'غير محدد',
+        mechanicName: appointment.mechanic?.name || (appointment.mechanics && appointment.mechanics[0]?.name) || 'غير محدد',
+        mechanics: appointment.mechanics || [],
         report: appointment.report ? {
           odometer: appointment.report.odometer,
           obd2_codes: appointment.report.obd2_codes,

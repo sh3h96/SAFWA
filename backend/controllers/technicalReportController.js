@@ -26,7 +26,16 @@ module.exports = {
 
       // Assignment Verification: Mechanic can only create technical report for their assigned appointment
       if (req.user && req.user.role === 'mechanic') {
-        if (appointment.mechanic_id !== req.user.id) {
+        const { AppointmentMechanic } = require('../models');
+        let isAssigned = appointment.mechanic_id === req.user.id;
+        if (!isAssigned) {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appointment.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssigned = true;
+        }
+
+        if (!isAssigned) {
           return res.status(404).json({ message: 'Appointment not found' });
         }
       }

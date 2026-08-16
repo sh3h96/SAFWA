@@ -31,7 +31,7 @@ router.get('/me', authenticateToken, userController.getMe);
 router.get('/staff-highlights', authenticateToken, userController.getStaffHighlights);
 
 // Administrative User routes (RBAC Restricted)
-router.get('/', authenticateToken, requireRole('admin', 'receptionist'), userController.getAllUsers);
+router.get('/', authenticateToken, requireRole('admin'), userController.getAllUsers);
 router.post('/', authenticateToken, requireRole('admin'), createUserValidation, userController.createUser);
 router.put('/:id', authenticateToken, requireRole('admin'), updateUserValidation, userController.updateUser);
 router.put('/:id/status', authenticateToken, requireRole('admin'), paramIdValidation, userController.updateUserStatus);
