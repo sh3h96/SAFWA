@@ -94,6 +94,13 @@ export const usersAPI = {
   },
 };
 
+export const auditLogsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/audit-logs', { params });
+    return response.data;
+  }
+};
+
 export const vehiclesAPI = {
   getAll: async (params = {}) => {
     const response = await api.get('/vehicles', { params });

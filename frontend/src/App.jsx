@@ -27,6 +27,7 @@ const InventoryPage = lazy(() => import('./pages/admin/InventoryPage'));
 const FinancialsPage = lazy(() => import('./pages/admin/FinancialsPage'));
 const UsersManagementPage = lazy(() => import('./pages/admin/UsersManagementPage'));
 const ReviewsReportsPage = lazy(() => import('./pages/admin/ReviewsReportsPage'));
+const AuditLogsPage = lazy(() => import('./pages/admin/AuditLogsPage'));
 
 // Client Pages
 const ClientVehiclesPage = lazy(() => import('./pages/client/ClientVehiclesPage'));
@@ -68,6 +69,10 @@ function App() {
                 <Route path="financials" element={<FinancialsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />
                 <Route path="reviews" element={<ReviewsReportsPage />} />
+                {/* Super Admin Only Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+                  <Route path="audit-logs" element={<AuditLogsPage />} />
+                </Route>
                 {/* Fallback redirect */}
                 <Route path="*" element={<Navigate to="/admin/appointments" replace />} />
               </Route>

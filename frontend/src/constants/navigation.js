@@ -45,6 +45,13 @@ export const adminNavGroups = [
         label: 'إدارة المستخدمين',
         path: '/admin/users',
       },
+      {
+        id: 'admin_audit_logs',
+        icon: 'history_toggle_off',
+        label: 'سجل التدقيق',
+        path: '/admin/audit-logs',
+        allowedRoles: ['super_admin'],
+      },
     ],
   },
 ];

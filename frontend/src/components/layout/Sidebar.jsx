@@ -11,7 +11,7 @@ import safwaLogo from '../../assets/images/safwa-logo.png';
 export default function Sidebar({ navGroups }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -45,47 +45,58 @@ export default function Sidebar({ navGroups }) {
 
       {/* Grouped Navigation Links */}
       <nav className="flex-1 py-4 px-3 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar space-y-6">
-        {navGroups.map((group) => (
-          <div key={group.id} className="space-y-1">
-            {/* Section Header */}
-            <h4 className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 mt-6 px-4 select-none">
-              {group.title}
-            </h4>
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter((item) => {
+            if (item.allowedRoles && item.allowedRoles.length > 0) {
+              return item.allowedRoles.includes(user?.role);
+            }
+            return true;
+          });
 
-            {/* Section Links */}
-            <div className="pt-1 space-y-1">
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.id}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer w-full ${
-                      isActive
-                        ? 'bg-teal-700 text-white shadow-md'
-                        : 'text-slate-300 hover:bg-[#1a2938] hover:text-white'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span
-                        className="material-symbols-outlined text-xl"
-                        style={{
-                          fontVariationSettings: isActive
-                            ? "'FILL' 1"
-                            : "'FILL' 0",
-                        }}
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="font-medium text-sm">{item.label}</span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <div key={group.id} className="space-y-1">
+              {/* Section Header */}
+              <h4 className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 mt-6 px-4 select-none">
+                {group.title}
+              </h4>
+
+              {/* Section Links */}
+              <div className="pt-1 space-y-1">
+                {visibleItems.map((item) => (
+                  <NavLink
+                    key={item.id}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer w-full ${
+                        isActive
+                          ? 'bg-teal-700 text-white shadow-md'
+                          : 'text-slate-300 hover:bg-[#1a2938] hover:text-white'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span
+                          className="material-symbols-outlined text-xl"
+                          style={{
+                            fontVariationSettings: isActive
+                              ? "'FILL' 1"
+                              : "'FILL' 0",
+                          }}
+                        >
+                          {item.icon}
+                        </span>
+                        <span className="font-medium text-sm">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer — Logout */}
