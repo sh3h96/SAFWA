@@ -1,16 +1,75 @@
-const { Vehicle, Appointment, TechnicalReport, User, Invoice } = require('../models');
+const { Vehicle, Appointment, TechnicalReport, User, Invoice, sequelize } = require('../models');
+const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/vehicles
   getAllVehicles: async (req, res) => {
     try {
-      const vehicles = await Vehicle.findAll({
-        include: [{ model: User, as: 'owner', attributes: ['name'] }]
+      const {
+        search,
+        page,
+        limit,
+        sortBy = 'created_at',
+        sortOrder = 'desc',
+        make,
+        model,
+        year,
+        client_id
+      } = req.query;
+
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = Math.min(parseInt(limit, 10) || 10, 100);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Whitelist sorting parameters
+      const allowedSortColumns = ['created_at', 'make', 'model', 'year', 'license_plate', 'id'];
+      const targetSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
+      const targetSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+      const whereClause = {};
+
+      if (make) whereClause.make = make;
+      if (model) whereClause.model = model;
+      if (year) whereClause.year = year;
+      if (client_id) whereClause.client_id = client_id;
+
+      if (search && search.trim() !== '') {
+        const searchTerm = search.trim();
+        whereClause[Op.or] = [
+          { make: { [Op.like]: `%${searchTerm}%` } },
+          { model: { [Op.like]: `%${searchTerm}%` } },
+          { license_plate: { [Op.like]: `%${searchTerm}%` } },
+          { vin: { [Op.like]: `%${searchTerm}%` } },
+          { '$owner.name$': { [Op.like]: `%${searchTerm}%` } },
+          { '$owner.email$': { [Op.like]: `%${searchTerm}%` } },
+          { '$owner.phone$': { [Op.like]: `%${searchTerm}%` } }
+        ];
+      }
+
+      const { count, rows: vehicles } = await Vehicle.findAndCountAll({
+        where: whereClause,
+        include: [
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'name', 'email', 'phone']
+          }
+        ],
+        order: [[targetSortBy, targetSortOrder]],
+        limit: limitNum,
+        offset: offset,
+        subQuery: false,
+        distinct: true
       });
 
       const formattedVehicles = vehicles.map(v => ({
         id: v.id,
+        client_id: v.client_id,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        license_plate: v.license_plate,
         name: `${v.make} ${v.model} ${v.year || ''}`.trim(),
         plateNumber: v.license_plate,
         addedDate: new Date(v.created_at).toLocaleDateString('ar-SA'),
@@ -18,10 +77,26 @@ module.exports = {
         vin: v.vin || '-',
         odometer: '-',
         lastServiceDate: '-',
-        image: null
+        image: null,
+        owner: v.owner ? {
+          id: v.owner.id,
+          name: v.owner.name,
+          email: v.owner.email,
+          phone: v.owner.phone
+        } : null
       }));
 
-      res.json(formattedVehicles);
+      const totalPages = Math.ceil(count / limitNum) || 1;
+
+      res.json({
+        data: formattedVehicles,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: count,
+          totalPages
+        }
+      });
     } catch (error) {
       console.error('Error fetching vehicles:', error);
       res.status(500).json({ message: 'Server error' });
@@ -178,5 +253,67 @@ module.exports = {
       console.error('Error updating vehicle:', error);
       res.status(500).json({ message: 'Server error' });
     }
+  },
+
+  // DELETE /api/vehicles/:id
+  deleteVehicle: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const { id } = req.params;
+
+      // Access Control: Restricted to Admin and Super Admin
+      if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+        await transaction.rollback();
+        return res.status(403).json({ message: 'Access forbidden: insufficient permissions' });
+      }
+
+      const vehicle = await Vehicle.findByPk(id, { transaction });
+      if (!vehicle) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Vehicle not found' });
+      }
+
+      // Check historical relations (Appointments, etc.)
+      const appointmentCount = await Appointment.count({
+        where: { vehicle_id: id },
+        transaction
+      });
+
+      if (appointmentCount > 0) {
+        await transaction.rollback();
+        return res.status(409).json({
+          message: 'لا يمكن حذف المركبة لاحتوائها على سجلات صيانة ومواعيد تاريخية مرتبطة بها'
+        });
+      }
+
+      const snapshot = {
+        id: vehicle.id,
+        client_id: vehicle.client_id,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        license_plate: vehicle.license_plate,
+        vin: vehicle.vin
+      };
+
+      await vehicle.destroy({ transaction });
+      await transaction.commit();
+
+      // Audit Log for Vehicle Deletion
+      await logAudit({
+        req,
+        action: 'VEHICLE_DELETED',
+        entityType: 'Vehicle',
+        entityId: snapshot.id,
+        oldValues: snapshot
+      });
+
+      res.json({ message: 'تم حذف المركبة بنجاح' });
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error deleting vehicle:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
   }
 };
+
