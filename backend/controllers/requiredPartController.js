@@ -7,8 +7,28 @@ module.exports = {
     try {
       const { appointment_id, parts } = req.body;
       
-      const { TechnicalReport } = require('../models');
+      const { TechnicalReport, Appointment, AppointmentMechanic } = require('../models');
+      const appt = await Appointment.findByPk(appointment_id);
+      if (!appt) {
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      // Assignment Verification: Mechanic must be assigned to appointment to submit parts requests
+      if (req.user && req.user.role === 'mechanic') {
+        let isAssigned = appt.mechanic_id === req.user.id;
+        if (!isAssigned) {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appt.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssigned = true;
+        }
+        if (!isAssigned) {
+          return res.status(404).json({ message: 'Appointment not found or unauthorized' });
+        }
+      }
+
       let report = await TechnicalReport.findOne({ where: { appointment_id } });
+
       
       if (!report) {
         report = await TechnicalReport.create({

@@ -290,12 +290,21 @@ module.exports = {
 
   // PUT /api/appointments/:id
   updateAppointment: async (req, res) => {
+    const { AppointmentMechanic, sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
     try {
-      const { AppointmentMechanic } = require('../models');
-      const appointment = await Appointment.findByPk(req.params.id);
+      const appointment = await Appointment.findByPk(req.params.id, { transaction });
       if (!appointment) {
+        await transaction.rollback();
         return res.status(404).json({ message: 'Appointment not found' });
       }
+
+      // Role Verification: Client is forbidden from updating appointments via this endpoint
+      if (req.user && req.user.role === 'client') {
+        await transaction.rollback();
+        return res.status(403).json({ message: 'Access forbidden: clients cannot update appointments via this endpoint' });
+      }
+
 
       // Check if current user is assigned to this appointment
       let isAssignedMechanic = false;
@@ -304,12 +313,14 @@ module.exports = {
           isAssignedMechanic = true;
         } else {
           const amRecord = await AppointmentMechanic.findOne({
-            where: { appointment_id: appointment.id, mechanic_id: req.user.id }
+            where: { appointment_id: appointment.id, mechanic_id: req.user.id },
+            transaction
           });
           if (amRecord) isAssignedMechanic = true;
         }
 
         if (!isAssignedMechanic) {
+          await transaction.rollback();
           return res.status(404).json({ message: 'Appointment not found' });
         }
 
@@ -317,6 +328,7 @@ module.exports = {
         const restrictedFields = ['mechanic_id', 'mechanic_ids', 'client_id', 'vehicle_id', 'scheduled_date', 'appointment_date', 'problem_description'];
         const hasRestrictedAttempt = restrictedFields.some(field => req.body[field] !== undefined);
         if (hasRestrictedAttempt) {
+          await transaction.rollback();
           return res.status(400).json({ message: 'Mechanics can only update appointment status' });
         }
       }
@@ -328,6 +340,7 @@ module.exports = {
       
       if (status !== undefined) {
         if (!VALID_STATUSES.includes(status)) {
+          await transaction.rollback();
           return res.status(400).json({ message: `Invalid status: ${status}. Valid statuses: ${VALID_STATUSES.join(', ')}` });
         }
         appointment.status = status;
@@ -338,27 +351,32 @@ module.exports = {
 
       // Handle Multi-Mechanic assignment array
       if (mechanic_ids !== undefined && Array.isArray(mechanic_ids)) {
+        // Deduplicate mechanic IDs
+        const uniqueMechanicIds = Array.from(new Set(mechanic_ids.map(id => Number(id))));
+
         // Validate all mechanic IDs
-        if (mechanic_ids.length > 0) {
+        if (uniqueMechanicIds.length > 0) {
           const validMechanics = await User.findAll({
-            where: { id: mechanic_ids, role: 'mechanic' }
+            where: { id: uniqueMechanicIds, role: 'mechanic', status: 'active' },
+            transaction
           });
-          if (validMechanics.length !== mechanic_ids.length) {
-            return res.status(400).json({ message: 'One or more mechanic IDs are invalid or not mechanics' });
+          if (validMechanics.length !== uniqueMechanicIds.length) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'One or more mechanic IDs are invalid, inactive, or not mechanics' });
           }
         }
 
         // Clear existing mechanics and bulk insert new assignments
-        await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
-        if (mechanic_ids.length > 0) {
-          const amRecords = mechanic_ids.map(mId => ({
+        await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id }, transaction });
+        if (uniqueMechanicIds.length > 0) {
+          const amRecords = uniqueMechanicIds.map(mId => ({
             appointment_id: appointment.id,
             mechanic_id: mId,
             assigned_at: new Date()
           }));
-          await AppointmentMechanic.bulkCreate(amRecords);
-          appointment.mechanic_id = mechanic_ids[0]; // Legacy fallback sync
-          assignedMechanicIds = mechanic_ids;
+          await AppointmentMechanic.bulkCreate(amRecords, { transaction });
+          appointment.mechanic_id = uniqueMechanicIds[0]; // Legacy fallback sync
+          assignedMechanicIds = uniqueMechanicIds;
         } else {
           appointment.mechanic_id = null;
         }
@@ -366,25 +384,27 @@ module.exports = {
       } else if (mechanic_id !== undefined) {
         // Single mechanic update legacy handling
         if (mechanic_id !== null) {
-          const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic' } });
+          const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic', status: 'active' }, transaction });
           if (!mechanic) {
+            await transaction.rollback();
             return res.status(400).json({ message: 'Mechanic not found or invalid role' });
           }
-          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
+          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id }, transaction });
           await AppointmentMechanic.create({
             appointment_id: appointment.id,
             mechanic_id,
             assigned_at: new Date()
-          });
+          }, { transaction });
           assignedMechanicIds = [mechanic_id];
         } else {
-          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
+          await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id }, transaction });
         }
         appointment.mechanic_id = mechanic_id;
         mechanicAssignmentChanged = true;
       }
 
-      await appointment.save();
+      await appointment.save({ transaction });
+      await transaction.commit();
 
       // Audit Log triggers
       if (status !== undefined && status !== oldStatus) {
@@ -427,6 +447,7 @@ module.exports = {
 
       res.json({ message: 'Appointment updated successfully', appointment: updatedAppointment });
     } catch (error) {
+      await transaction.rollback();
       console.error('Error updating appointment:', error);
       res.status(500).json({ message: 'Server error' });
     }
