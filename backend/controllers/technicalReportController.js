@@ -1,4 +1,5 @@
 const { TechnicalReport, Appointment } = require('../models');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // POST /api/reports
@@ -52,7 +53,19 @@ module.exports = {
         urgency_level
       });
 
-      // Status remains under_inspection until mechanic chooses Path A or Path B
+      await logAudit({
+        req,
+        action: 'TECHNICAL_REPORT_CREATED',
+        entityType: 'TechnicalReport',
+        entityId: report.id,
+        newValues: {
+          appointment_id,
+          mechanic_id: req.user.id,
+          diagnostics,
+          odometer,
+          repair_plan
+        }
+      });
 
       res.status(201).json({ message: 'Report created successfully', report });
     } catch (error) {

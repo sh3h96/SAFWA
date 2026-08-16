@@ -1,5 +1,6 @@
 const { SparePart } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/inventory (GET /api/spare-parts)
@@ -102,6 +103,14 @@ module.exports = {
         min_stock_level: min_stock_level !== undefined ? parseInt(min_stock_level) : 5
       });
 
+      await logAudit({
+        req,
+        action: 'PART_CREATED',
+        entityType: 'SparePart',
+        entityId: newPart.id,
+        newValues: { name, part_number, brand, price: newPart.price, stock_quantity: newPart.stock_quantity }
+      });
+
       res.status(201).json({ message: 'Part added successfully', part: newPart });
     } catch (error) {
       console.error('Error adding part:', error);
@@ -117,6 +126,15 @@ module.exports = {
         return res.status(404).json({ message: 'Part not found' });
       }
       
+      const oldValues = {
+        name: part.name,
+        part_number: part.part_number,
+        brand: part.brand,
+        stock_quantity: part.stock_quantity,
+        price: part.price,
+        min_stock_level: part.min_stock_level
+      };
+
       const { name, part_number, brand, stock_quantity, price, min_stock_level } = req.body;
       
       if (name !== undefined) part.name = name;
@@ -127,6 +145,27 @@ module.exports = {
       if (min_stock_level !== undefined) part.min_stock_level = parseInt(min_stock_level);
       
       await part.save();
+
+      await logAudit({
+        req,
+        action: 'PART_UPDATED',
+        entityType: 'SparePart',
+        entityId: part.id,
+        oldValues,
+        newValues: { name: part.name, part_number: part.part_number, brand: part.brand, stock_quantity: part.stock_quantity, price: part.price }
+      });
+
+      if (stock_quantity !== undefined && parseInt(stock_quantity) !== oldValues.stock_quantity) {
+        await logAudit({
+          req,
+          action: 'PART_STOCK_ADJUSTED',
+          entityType: 'SparePart',
+          entityId: part.id,
+          oldValues: { stock_quantity: oldValues.stock_quantity },
+          newValues: { stock_quantity: part.stock_quantity }
+        });
+      }
+
       res.json({ message: 'Part updated successfully', part });
     } catch (error) {
       console.error('Error updating part:', error);

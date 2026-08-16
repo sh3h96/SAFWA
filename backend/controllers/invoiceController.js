@@ -1,5 +1,6 @@
 const { Invoice, InvoiceItem, Payment, User, Vehicle, Appointment, TechnicalReport, RequiredPart, SparePart, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/invoices/reports
@@ -127,6 +128,14 @@ module.exports = {
         total_amount,
         status: 'unpaid',
         issued_at: new Date()
+      });
+
+      await logAudit({
+        req,
+        action: 'INVOICE_ISSUED',
+        entityType: 'Invoice',
+        entityId: invoice.id,
+        newValues: { appointment_id, total_amount, laborCostNum, partsCostNum, status: 'unpaid' }
       });
 
       res.status(201).json({ message: 'Invoice issued successfully', invoice });
@@ -293,6 +302,7 @@ module.exports = {
       }
 
       const payment_method = req.body.payment_method || 'credit_card';
+      const oldInvoiceStatus = invoice.status;
 
       // Perform inside Sequelize Transaction for financial safety
       const t = await sequelize.transaction();
@@ -314,6 +324,25 @@ module.exports = {
 
         await invoice.update({ status: newStatus }, { transaction: t });
         await t.commit();
+
+        await logAudit({
+          req,
+          action: 'INVOICE_PAYMENT_PROCESSED',
+          entityType: 'Invoice',
+          entityId: invoice.id,
+          newValues: { payment_id: newPayment.id, amount: paymentAmount, payment_method, newStatus }
+        });
+
+        if (newStatus !== oldInvoiceStatus) {
+          await logAudit({
+            req,
+            action: 'INVOICE_STATUS_CHANGED',
+            entityType: 'Invoice',
+            entityId: invoice.id,
+            oldValues: { status: oldInvoiceStatus },
+            newValues: { status: newStatus }
+          });
+        }
 
         return res.json({
           message: 'Payment processed successfully',

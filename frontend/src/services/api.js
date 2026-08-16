@@ -49,6 +49,30 @@ export const authAPI = {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
+  verifyEmail: async (params) => {
+    const response = await api.get('/auth/verify-email', { params });
+    return response.data;
+  },
+  resendVerification: async (data) => {
+    const response = await api.post('/auth/resend-verification', data);
+    return response.data;
+  },
+  forgotPassword: async (data) => {
+    const response = await api.post('/auth/forgot-password', data);
+    return response.data;
+  },
+  resetPassword: async (data) => {
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
+  },
+  logout: async () => {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  },
+  getMe: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
 };
 
 export const usersAPI = {

@@ -17,7 +17,7 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
   // Check if route is restricted by role
   if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
     // Role not authorized, redirect to their respective dashboard
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'receptionist') {
       return <Navigate to="/admin/appointments" replace />;
     } else if (user.role === 'mechanic') {
       return <Navigate to="/mechanic/tasks" replace />;

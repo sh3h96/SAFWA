@@ -1,5 +1,6 @@
 const { Appointment, User, Vehicle } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
 
 const VALID_STATUSES = [
   'pending', 
@@ -88,6 +89,20 @@ module.exports = {
         scheduled_date: appointment_date || new Date(),
         problem_description: description || 'صيانة عامة',
         status: 'pending'
+      });
+
+      await logAudit({
+        req,
+        action: 'APPOINTMENT_CREATED',
+        entityType: 'Appointment',
+        entityId: newAppointment.id,
+        newValues: {
+          client_id: req.user.id,
+          vehicle_id,
+          scheduled_date: newAppointment.scheduled_date,
+          problem_description: newAppointment.problem_description,
+          status: 'pending'
+        }
       });
       
       res.status(201).json({ message: 'Appointment created successfully', appointment: newAppointment });
@@ -306,6 +321,9 @@ module.exports = {
         }
       }
 
+      const oldStatus = appointment.status;
+      const oldMechanicId = appointment.mechanic_id;
+
       const { status, mechanic_id, mechanic_ids } = req.body;
       
       if (status !== undefined) {
@@ -314,6 +332,9 @@ module.exports = {
         }
         appointment.status = status;
       }
+
+      let mechanicAssignmentChanged = false;
+      let assignedMechanicIds = [];
 
       // Handle Multi-Mechanic assignment array
       if (mechanic_ids !== undefined && Array.isArray(mechanic_ids)) {
@@ -337,9 +358,11 @@ module.exports = {
           }));
           await AppointmentMechanic.bulkCreate(amRecords);
           appointment.mechanic_id = mechanic_ids[0]; // Legacy fallback sync
+          assignedMechanicIds = mechanic_ids;
         } else {
           appointment.mechanic_id = null;
         }
+        mechanicAssignmentChanged = true;
       } else if (mechanic_id !== undefined) {
         // Single mechanic update legacy handling
         if (mechanic_id !== null) {
@@ -353,13 +376,47 @@ module.exports = {
             mechanic_id,
             assigned_at: new Date()
           });
+          assignedMechanicIds = [mechanic_id];
         } else {
           await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id } });
         }
         appointment.mechanic_id = mechanic_id;
+        mechanicAssignmentChanged = true;
       }
 
       await appointment.save();
+
+      // Audit Log triggers
+      if (status !== undefined && status !== oldStatus) {
+        await logAudit({
+          req,
+          action: 'APPOINTMENT_STATUS_CHANGED',
+          entityType: 'Appointment',
+          entityId: appointment.id,
+          oldValues: { status: oldStatus },
+          newValues: { status: appointment.status }
+        });
+      }
+
+      if (mechanicAssignmentChanged) {
+        await logAudit({
+          req,
+          action: assignedMechanicIds.length > 0 ? 'APPOINTMENT_MECHANIC_ASSIGNED' : 'APPOINTMENT_MECHANIC_REMOVED',
+          entityType: 'Appointment',
+          entityId: appointment.id,
+          oldValues: { mechanic_id: oldMechanicId },
+          newValues: { mechanic_ids: assignedMechanicIds, primary_mechanic_id: appointment.mechanic_id }
+        });
+      }
+
+      await logAudit({
+        req,
+        action: 'APPOINTMENT_UPDATED',
+        entityType: 'Appointment',
+        entityId: appointment.id,
+        oldValues: { status: oldStatus, mechanic_id: oldMechanicId },
+        newValues: { status: appointment.status, mechanic_id: appointment.mechanic_id }
+      });
       
       // Fetch updated appointment with mechanics
       const updatedAppointment = await Appointment.findByPk(appointment.id, {

@@ -5,6 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 const escapeHtml = require('../utils/htmlEscape');
 const { User, Appointment } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -127,17 +128,20 @@ module.exports = {
       const user = await User.findOne({ where: { email } });
       
       if (!user) {
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', newValues: { attemptedEmail: email } });
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
       // Check if user is suspended
       if (user.status === 'suspended' || user.status === 'موقوف') {
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'suspended' } });
         return res.status(403).json({ message: 'عذراً، تم إيقاف حسابك. يرجى التواصل مع الإدارة.' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'invalid_password' } });
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -146,6 +150,14 @@ module.exports = {
         getJwtSecret(),
         { expiresIn: '1d' }
       );
+
+      await logAudit({
+        req: { user: { id: user.id }, ip: req.ip, headers: req.headers },
+        action: 'AUTH_LOGIN_SUCCESS',
+        entityType: 'User',
+        entityId: user.id,
+        newValues: { email: user.email, role: user.role }
+      });
 
       res.json({
         token,
@@ -266,11 +278,23 @@ module.exports = {
 
       // Super Admin Creation Protection: No user may create a new super_admin account
       if (targetRole === 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          newValues: { attemptedRole: 'super_admin', email }
+        });
         return res.status(403).json({ message: 'غير مصرح: لا يمكن إنشاء حساب Super Admin جديد' });
       }
 
       // Admin Hierarchy Protection: Only Super Admin can create Admin accounts
       if (targetRole === 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          newValues: { attemptedRole: 'admin', email }
+        });
         return res.status(403).json({ message: 'غير مصرح: إنشاء وتجهيز حسابات المدراء محصور بـ Super Admin فقط' });
       }
 
@@ -288,6 +312,15 @@ module.exports = {
         role: targetRole,
         phone,
         is_email_verified: true
+      });
+
+      const auditAction = targetRole === 'admin' ? 'ADMIN_CREATED' : 'USER_CREATED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: newUser.id,
+        newValues: { name: newUser.name, email: newUser.email, role: newUser.role, phone: newUser.phone }
       });
 
       const userWithoutPassword = newUser.toJSON();
@@ -314,9 +347,23 @@ module.exports = {
       // Super Admin Immutability Protection: Super Admin cannot be updated by normal admins
       if (user.role === 'super_admin') {
         if (req.user.id !== user.id && req.user.role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedEdit: true }
+          });
           return res.status(403).json({ message: 'غير مصرح: لا يمكن تعديل حساب Super Admin' });
         }
         if (role && role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedRoleRemoval: true }
+          });
           return res.status(403).json({ message: 'غير مصرح: لا يمكن إزالة صلاحيات Super Admin' });
         }
       }
@@ -324,12 +371,26 @@ module.exports = {
       // Admin Hierarchy Protection: Only Super Admin can edit other Admin accounts or change user role to/from admin
       if (user.role === 'admin' && user.id !== req.user.id) {
         if (req.user.role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedAdminEdit: true }
+          });
           return res.status(403).json({ message: 'غير مصرح: تعديل حسابات المدراء محصور بـ Super Admin فقط' });
         }
       }
 
       // Prevent promotion of any user to super_admin
       if (role === 'super_admin' && user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedPromotion: 'super_admin' }
+        });
         return res.status(403).json({ message: 'غير مصرح: لا يمكن ترقية حساب إلى Super Admin' });
       }
 
@@ -340,6 +401,8 @@ module.exports = {
           return res.status(400).json({ message: 'Email already in use' });
         }
       }
+
+      const oldValues = { name: user.name, email: user.email, phone: user.phone, role: user.role };
 
       const updateData = {};
       if (name !== undefined) updateData.name = name;
@@ -352,6 +415,27 @@ module.exports = {
 
       await user.update(updateData);
       
+      const auditAction = user.role === 'admin' ? 'ADMIN_UPDATED' : 'USER_UPDATED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: user.id,
+        oldValues,
+        newValues: updateData
+      });
+
+      if (role && role !== oldValues.role) {
+        await logAudit({
+          req,
+          action: 'USER_ROLE_CHANGED',
+          entityType: 'User',
+          entityId: user.id,
+          oldValues: { role: oldValues.role },
+          newValues: { role }
+        });
+      }
+
       const userWithoutPassword = user.toJSON();
       delete userWithoutPassword.password;
       
@@ -373,19 +457,44 @@ module.exports = {
 
       // Super Admin Immutability Protection: Super Admin cannot be suspended
       if (user.role === 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedSuspension: true }
+        });
         return res.status(403).json({ message: 'غير مصرح: لا يمكن إيقاف أو تعطيل حساب Super Admin' });
       }
 
       // Admin Hierarchy Protection: Only Super Admin can suspend/activate Admin accounts
       if (user.role === 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedAdminSuspension: true }
+        });
         return res.status(403).json({ message: 'غير مصرح: إيقاف أو تفعيل حسابات المدراء محصور بـ Super Admin فقط' });
       }
 
+      const oldStatus = user.status;
       // Toggle status between active and suspended
       const newStatus = user.status === 'active' ? 'suspended' : 'active';
       await user.update({
         status: newStatus,
         token_version: user.token_version + 1
+      });
+
+      const auditAction = user.role === 'admin' ? 'ADMIN_STATUS_CHANGED' : 'USER_STATUS_CHANGED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: user.id,
+        oldValues: { status: oldStatus },
+        newValues: { status: newStatus }
       });
 
       const userWithoutPassword = user.toJSON();
@@ -425,6 +534,13 @@ module.exports = {
         is_email_verified: true,
         verification_token_hash: null,
         verification_token_expires_at: null
+      });
+
+      await logAudit({
+        req,
+        action: 'AUTH_EMAIL_VERIFIED',
+        entityType: 'User',
+        entityId: user.id
       });
 
       res.json({ message: 'تم تفعيل البريد الإلكتروني بنجاح' });
@@ -521,6 +637,13 @@ module.exports = {
         reset_token_expires_at: resetTokenExpiresAt
       });
 
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_RESET_REQUEST',
+        entityType: 'User',
+        entityId: user.id
+      });
+
       try {
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const resetUrl = `${frontendUrl}/reset-password?token=${rawResetToken}`;
@@ -591,6 +714,13 @@ module.exports = {
         token_version: user.token_version + 1
       });
 
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_RESET_SUCCESS',
+        entityType: 'User',
+        entityId: user.id
+      });
+
       res.json({ message: 'تمت إعادة تعيين كلمة المرور بنجاح' });
     } catch (error) {
       console.error('Reset password error:', error);
@@ -609,6 +739,13 @@ module.exports = {
       if (user) {
         await user.update({ token_version: user.token_version + 1 });
       }
+
+      await logAudit({
+        req,
+        action: 'AUTH_LOGOUT',
+        entityType: 'User',
+        entityId: req.user.id
+      });
 
       res.json({ message: 'تم تسجيل الخروج بنجاح' });
     } catch (error) {

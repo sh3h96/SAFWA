@@ -1,4 +1,5 @@
 const { Vehicle, Appointment, TechnicalReport, User, Invoice } = require('../models');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/vehicles
@@ -109,7 +110,7 @@ module.exports = {
       const { make, model, year, license_plate, vin, client_id } = req.body;
       
       let targetClientId = req.user.id;
-      if (req.user.role === 'admin' || req.user.role === 'receptionist') {
+      if (req.user.role === 'admin' || req.user.role === 'super_admin') {
         if (client_id !== undefined && client_id !== null) {
           const targetClient = await User.findByPk(client_id);
           if (!targetClient) {
@@ -127,6 +128,15 @@ module.exports = {
         license_plate,
         vin
       });
+
+      await logAudit({
+        req,
+        action: 'VEHICLE_CREATED',
+        entityType: 'Vehicle',
+        entityId: newVehicle.id,
+        newValues: { client_id: targetClientId, make, model, year, license_plate, vin }
+      });
+
       res.status(201).json(newVehicle);
     } catch (error) {
       console.error('Error creating vehicle:', error);
@@ -150,7 +160,19 @@ module.exports = {
         return res.status(404).json({ message: 'Vehicle not found' });
       }
 
+      const oldValues = { make: vehicle.make, model: vehicle.model, year: vehicle.year, license_plate: vehicle.license_plate, vin: vehicle.vin };
+
       await vehicle.update({ make, model, year, license_plate, vin });
+
+      await logAudit({
+        req,
+        action: 'VEHICLE_UPDATED',
+        entityType: 'Vehicle',
+        entityId: vehicle.id,
+        oldValues,
+        newValues: { make, model, year, license_plate, vin }
+      });
+
       res.json(vehicle);
     } catch (error) {
       console.error('Error updating vehicle:', error);

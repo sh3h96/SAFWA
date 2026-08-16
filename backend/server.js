@@ -71,6 +71,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const technicalReportRoutes = require('./routes/technicalReportRoutes');
 const requiredPartRoutes = require('./routes/requiredPartRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
 
 app.use('/api/auth', userRoutes); // POST /api/auth/login
 app.use('/api/users', userRoutes);
@@ -83,6 +84,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', technicalReportRoutes);
 app.use('/api/required-parts', requiredPartRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 app.get('/', (req, res) => {
   res.send('SAFWA Backend API is running...');

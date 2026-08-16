@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import api from '../../services/api';
+import { authAPI } from '../../services/api';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,11 +14,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showResendBtn, setShowResendBtn] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials) => {
-      const response = await api.post('/auth/login', credentials);
-      return response.data;
+      return await authAPI.login(credentials);
     },
     onSuccess: (data) => {
       login(data.token, data.user);
@@ -28,17 +30,39 @@ export default function LoginPage() {
       } else if (data.user.role === 'mechanic') {
         navigate('/mechanic/tasks');
       } else {
+        // admin or receptionist
         navigate('/admin/appointments');
       }
     },
     onError: (error) => {
-      setErrorMsg(error.response?.data?.message || 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.');
+      const msg = error.response?.data?.message || 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.';
+      setErrorMsg(msg);
+      // Check if error is related to email verification
+      if (msg.includes('تأكيد') || msg.includes('تفعيل') || msg.includes('البريد')) {
+        setShowResendBtn(true);
+      } else {
+        setShowResendBtn(false);
+      }
     }
   });
+
+  const handleResend = async () => {
+    if (!contact) return;
+    setIsResending(true);
+    try {
+      const res = await authAPI.resendVerification({ email: contact });
+      toast.success(res?.message || 'تم إرسال رابط التفعيل إلى بريدك الإلكتروني.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'تعذر إرسال رابط التفعيل.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setShowResendBtn(false);
     loginMutation.mutate({ email: contact, password });
   };
 
@@ -109,8 +133,27 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {errorMsg && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-bold text-center">
-                {errorMsg}
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-bold text-center space-y-2">
+                <p>{errorMsg}</p>
+                {showResendBtn && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={isResending}
+                      className="mt-1 text-xs bg-white text-teal-700 border border-teal-300 px-3 py-1.5 rounded-md hover:bg-teal-50 font-bold transition-all disabled:opacity-50 inline-flex items-center gap-1.5"
+                    >
+                      {isResending ? (
+                        <span>جاري الإرسال...</span>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-sm">mark_email_unread</span>
+                          <span>إعادة إرسال رابط التفعيل</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

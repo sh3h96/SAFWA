@@ -1,4 +1,5 @@
 const { Review, User, Appointment } = require('../models');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/reviews
@@ -66,6 +67,14 @@ module.exports = {
         appointment_id,
         rating: numericRating,
         comment: comment || ''
+      });
+
+      await logAudit({
+        req,
+        action: 'REVIEW_CREATED',
+        entityType: 'Review',
+        entityId: review.id,
+        newValues: { appointment_id, rating: numericRating, comment: comment || '' }
       });
 
       res.status(201).json({ message: 'Review submitted successfully', review });

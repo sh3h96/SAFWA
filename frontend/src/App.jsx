@@ -18,6 +18,7 @@ const queryClient = new QueryClient();
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const PasswordResetPage = lazy(() => import('./pages/auth/PasswordResetPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 
 // Admin Pages
 const AppointmentsControlPage = lazy(() => import('./pages/admin/AppointmentsControlPage'));
@@ -52,11 +53,13 @@ function App() {
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
             <Route path="/reset-password" element={<PasswordResetPage />} />
             <Route path="/auth/reset-password" element={<PasswordResetPage />} />
 
-            {/* Admin Dashboard */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            {/* Admin & Receptionist Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'receptionist']} />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="appointments" element={<AppointmentsControlPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
