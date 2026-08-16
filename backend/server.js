@@ -3,12 +3,62 @@ const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security Headers
+app.use(helmet());
+
+// CORS Configuration
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map(s => s.trim())
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser agents (mobile apps/curl) or allowed origins or non-production mode
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS Policy: Origin not allowed'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
+// Body Parser with Payload Size Protection
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Rate Limiter for Authentication Endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 15, // 15 attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  message: { message: 'Too many authentication attempts, please try again after 15 minutes' }
+});
+
+// Apply rate limiting to authentication and account recovery routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/resend-verification', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
+app.use('/api/auth/logout', authLimiter);
+app.use('/api/users/login', authLimiter);
+app.use('/api/users/register', authLimiter);
+app.use('/api/users/resend-verification', authLimiter);
+app.use('/api/users/forgot-password', authLimiter);
+app.use('/api/users/reset-password', authLimiter);
+app.use('/api/users/logout', authLimiter);
 
 // Routes
 const userRoutes = require('./routes/userRoutes');

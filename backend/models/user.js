@@ -43,6 +43,32 @@ module.exports = (sequelize) => {
         "type": DataTypes.STRING,
         "allowNull": false,
         "defaultValue": 'active'
+    },
+    is_email_verified: {
+        "type": DataTypes.BOOLEAN,
+        "allowNull": false,
+        "defaultValue": false
+    },
+    verification_token_hash: {
+        "type": DataTypes.STRING,
+        "allowNull": true
+    },
+    verification_token_expires_at: {
+        "type": DataTypes.DATE,
+        "allowNull": true
+    },
+    reset_token_hash: {
+        "type": DataTypes.STRING,
+        "allowNull": true
+    },
+    reset_token_expires_at: {
+        "type": DataTypes.DATE,
+        "allowNull": true
+    },
+    token_version: {
+        "type": DataTypes.INTEGER,
+        "allowNull": false,
+        "defaultValue": 1
     }
   }, {
     sequelize,

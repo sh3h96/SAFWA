@@ -1,35 +1,21 @@
-let bcrypt;
-try {
-  bcrypt = require('bcrypt');
-} catch (e) {
-  try {
-    bcrypt = require('bcryptjs');
-  } catch (e2) {
-    bcrypt = {
-      hash: async (pwd) => pwd,
-      compare: async (pwd, hash) => pwd === hash
-    };
-  }
-}
-let jwt;
-try {
-  jwt = require('jsonwebtoken');
-} catch (e) {
-  jwt = {
-    sign: (payload) => 'mock_token_' + JSON.stringify(payload),
-    verify: (token) => ({ id: 1 })
-  };
-}
-
-let sendEmail;
-try {
-  sendEmail = require('../utils/sendEmail');
-} catch (e) {
-  sendEmail = async () => {};
-}
-
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
+const escapeHtml = require('../utils/htmlEscape');
 const { User, Appointment } = require('../models');
 const { Op } = require('sequelize');
+
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable is missing in production environment');
+    }
+    return 'safwa_secret_key';
+  }
+  return secret;
+};
 
 const VALID_ROLES = ['admin', 'client', 'mechanic', 'receptionist'];
 
@@ -55,31 +41,47 @@ module.exports = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Generate verification token
+      const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenHash = crypto.createHash('sha256').update(rawVerificationToken).digest('hex');
+      const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       const newUser = await User.create({
         name: fullName,
         email,
         phone,
         password: hashedPassword,
-        role: 'client' // Hardcoded role for security on public registration
+        role: 'client', // Hardcoded role for security on public registration
+        is_email_verified: false,
+        verification_token_hash: verificationTokenHash,
+        verification_token_expires_at: verificationTokenExpiresAt
       });
 
       const token = jwt.sign(
-        { id: newUser.id, role: newUser.role, email: newUser.email },
-        process.env.JWT_SECRET || 'safwa_secret_key',
+        { id: newUser.id, role: newUser.role, email: newUser.email, tokenVersion: newUser.token_version },
+        getJwtSecret(),
         { expiresIn: '1d' }
       );
 
-      // Send Welcome Email (Non-blocking catch)
+      // Send Welcome & Email Verification Link (Non-blocking catch)
       try {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
+        const escapedName = escapeHtml(newUser.name);
+
         const emailHtml = `
           <div dir="rtl" style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
             <div style="background-color: #0F766E; padding: 20px; text-align: center;">
               <h1 style="color: white; margin: 0;">صفوة لصيانة السيارات</h1>
             </div>
             <div style="padding: 30px; background-color: #ffffff;">
-              <h2 style="color: #0F766E;">مرحباً بك يا ${newUser.name}! 👋</h2>
+              <h2 style="color: #0F766E;">مرحباً بك يا ${escapedName}! 👋</h2>
               <p style="font-size: 16px;">يسعدنا انضمامك إلى نظام <strong>صفوة</strong> لإدارة صيانة السيارات.</p>
-              <p style="font-size: 16px;">تم إنشاء حسابك بنجاح. يمكنك الآن إضافة مركباتك، حجز مواعيد الصيانة، ومتابعة التقارير الفنية بكل سهولة وشفافية.</p>
+              <p style="font-size: 16px;">يرجى تأكيد بريدك الإلكتروني بالضغط على الرابط أدناه لتفعيل حسابك بالكامل:</p>
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${verifyUrl}" style="background-color: #0F766E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">تأكيد البريد الإلكتروني</a>
+              </div>
+              <p style="font-size: 14px; color: #64748b;">هذا الرابط صالحة لمدة 24 ساعة فقط.</p>
             </div>
             <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #64748b;">
               <p>هذه رسالة تلقائية من نظام صفوة، يرجى عدم الرد عليها.</p>
@@ -89,7 +91,7 @@ module.exports = {
 
         sendEmail({
           email: newUser.email,
-          subject: 'مرحباً بك في نظام صفوة!',
+          subject: 'مرحباً بك في نظام صفوة - تأكيد البريد الإلكتروني',
           html: emailHtml
         }).catch(e => console.error('Email send error:', e));
       } catch (e) {
@@ -97,13 +99,14 @@ module.exports = {
       }
 
       res.status(201).json({ 
-        message: 'تم إنشاء الحساب بنجاح',
+        message: 'تم إنشاء الحساب بنجاح، يرجى مراجعة بريدك الإلكتروني للتأكيد',
         token,
         user: {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
-          role: newUser.role
+          role: newUser.role,
+          isEmailVerified: newUser.is_email_verified
         }
       });
     } catch (error) {
@@ -139,8 +142,8 @@ module.exports = {
       }
 
       const token = jwt.sign(
-        { id: user.id, role: user.role, email: user.email },
-        process.env.JWT_SECRET || 'safwa_secret_key',
+        { id: user.id, role: user.role, email: user.email, tokenVersion: user.token_version },
+        getJwtSecret(),
         { expiresIn: '1d' }
       );
 
@@ -311,7 +314,10 @@ module.exports = {
       if (name !== undefined) updateData.name = name;
       if (email !== undefined) updateData.email = email;
       if (phone !== undefined) updateData.phone = phone;
-      if (role !== undefined && VALID_ROLES.includes(role)) updateData.role = role;
+      if (role !== undefined && VALID_ROLES.includes(role)) {
+        updateData.role = role;
+        updateData.token_version = user.token_version + 1;
+      }
 
       await user.update(updateData);
       
@@ -336,7 +342,10 @@ module.exports = {
 
       // Toggle status between active and suspended
       const newStatus = user.status === 'active' ? 'suspended' : 'active';
-      await user.update({ status: newStatus });
+      await user.update({
+        status: newStatus,
+        token_version: user.token_version + 1
+      });
 
       const userWithoutPassword = user.toJSON();
       delete userWithoutPassword.password;
@@ -344,6 +353,225 @@ module.exports = {
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Update user status error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // GET or POST /api/users/verify-email
+  verifyEmail: async (req, res) => {
+    try {
+      const token = req.query.token || req.body.token;
+
+      if (!token) {
+        return res.status(400).json({ message: 'رمز التحقق مطلوب' });
+      }
+
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      const user = await User.findOne({
+        where: { verification_token_hash: hashedToken }
+      });
+
+      if (!user) {
+        return res.status(400).json({ message: 'رمز التفعيل غير صالح أو تم استخدامه سابقاً' });
+      }
+
+      if (user.verification_token_expires_at && new Date() > new Date(user.verification_token_expires_at)) {
+        return res.status(400).json({ message: 'انتهت صلاحية رابط التفعيل. يرجى طلب رابط جديد' });
+      }
+
+      await user.update({
+        is_email_verified: true,
+        verification_token_hash: null,
+        verification_token_expires_at: null
+      });
+
+      res.json({ message: 'تم تفعيل البريد الإلكتروني بنجاح' });
+    } catch (error) {
+      console.error('Verify email error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // POST /api/users/resend-verification
+  resendVerification: async (req, res) => {
+    try {
+      const { email } = req.body;
+      const genericMessage = 'إذا كان البريد الإلكتروني مسجلاً لدينا، فقد تم إرسال رابط التفعيل';
+
+      if (!email) {
+        return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+      }
+
+      const user = await User.findOne({ where: { email } });
+
+      if (!user || user.is_email_verified) {
+        return res.json({ message: genericMessage });
+      }
+
+      const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenHash = crypto.createHash('sha256').update(rawVerificationToken).digest('hex');
+      const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await user.update({
+        verification_token_hash: verificationTokenHash,
+        verification_token_expires_at: verificationTokenExpiresAt
+      });
+
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
+        const escapedName = escapeHtml(user.name);
+
+        const emailHtml = `
+          <div dir="rtl" style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: #0F766E; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">صفوة لصيانة السيارات</h1>
+            </div>
+            <div style="padding: 30px; background-color: #ffffff;">
+              <h2 style="color: #0F766E;">مرحباً بك يا ${escapedName}! 👋</h2>
+              <p style="font-size: 16px;">تم طلب إرسال رابط تفعيل جديد لبريدك الإلكتروني.</p>
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${verifyUrl}" style="background-color: #0F766E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">تأكيد البريد الإلكتروني</a>
+              </div>
+              <p style="font-size: 14px; color: #64748b;">هذا الرابط صالحة لمدة 24 ساعة فقط.</p>
+            </div>
+          </div>
+        `;
+
+        sendEmail({
+          email: user.email,
+          subject: 'إعادة إرسال رابط تفعيل البريد الإلكتروني - صفوة',
+          html: emailHtml
+        }).catch(e => console.error('Resend email send error:', e));
+      } catch (e) {
+        console.error('Non-critical email resend error:', e);
+      }
+
+      res.json({ message: genericMessage });
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // POST /api/users/forgot-password
+  forgotPassword: async (req, res) => {
+    try {
+      const { email } = req.body;
+      const genericMessage = 'إذا كان البريد الإلكتروني مسجلاً لدينا، فقد تم إرسال تعليمات إعادة تعيين كلمة المرور';
+
+      if (!email) {
+        return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+      }
+
+      const user = await User.findOne({ where: { email } });
+
+      if (!user) {
+        return res.json({ message: genericMessage });
+      }
+
+      const rawResetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenHash = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+      const resetTokenExpiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+
+      await user.update({
+        reset_token_hash: resetTokenHash,
+        reset_token_expires_at: resetTokenExpiresAt
+      });
+
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const resetUrl = `${frontendUrl}/reset-password?token=${rawResetToken}`;
+        const escapedName = escapeHtml(user.name);
+
+        const emailHtml = `
+          <div dir="rtl" style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: #0F766E; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">صفوة لصيانة السيارات</h1>
+            </div>
+            <div style="padding: 30px; background-color: #ffffff;">
+              <h2 style="color: #0F766E;">إعادة تعيين كلمة المرور</h2>
+              <p style="font-size: 16px;">مرحباً ${escapedName}،</p>
+              <p style="font-size: 16px;">تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك. اتبع الرابط التالي لإكمال العملية:</p>
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${resetUrl}" style="background-color: #0F766E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">إعادة تعيين كلمة المرور</a>
+              </div>
+              <p style="font-size: 14px; color: #64748b;">هذا الرابط صالحة لمدة ساعة واحدة فقط. إذا لم تطلب ذلك، يمكنك تجاهل الرسالة بآمان.</p>
+            </div>
+          </div>
+        `;
+
+        sendEmail({
+          email: user.email,
+          subject: 'طلب إعادة تعيين كلمة المرور - صفوة',
+          html: emailHtml
+        }).catch(e => console.error('Forgot password email error:', e));
+      } catch (e) {
+        console.error('Non-critical forgot password email error:', e);
+      }
+
+      res.json({ message: genericMessage });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // POST /api/users/reset-password
+  resetPassword: async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: 'الرمز وكلمة المرور الجديدة مطلوبان' });
+      }
+
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      const user = await User.findOne({
+        where: { reset_token_hash: hashedToken }
+      });
+
+      if (!user) {
+        return res.status(400).json({ message: 'رمز إعادة التعيين غير صالح أو تم استخدامه سابقاً' });
+      }
+
+      if (user.reset_token_expires_at && new Date() > new Date(user.reset_token_expires_at)) {
+        return res.status(400).json({ message: 'انتهت صلاحية رابط إعادة التعيين. يرجى طلب رابط جديد' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await user.update({
+        password: hashedPassword,
+        reset_token_hash: null,
+        reset_token_expires_at: null,
+        token_version: user.token_version + 1
+      });
+
+      res.json({ message: 'تمت إعادة تعيين كلمة المرور بنجاح' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // POST /api/users/logout or /api/auth/logout
+  logout: async (req, res) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: 'Authentication token missing or invalid' });
+      }
+
+      const user = await User.findByPk(req.user.id);
+      if (user) {
+        await user.update({ token_version: user.token_version + 1 });
+      }
+
+      res.json({ message: 'تم تسجيل الخروج بنجاح' });
+    } catch (error) {
+      console.error('Logout error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   }

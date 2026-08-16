@@ -2,14 +2,24 @@ const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
   try {
-    console.log('Sending email with user:', process.env.MAILTRAP_USER);
-    // Create a transporter using Mailtrap credentials
+    const smtpHost = process.env.SMTP_HOST || process.env.MAILTRAP_HOST || (process.env.NODE_ENV === 'production' ? null : 'sandbox.smtp.mailtrap.io');
+    const smtpPort = process.env.SMTP_PORT || process.env.MAILTRAP_PORT || 2525;
+    const smtpUser = process.env.SMTP_USER || process.env.MAILTRAP_USER;
+    const smtpPass = process.env.SMTP_PASS || process.env.MAILTRAP_PASS;
+
+    if (!smtpHost || !smtpUser) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('Email warning: SMTP credentials not configured in production environment. Email skipped.');
+        return false;
+      }
+    }
+
     const transporter = nodemailer.createTransport({
-      host: process.env.MAILTRAP_HOST || 'sandbox.smtp.mailtrap.io',
-      port: process.env.MAILTRAP_PORT || 2525,
+      host: smtpHost || 'sandbox.smtp.mailtrap.io',
+      port: Number(smtpPort),
       auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
 
