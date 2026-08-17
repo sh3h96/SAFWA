@@ -53,6 +53,12 @@ export const AuthProvider = ({ children }) => {
   const isMechanic = user?.role === 'mechanic';
   const isClient = user?.role === 'client';
 
+  const updateUserContext = (updatedUserData) => {
+    const newUserData = { ...user, ...updatedUserData };
+    localStorage.setItem('user', JSON.stringify(newUserData));
+    setUser(newUserData);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -66,6 +72,7 @@ export const AuthProvider = ({ children }) => {
         isClient,
         login,
         logout,
+        updateUserContext
       }}
     >
       {children}

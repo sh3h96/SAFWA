@@ -6,6 +6,7 @@ import EditUserModal from '../../components/admin/EditUserModal';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
 
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function UsersManagementPage() {
   const queryClient = useQueryClient();
@@ -30,16 +31,24 @@ export default function UsersManagementPage() {
   const createUserMutation = useMutation({
     mutationFn: usersAPI.create,
     onSuccess: () => {
+      toast.success('تم إنشاء المستخدم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsModalOpen(false);
       setName(''); setEmail(''); setPhone(''); setRole('client'); setPassword('');
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء إنشاء المستخدم');
     }
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: (id) => usersAPI.updateStatus(id),
     onSuccess: () => {
+      toast.success('تم تغيير حالة المستخدم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تغيير حالة المستخدم');
     }
   });
 

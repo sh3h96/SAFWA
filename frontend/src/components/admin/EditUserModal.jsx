@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function EditUserModal({ user, onClose }) {
   const queryClient = useQueryClient();
+  const { isSuperAdmin } = useAuth();
   
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -22,8 +25,12 @@ export default function EditUserModal({ user, onClose }) {
   const updateMutation = useMutation({
     mutationFn: (data) => usersAPI.update(user.id, data),
     onSuccess: () => {
+      toast.success('تم تحديث بيانات المستخدم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['users'] });
       onClose();
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تعديل المستخدم');
     }
   });
 
@@ -65,12 +72,29 @@ export default function EditUserModal({ user, onClose }) {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">الصلاحية (Role)</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
-              <option value="client">عميل</option>
-              <option value="mechanic">ميكانيكي</option>
-              <option value="admin">إداري</option>
+            <select 
+              value={role} 
+              onChange={e => setRole(e.target.value)} 
+              disabled={user?.role === 'super_admin'}
+              className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none disabled:opacity-60 cursor-pointer"
+            >
+              {user?.role === 'super_admin' ? (
+                <option value="super_admin">سوبر أدمن (ثابت)</option>
+              ) : (
+                <>
+                  <option value="client">عميل</option>
+                  <option value="mechanic">ميكانيكي</option>
+                  {(isSuperAdmin || user?.role === 'admin') && <option value="admin">إداري</option>}
+                </>
+              )}
             </select>
           </div>
+
+          {updateMutation.isError && (
+            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold">
+              {updateMutation.error?.response?.data?.message || 'تعذر حفظ التعديلات'}
+            </div>
+          )}
 
           <div className="pt-4 flex gap-4">
             <button 

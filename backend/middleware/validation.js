@@ -101,6 +101,27 @@ const updateUserValidation = [
   handleValidation
 ];
 
+const updateProfileValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 }).withMessage('الاسم يجب أن يكون بين حرفين و 100 حرف'),
+  body('phone')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 7, max: 20 }).withMessage('رقم الهاتف غير صالح'),
+  handleValidation
+];
+
+const changePasswordValidation = [
+  body('currentPassword')
+    .notEmpty().withMessage('كلمة المرور الحالية مطلوبة'),
+  body('newPassword')
+    .notEmpty().withMessage('كلمة المرور الجديدة مطلوبة')
+    .isLength({ min: 6 }).withMessage('كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف'),
+  handleValidation
+];
+
 const paramIdValidation = [
   param('id')
     .isInt({ min: 1 }).withMessage('المعرف غير صالح'),
@@ -347,5 +368,7 @@ module.exports = {
   resendVerificationValidation,
   verifyEmailValidation,
   forgotPasswordValidation,
-  resetPasswordValidation
+  resetPasswordValidation,
+  updateProfileValidation,
+  changePasswordValidation
 };

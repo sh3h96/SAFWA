@@ -344,9 +344,14 @@ module.exports = {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Prevent users from changing their own role
+      if (String(req.user.id) === String(user.id) && role && role !== user.role) {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكنك تغيير دورك بنفسك' });
+      }
+
       // Super Admin Immutability Protection: Super Admin cannot be updated by normal admins
       if (user.role === 'super_admin') {
-        if (req.user.id !== user.id && req.user.role !== 'super_admin') {
+        if (String(req.user.id) !== String(user.id) && req.user.role !== 'super_admin') {
           await logAudit({
             req,
             action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
@@ -368,8 +373,8 @@ module.exports = {
         }
       }
 
-      // Admin Hierarchy Protection: Only Super Admin can edit other Admin accounts or change user role to/from admin
-      if (user.role === 'admin' && user.id !== req.user.id) {
+      // Admin Hierarchy Protection: Only Super Admin can edit other Admin accounts or promote users to admin
+      if (user.role === 'admin' && String(user.id) !== String(req.user.id)) {
         if (req.user.role !== 'super_admin') {
           await logAudit({
             req,
@@ -380,6 +385,18 @@ module.exports = {
           });
           return res.status(403).json({ message: 'غير مصرح: تعديل حسابات المدراء محصور بـ Super Admin فقط' });
         }
+      }
+
+      // Admin Hierarchy Protection: Normal Admin cannot promote any user to admin
+      if (role === 'admin' && user.role !== 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedPromotionToAdmin: true }
+        });
+        return res.status(403).json({ message: 'غير مصرح: منح صلاحيات Admin محصور بـ Super Admin فقط' });
       }
 
       // Prevent promotion of any user to super_admin
@@ -455,6 +472,11 @@ module.exports = {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Prevent users from suspending their own account
+      if (String(req.user.id) === String(user.id)) {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكنك تغيير حالة حسابك بنفسك' });
+      }
+
       // Super Admin Immutability Protection: Super Admin cannot be suspended
       if (user.role === 'super_admin') {
         await logAudit({
@@ -503,6 +525,90 @@ module.exports = {
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Update user status error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/users/profile
+  updateProfile: async (req, res) => {
+    try {
+      const { name, phone } = req.body;
+      const user = await User.findByPk(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const oldValues = { name: user.name, phone: user.phone };
+      const updateData = {};
+      if (name !== undefined && name.trim().length > 0) updateData.name = name.trim();
+      if (phone !== undefined) updateData.phone = phone.trim();
+
+      await user.update(updateData);
+
+      await logAudit({
+        req,
+        action: 'USER_PROFILE_UPDATED',
+        entityType: 'User',
+        entityId: user.id,
+        oldValues,
+        newValues: updateData
+      });
+
+      const userWithoutPassword = user.toJSON();
+      delete userWithoutPassword.password;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/users/change-password
+  changePassword: async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'كلمة المرور الحالية وكلمة المرور الجديدة مطلوبة' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف' });
+      }
+
+      const user = await User.findByPk(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        await logAudit({
+          req,
+          action: 'AUTH_PASSWORD_CHANGE_FAILED',
+          entityType: 'User',
+          entityId: user.id,
+          newValues: { reason: 'invalid_current_password' }
+        });
+        return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await user.update({
+        password: hashedPassword,
+        token_version: user.token_version + 1
+      });
+
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_CHANGED',
+        entityType: 'User',
+        entityId: user.id
+      });
+
+      res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
+    } catch (error) {
+      console.error('Change password error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   },

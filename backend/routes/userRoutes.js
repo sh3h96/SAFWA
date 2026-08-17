@@ -11,7 +11,9 @@ const {
   resendVerificationValidation,
   verifyEmailValidation,
   forgotPasswordValidation,
-  resetPasswordValidation
+  resetPasswordValidation,
+  updateProfileValidation,
+  changePasswordValidation
 } = require('../middleware/validation');
 
 // Public Auth routes
@@ -25,9 +27,11 @@ router.post('/resend-verification', resendVerificationValidation, userController
 router.post('/forgot-password', forgotPasswordValidation, userController.forgotPassword);
 router.post('/reset-password', resetPasswordValidation, userController.resetPassword);
 
-// Protected User routes
+// Protected User & Profile routes
 router.post('/logout', authenticateToken, userController.logout);
 router.get('/me', authenticateToken, userController.getMe);
+router.put('/profile', authenticateToken, updateProfileValidation, userController.updateProfile);
+router.put('/change-password', authenticateToken, changePasswordValidation, userController.changePassword);
 router.get('/staff-highlights', authenticateToken, userController.getStaffHighlights);
 
 // Administrative User routes (RBAC Restricted)
