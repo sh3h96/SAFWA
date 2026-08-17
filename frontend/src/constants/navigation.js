@@ -104,13 +104,19 @@ export const clientNavGroups = [
 export const mechanicNavGroups = [
   {
     id: 'mechanic_tasks',
-    title: 'جدول العمل',
+    title: 'جدول العمل والقطع',
     items: [
       {
         id: 'mechanic_assigned_tasks',
         icon: 'assignment',
         label: 'السيارات المخصصة',
         path: '/mechanic/tasks',
+      },
+      {
+        id: 'mechanic_parts_requests',
+        icon: 'precision_manufacturing',
+        label: 'طلبات قطع الغيار',
+        path: '/mechanic/parts-requests',
       }
     ],
   },

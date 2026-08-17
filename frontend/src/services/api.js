@@ -132,6 +132,25 @@ export const inventoryAPI = {
   update: async (id, partData) => {
     const response = await api.put(`/inventory/${id}`, partData);
     return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/inventory/${id}`);
+    return response.data;
+  }
+};
+
+export const requiredPartsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/required-parts', { params });
+    return response.data;
+  },
+  submit: async (data) => {
+    const response = await api.post('/required-parts', data);
+    return response.data;
+  },
+  updateApproval: async (decisions) => {
+    const response = await api.put('/required-parts/approval', { decisions });
+    return response.data;
   }
 };
 

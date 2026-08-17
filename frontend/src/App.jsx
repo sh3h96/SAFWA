@@ -38,6 +38,7 @@ const ClientReviewsPage = lazy(() => import('./pages/client/ClientReviewsPage'))
 
 // Mechanic Pages
 const MechanicTasksPage = lazy(() => import('./pages/mechanic/MechanicTasksPage'));
+const MechanicPartsRequestsPage = lazy(() => import('./pages/mechanic/MechanicPartsRequestsPage'));
 
 function App() {
   return (
@@ -95,6 +96,7 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['mechanic']} />}>
               <Route path="/mechanic" element={<MechanicLayout />}>
                 <Route path="tasks" element={<MechanicTasksPage />} />
+                <Route path="parts-requests" element={<MechanicPartsRequestsPage />} />
                 {/* Fallback redirect */}
                 <Route path="*" element={<Navigate to="/mechanic/tasks" replace />} />
               </Route>

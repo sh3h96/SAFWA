@@ -1,4 +1,4 @@
-const { SparePart } = require('../models');
+const { SparePart, RequiredPart } = require('../models');
 const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -169,6 +169,44 @@ module.exports = {
       res.json({ message: 'Part updated successfully', part });
     } catch (error) {
       console.error('Error updating part:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // DELETE /api/inventory/:id (DELETE /api/spare-parts/:id)
+  deletePart: async (req, res) => {
+    try {
+      const part = await SparePart.findByPk(req.params.id);
+      if (!part) {
+        return res.status(404).json({ message: 'القطعة غير موجودة' });
+      }
+
+      // Foreign key check: Check if referenced in any RequiredPart request
+      const inUse = await RequiredPart.findOne({ where: { part_id: req.params.id } });
+      if (inUse) {
+        return res.status(409).json({ message: 'لا يمكن حذف قطعة الغيار لأنها مرتبطة بطلبات قطع غيار سابقة أو تاريخية.' });
+      }
+
+      const oldValues = {
+        id: part.id,
+        name: part.name,
+        part_number: part.part_number,
+        brand: part.brand
+      };
+
+      await part.destroy();
+
+      await logAudit({
+        req,
+        action: 'PART_DELETED',
+        entityType: 'SparePart',
+        entityId: req.params.id,
+        oldValues
+      });
+
+      res.json({ message: 'تم حذف قطعة الغيار بنجاح' });
+    } catch (error) {
+      console.error('Error deleting spare part:', error);
       res.status(500).json({ message: 'Server error' });
     }
   }

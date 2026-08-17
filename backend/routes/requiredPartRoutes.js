@@ -8,6 +8,7 @@ const {
 } = require('../middleware/validation');
 
 // Protected Required Parts routes (RBAC Restricted)
+router.get('/', authenticateToken, requireRole('mechanic', 'admin'), requiredPartController.getRequests);
 router.post('/', authenticateToken, requireRole('mechanic', 'admin'), createRequiredPartValidation, requiredPartController.submitRequest);
 router.put('/approval', authenticateToken, requireRole('admin'), updateApprovalValidation, requiredPartController.updateApproval);
 
