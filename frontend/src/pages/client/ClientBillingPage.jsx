@@ -74,12 +74,14 @@ export default function ClientBillingPage() {
                 <div className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                   invoice.status === 'paid' 
                     ? 'bg-teal-50 text-teal-600' 
+                    : invoice.status === 'partially_paid'
+                    ? 'bg-amber-50 text-amber-600'
                     : 'bg-rose-50 text-rose-600'
                 }`}>
                   <span className="material-symbols-outlined text-[14px]">
-                    {invoice.status === 'paid' ? 'check_circle' : 'error'}
+                    {invoice.status === 'paid' ? 'check_circle' : invoice.status === 'partially_paid' ? 'hourglass_top' : 'error'}
                   </span>
-                  {invoice.status === 'paid' ? 'مدفوعة' : 'غير مدفوعة'}
+                  {invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'partially_paid' ? 'مدفوعة جزئياً' : 'غير مدفوعة'}
                 </div>
               </div>
 
@@ -106,7 +108,7 @@ export default function ClientBillingPage() {
                   <span className="material-symbols-outlined text-sm">visibility</span>
                   عرض التفاصيل
                 </button>
-                {invoice.status === 'unpaid' && (
+                {invoice.status !== 'paid' && (
                   <button 
                     onClick={() => payMutation.mutate(invoice.originalId)}
                     disabled={payMutation.isPending}
@@ -120,7 +122,7 @@ export default function ClientBillingPage() {
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-sm">credit_card</span>
-                        دفع الآن
+                        {invoice.status === 'partially_paid' ? 'سداد المتبقي' : 'دفع الآن'}
                       </>
                     )}
                   </button>

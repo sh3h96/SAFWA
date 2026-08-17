@@ -15,7 +15,7 @@ module.exports = {
           { '$customer.phone$': { [Op.like]: `%${search}%` } },
           { '$vehicle.license_plate$': { [Op.like]: `%${search}%` } }
         ];
-        
+
         if (!isNaN(search) && search.trim() !== '') {
           const numericId = search.replace(/\D/g, '');
           if (numericId) {
@@ -32,15 +32,15 @@ module.exports = {
 
         whereClause[Op.or] = searchConditions;
       }
-      
+
       const appointments = await Appointment.findAll({
         where: whereClause,
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
           { model: User, as: 'customer', attributes: ['name', 'phone'] },
           { model: Invoice, as: 'invoice' },
-          { 
-            model: TechnicalReport, 
+          {
+            model: TechnicalReport,
             as: 'report',
             include: [
               {
@@ -59,7 +59,7 @@ module.exports = {
         let amount = 0;
         let approvedPartsCost = 0;
         let invoice_id = null;
-        
+
         if (app.invoice) {
           status = 'invoiced';
           amount = parseFloat(app.invoice.total_amount);
@@ -123,22 +123,50 @@ module.exports = {
         return res.status(400).json({ message: 'Invoice total amount must be greater than zero' });
       }
 
-      const invoice = await Invoice.create({
-        appointment_id,
-        total_amount,
-        status: 'unpaid',
-        issued_at: new Date()
-      });
+      const t = await sequelize.transaction();
+      try {
+        const invoice = await Invoice.create({
+          appointment_id,
+          total_amount,
+          status: 'unpaid',
+          issued_at: new Date()
+        }, { transaction: t });
 
-      await logAudit({
-        req,
-        action: 'INVOICE_ISSUED',
-        entityType: 'Invoice',
-        entityId: invoice.id,
-        newValues: { appointment_id, total_amount, laborCostNum, partsCostNum, status: 'unpaid' }
-      });
+        if (laborCostNum > 0) {
+          await InvoiceItem.create({
+            invoice_id: invoice.id,
+            description: 'أجور اليد والخدمة',
+            quantity: 1,
+            unit_price: laborCostNum,
+            total_price: laborCostNum
+          }, { transaction: t });
+        }
 
-      res.status(201).json({ message: 'Invoice issued successfully', invoice });
+        if (partsCostNum > 0) {
+          await InvoiceItem.create({
+            invoice_id: invoice.id,
+            description: 'تكلفة قطع الغيار المعتمدة',
+            quantity: 1,
+            unit_price: partsCostNum,
+            total_price: partsCostNum
+          }, { transaction: t });
+        }
+
+        await t.commit();
+
+        await logAudit({
+          req,
+          action: 'INVOICE_ISSUED',
+          entityType: 'Invoice',
+          entityId: invoice.id,
+          newValues: { appointment_id, total_amount, laborCostNum, partsCostNum, status: 'unpaid' }
+        });
+
+        res.status(201).json({ message: 'Invoice issued successfully', invoice });
+      } catch (err) {
+        await t.rollback();
+        throw err;
+      }
     } catch (error) {
       console.error('Error issuing invoice:', error);
       res.status(500).json({ message: 'Server error' });
@@ -176,7 +204,7 @@ module.exports = {
 
       // Ownership Verification: Client can only view their own invoice
       if (req.user.role === 'client') {
-        if (!invoice.appointment || invoice.appointment.client_id !== req.user.id) {
+        if (!invoice.appointment || Number(invoice.appointment.client_id) !== Number(req.user.id)) {
           return res.status(404).json({ message: 'Invoice not found' });
         }
       }
@@ -192,8 +220,7 @@ module.exports = {
       };
 
       const appointment = invoice.appointment;
-      
-      // Dynamic calculation of labor and parts cost from items
+
       let partsCost = 0;
       let laborCost = 0;
       if (invoice.items && invoice.items.length > 0) {
@@ -261,13 +288,6 @@ module.exports = {
   // POST /api/invoices/:id/pay
   payInvoice: async (req, res) => {
     try {
-      const paymentInput = req.body.amount !== undefined ? req.body.amount : req.body.amount_paid;
-      const paymentAmount = parseFloat(paymentInput);
-
-      if (isNaN(paymentAmount) || !isFinite(paymentAmount) || paymentAmount <= 0) {
-        return res.status(400).json({ message: 'Invalid payment amount. Amount must be a positive number.' });
-      }
-
       const invoice = await Invoice.findByPk(req.params.id, {
         include: [
           { model: Payment, as: 'payments' },
@@ -281,7 +301,7 @@ module.exports = {
 
       // Ownership Verification: Client can only pay their own invoice
       if (req.user.role === 'client') {
-        if (!invoice.appointment || invoice.appointment.client_id !== req.user.id) {
+        if (!invoice.appointment || Number(invoice.appointment.client_id) !== Number(req.user.id)) {
           return res.status(404).json({ message: 'Invoice not found' });
         }
       }
@@ -294,8 +314,21 @@ module.exports = {
         return res.status(400).json({ message: 'Invoice is already fully paid' });
       }
 
+      let paymentAmount;
+      const rawInput = req.body.amount !== undefined ? req.body.amount : req.body.amount_paid;
+
+      if (rawInput !== undefined && rawInput !== null) {
+        paymentAmount = parseFloat(rawInput);
+      } else {
+        paymentAmount = remainingBalance;
+      }
+
+      if (isNaN(paymentAmount) || !isFinite(paymentAmount) || paymentAmount <= 0) {
+        return res.status(400).json({ message: 'Invalid payment amount. Amount must be a positive number.' });
+      }
+
       if (paymentAmount > remainingBalance + 0.01) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: `Payment amount (${paymentAmount}) exceeds remaining balance (${remainingBalance.toFixed(2)})`,
           remainingBalance
         });
@@ -327,7 +360,7 @@ module.exports = {
 
         await logAudit({
           req,
-          action: 'INVOICE_PAYMENT_PROCESSED',
+          action: 'PAYMENT_RECORDED',
           entityType: 'Invoice',
           entityId: invoice.id,
           newValues: { payment_id: newPayment.id, amount: paymentAmount, payment_method, newStatus }
@@ -366,30 +399,42 @@ module.exports = {
   getMyInvoices: async (req, res) => {
     try {
       const invoices = await Invoice.findAll({
-        include: [{
-          model: Appointment,
-          as: 'appointment',
-          required: true,
-          where: { client_id: req.user.id },
-          include: [{
-            model: Vehicle,
-            as: 'vehicle',
-            attributes: ['make', 'model', 'license_plate']
-          }]
-        }],
+        include: [
+          {
+            model: Appointment,
+            as: 'appointment',
+            required: true,
+            where: { client_id: req.user.id },
+            include: [{
+              model: Vehicle,
+              as: 'vehicle',
+              attributes: ['make', 'model', 'license_plate']
+            }]
+          },
+          {
+            model: Payment,
+            as: 'payments'
+          }
+        ],
         order: [['created_at', 'DESC']]
       });
 
       const formattedInvoices = invoices.map(inv => {
-        const vehicle = inv.appointment && inv.appointment.vehicle 
-          ? `${inv.appointment.vehicle.make} ${inv.appointment.vehicle.model}` 
+        const vehicle = inv.appointment && inv.appointment.vehicle
+          ? `${inv.appointment.vehicle.make} ${inv.appointment.vehicle.model}`
           : 'مركبة غير محددة';
-          
+
+        const totalPaid = (inv.payments || []).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalAmount = parseFloat(inv.total_amount);
+        const remainingBalance = Math.max(0, totalAmount - totalPaid);
+
         return {
           id: `INV-${inv.id}`,
           originalId: inv.id,
           date: new Date(inv.created_at).toLocaleDateString('ar-SA'),
-          amount: parseFloat(inv.total_amount),
+          amount: totalAmount,
+          totalPaid,
+          remainingBalance,
           status: inv.status,
           description: inv.appointment?.problem_description || 'صيانة دورية وإصلاح',
           vehicle

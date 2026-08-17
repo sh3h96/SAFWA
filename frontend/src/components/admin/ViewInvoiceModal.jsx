@@ -125,7 +125,7 @@ export default function ViewInvoiceModal({ invoiceId, onClose }) {
                   إغلاق
                 </button>
                 <button 
-                  onClick={() => alert('جاري تجهيز الفاتورة للطباعة...')}
+                  onClick={() => window.print()}
                   className="flex-2 w-2/3 px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-sm flex justify-center items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">print</span>
