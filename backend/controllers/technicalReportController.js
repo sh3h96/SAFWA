@@ -41,21 +41,37 @@ module.exports = {
         }
       }
 
-      const report = await TechnicalReport.create({
-        appointment_id,
-        mechanic_id: req.user.id,
-        diagnostics: diagnostics || '',
-        mechanic_notes,
-        odometer,
-        obd2_codes,
-        visual_notes,
-        repair_plan,
-        urgency_level
-      });
+      let report = await TechnicalReport.findOne({ where: { appointment_id } });
+      const isNew = !report;
+
+      if (report) {
+        await report.update({
+          mechanic_id: req.user.id,
+          diagnostics: diagnostics !== undefined ? diagnostics : report.diagnostics,
+          mechanic_notes: mechanic_notes !== undefined ? mechanic_notes : report.mechanic_notes,
+          odometer: odometer !== undefined ? odometer : report.odometer,
+          obd2_codes: obd2_codes !== undefined ? obd2_codes : report.obd2_codes,
+          visual_notes: visual_notes !== undefined ? visual_notes : report.visual_notes,
+          repair_plan: repair_plan !== undefined ? repair_plan : report.repair_plan,
+          urgency_level: urgency_level !== undefined ? urgency_level : report.urgency_level
+        });
+      } else {
+        report = await TechnicalReport.create({
+          appointment_id,
+          mechanic_id: req.user.id,
+          diagnostics: diagnostics || '',
+          mechanic_notes,
+          odometer,
+          obd2_codes,
+          visual_notes,
+          repair_plan,
+          urgency_level
+        });
+      }
 
       await logAudit({
         req,
-        action: 'TECHNICAL_REPORT_CREATED',
+        action: isNew ? 'TECHNICAL_REPORT_CREATED' : 'TECHNICAL_REPORT_UPDATED',
         entityType: 'TechnicalReport',
         entityId: report.id,
         newValues: {
@@ -67,7 +83,7 @@ module.exports = {
         }
       });
 
-      res.status(201).json({ message: 'Report created successfully', report });
+      res.status(isNew ? 201 : 200).json({ message: isNew ? 'Report created successfully' : 'Report updated successfully', report });
     } catch (error) {
       console.error('Error creating technical report:', error);
       res.status(500).json({ message: 'Server error' });

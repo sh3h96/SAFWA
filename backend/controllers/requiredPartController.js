@@ -116,6 +116,21 @@ module.exports = {
         }
       }
 
+      // Strict validation for each part ID and positive quantity (> 0)
+      for (const p of parts) {
+        const partId = p.id !== undefined ? p.id : p.part_id;
+        const qty = p.qty !== undefined ? p.qty : p.quantity;
+
+        if (!partId || typeof qty !== 'number' || !Number.isInteger(qty) || qty <= 0) {
+          return res.status(400).json({ message: 'Invalid quantity or part ID. Quantity must be a positive integer.' });
+        }
+
+        const sparePart = await SparePart.findByPk(partId);
+        if (!sparePart) {
+          return res.status(400).json({ message: `Spare part with ID ${partId} not found` });
+        }
+      }
+
       let report = await TechnicalReport.findOne({ where: { appointment_id } });
 
       if (!report) {
@@ -126,12 +141,16 @@ module.exports = {
         });
       }
 
-      const records = parts.map(part => ({
-        technical_report_id: report.id,
-        part_id: part.id,
-        quantity: part.qty,
-        status: 'pending'
-      }));
+      const records = parts.map(part => {
+        const partId = part.id !== undefined ? part.id : part.part_id;
+        const qty = part.qty !== undefined ? part.qty : part.quantity;
+        return {
+          technical_report_id: report.id,
+          part_id: partId,
+          quantity: qty,
+          status: 'pending'
+        };
+      });
 
       const createdRecords = await RequiredPart.bulkCreate(records);
 
@@ -152,10 +171,13 @@ module.exports = {
 
   // PUT /api/required-parts/approval
   updateApproval: async (req, res) => {
+    const { sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
     try {
       const { decisions } = req.body;
 
       if (!decisions || !Array.isArray(decisions) || decisions.length === 0) {
+        await transaction.rollback();
         return res.status(400).json({ message: 'Decisions list is required' });
       }
 
@@ -163,11 +185,13 @@ module.exports = {
       for (const decision of decisions) {
         if (decision.status === 'approved') {
           const reqPart = await RequiredPart.findByPk(decision.id, {
-            include: [{ model: SparePart, as: 'partDetails' }]
+            include: [{ model: SparePart, as: 'partDetails' }],
+            transaction
           });
           if (reqPart && reqPart.status !== 'approved') {
             const availableStock = reqPart.partDetails?.stock_quantity ?? 0;
             if (availableStock < reqPart.quantity) {
+              await transaction.rollback();
               return res.status(400).json({
                 message: `المخزون غير كافٍ للقطعة "${reqPart.partDetails?.name || decision.id}". المتوفر: ${availableStock}، المطلوب: ${reqPart.quantity}`
               });
@@ -179,22 +203,23 @@ module.exports = {
       // Pass 2: Execute updates & stock deduction
       for (const decision of decisions) {
         const oldPart = await RequiredPart.findByPk(decision.id, {
-          include: [{ model: SparePart, as: 'partDetails' }]
+          include: [{ model: SparePart, as: 'partDetails' }],
+          transaction
         });
         const oldStatus = oldPart ? oldPart.status : 'pending';
 
         await RequiredPart.update(
           { status: decision.status },
-          { where: { id: decision.id } }
+          { where: { id: decision.id }, transaction }
         );
 
         if (decision.status === 'approved' && oldStatus !== 'approved' && oldPart?.partDetails) {
-          const sparePart = await SparePart.findByPk(oldPart.part_id);
+          const sparePart = await SparePart.findByPk(oldPart.part_id, { transaction });
           if (sparePart) {
             const oldQty = sparePart.stock_quantity;
             const newQty = Math.max(0, sparePart.stock_quantity - oldPart.quantity);
             sparePart.stock_quantity = newQty;
-            await sparePart.save();
+            await sparePart.save({ transaction });
 
             await logAudit({
               req,
@@ -218,8 +243,10 @@ module.exports = {
         });
       }
 
+      await transaction.commit();
       res.json({ message: 'Parts approval updated successfully' });
     } catch (error) {
+      await transaction.rollback();
       console.error('Error updating parts approval:', error);
       res.status(500).json({ message: 'Server error' });
     }
