@@ -38,13 +38,28 @@ module.exports = {
     try {
       const { appointment_id, rating, comment } = req.body;
 
-      if (!appointment_id || !rating) {
+      if (!appointment_id || rating === undefined || rating === null) {
         return res.status(400).json({ message: 'appointment_id and rating are required' });
       }
 
-      const numericRating = parseInt(rating);
-      if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      const numRating = Number(rating);
+      if (
+        typeof rating === 'boolean' ||
+        isNaN(numRating) ||
+        !Number.isInteger(numRating) ||
+        numRating < 1 ||
+        numRating > 5 ||
+        (typeof rating === 'string' && rating.includes('.'))
+      ) {
         return res.status(400).json({ message: 'Rating must be an integer between 1 and 5' });
+      }
+
+      if (comment !== undefined && comment !== null && typeof comment !== 'string') {
+        return res.status(400).json({ message: 'Comment must be a text string' });
+      }
+
+      if (typeof comment === 'string' && comment.length > 1000) {
+        return res.status(400).json({ message: 'Comment exceeds maximum allowed length of 1000 characters' });
       }
 
       // Ownership Verification: Check if appointment belongs to current client
@@ -56,7 +71,12 @@ module.exports = {
         return res.status(404).json({ message: 'Appointment not found or unauthorized' });
       }
 
-      // Check if review already exists for this appointment
+      // Service Eligibility Verification: Only completed or ready_for_pickup appointments can be reviewed
+      if (!['completed', 'ready_for_pickup'].includes(appointment.status)) {
+        return res.status(400).json({ message: 'Only completed services can be reviewed' });
+      }
+
+      // Duplicate Review Protection
       const existingReview = await Review.findOne({ where: { appointment_id } });
       if (existingReview) {
         return res.status(400).json({ message: 'Review already submitted for this appointment' });
@@ -65,8 +85,8 @@ module.exports = {
       const review = await Review.create({
         client_id: req.user.id,
         appointment_id,
-        rating: numericRating,
-        comment: comment || ''
+        rating: numRating,
+        comment: comment ? String(comment).trim() : ''
       });
 
       await logAudit({
@@ -74,7 +94,7 @@ module.exports = {
         action: 'REVIEW_CREATED',
         entityType: 'Review',
         entityId: review.id,
-        newValues: { appointment_id, rating: numericRating, comment: comment || '' }
+        newValues: { appointment_id, rating: numRating, comment: comment ? String(comment).trim() : '' }
       });
 
       res.status(201).json({ message: 'Review submitted successfully', review });

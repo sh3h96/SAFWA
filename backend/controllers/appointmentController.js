@@ -115,11 +115,12 @@ module.exports = {
   // GET /api/appointments/my
   getMyAppointments: async (req, res) => {
     try {
-      const { TechnicalReport, RequiredPart, SparePart } = require('../models');
+      const { TechnicalReport, RequiredPart, SparePart, Review } = require('../models');
       const appointments = await Appointment.findAll({
         where: { client_id: req.user.id },
         include: [
           { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
+          { model: Review, as: 'review', attributes: ['id', 'rating', 'comment'] },
           { 
             model: TechnicalReport, 
             as: 'report',
@@ -159,6 +160,8 @@ module.exports = {
           plateNumber: app.vehicle?.license_plate || '',
           description: app.problem_description,
           status: app.status,
+          hasReview: !!app.review,
+          review: app.review ? { id: app.review.id, rating: app.review.rating, comment: app.review.comment } : null,
           requestedParts
         };
       });
