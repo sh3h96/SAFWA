@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LicensePlate from '../../components/common/LicensePlate';
 import StatusBadge from '../../components/common/StatusBadge';
 import DataTable from '../../components/common/DataTable';
 import { customerResponse } from '../../mock/customer/customer';
 import { formatCurrency } from '../../utils/formatters';
+import toast from 'react-hot-toast';
 
 export default function CustomerDashboardPage() {
+  const navigate = useNavigate();
   const [data] = useState(customerResponse);
   const [selectedVehicleId, setSelectedVehicleId] = useState(data.vehicles[0].id);
 
@@ -43,7 +46,7 @@ export default function CustomerDashboardPage() {
       label: '',
       render: (row) => (
         <button 
-          onClick={() => alert(`تحميل فاتورة ${row.id}`)}
+          onClick={() => toast.success(`جاري تحميل الفاتورة ${row.id}`)}
           className="text-secondary hover:text-primary transition-colors p-1"
           title="تحميل"
         >
@@ -73,7 +76,7 @@ export default function CustomerDashboardPage() {
           </div>
 
           <button 
-            onClick={() => alert('إعادة التوجيه لمعالج حجز خدمة جديد')}
+            onClick={() => navigate('/client/booking')}
             className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-hover transition-all active:scale-95 shadow-sm flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -142,7 +145,10 @@ export default function CustomerDashboardPage() {
         <section className="col-span-12 lg:col-span-8 bg-white border border-border-slate rounded-xl shadow-sm overflow-hidden space-y-4">
           <div className="p-6 border-b border-border-slate flex items-center justify-between">
             <h2 className="text-lg font-bold text-on-surface">الفواتير الأخيرة</h2>
-            <button className="text-primary text-xs font-bold hover:underline flex items-center gap-1">
+            <button 
+              onClick={() => navigate('/client/billing')}
+              className="text-primary text-xs font-bold hover:underline flex items-center gap-1"
+            >
               <span>عرض الكل</span>
               <span className="material-symbols-outlined text-sm">arrow_back</span>
             </button>
@@ -158,7 +164,7 @@ export default function CustomerDashboardPage() {
         <section className="col-span-12 lg:col-span-4 space-y-4">
           {/* Action 1 */}
           <div 
-            onClick={() => alert('إعادة التوجيه لمركباتي')}
+            onClick={() => navigate('/client/vehicles')}
             className="group bg-white border border-border-slate p-5 rounded-xl flex items-center justify-between hover:shadow-md hover:border-primary/40 transition-all cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-4">
@@ -177,7 +183,7 @@ export default function CustomerDashboardPage() {
 
           {/* Action 2 */}
           <div 
-            onClick={() => alert('إعادة التوجيه لسجل الصيانة')}
+            onClick={() => navigate('/client/appointments')}
             className="group bg-white border border-border-slate p-5 rounded-xl flex items-center justify-between hover:shadow-md hover:border-primary/40 transition-all cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-4">
@@ -196,7 +202,7 @@ export default function CustomerDashboardPage() {
 
           {/* Action 3 */}
           <div 
-            onClick={() => alert('فتح شاشة تقييم الخدمة')}
+            onClick={() => navigate('/client/reviews')}
             className="group bg-white border border-border-slate p-5 rounded-xl flex items-center justify-between hover:shadow-md hover:border-primary/40 transition-all cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-4">

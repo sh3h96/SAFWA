@@ -13,6 +13,17 @@ const VALID_STATUSES = [
   'cancelled'
 ];
 
+const ALLOWED_TRANSITIONS = {
+  pending: ['awaiting_assignment', 'under_inspection', 'in_progress', 'cancelled'],
+  awaiting_assignment: ['under_inspection', 'in_progress', 'cancelled'],
+  under_inspection: ['in_progress', 'waiting_parts', 'ready_for_pickup', 'completed', 'cancelled'],
+  in_progress: ['waiting_parts', 'ready_for_pickup', 'completed', 'cancelled'],
+  waiting_parts: ['under_inspection', 'in_progress', 'ready_for_pickup', 'completed', 'cancelled'],
+  ready_for_pickup: ['completed', 'in_progress', 'cancelled'],
+  completed: [],
+  cancelled: []
+};
+
 module.exports = {
   // GET /api/appointments/slots
   getAvailableSlots: async (req, res) => {
@@ -341,11 +352,24 @@ module.exports = {
 
       const { status, mechanic_id, mechanic_ids } = req.body;
       
-      if (status !== undefined) {
+      if (status !== undefined && status !== oldStatus) {
         if (!VALID_STATUSES.includes(status)) {
           await transaction.rollback();
           return res.status(400).json({ message: `Invalid status: ${status}. Valid statuses: ${VALID_STATUSES.join(', ')}` });
         }
+
+        if (oldStatus) {
+          if (oldStatus === 'completed' || oldStatus === 'cancelled') {
+            await transaction.rollback();
+            return res.status(400).json({ message: `Cannot change status of an appointment that is already ${oldStatus}` });
+          }
+          const allowedNext = ALLOWED_TRANSITIONS[oldStatus] || [];
+          if (!allowedNext.includes(status)) {
+            await transaction.rollback();
+            return res.status(400).json({ message: `Invalid status transition from '${oldStatus}' to '${status}'` });
+          }
+        }
+
         appointment.status = status;
       }
 

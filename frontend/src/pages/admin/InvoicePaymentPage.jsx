@@ -4,6 +4,7 @@ import AlertBanner from '../../components/common/AlertBanner';
 import PaymentSuccessModal from '../../components/invoices/PaymentSuccessModal';
 import { currentInvoiceResponse } from '../../mock/admin/invoices';
 import { formatCurrency } from '../../utils/formatters';
+import toast from 'react-hot-toast';
 
 export default function InvoicePaymentPage() {
   const invoice = currentInvoiceResponse;
@@ -266,14 +267,14 @@ export default function InvoicePaymentPage() {
             {/* PDF & Share Actions */}
             <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-border-slate">
               <button 
-                onClick={() => alert('جاري تحميل الفاتورة بصيغة PDF...')}
+                onClick={() => toast.success('جاري تحميل الفاتورة بصيغة PDF...')}
                 className="flex flex-col items-center gap-1 p-3 hover:bg-surface-container rounded-lg transition-colors group text-xs text-secondary"
               >
                 <span className="material-symbols-outlined text-lg group-hover:text-primary">download</span>
                 <span>تحميل PDF</span>
               </button>
               <button 
-                onClick={() => alert('تم نسخ رابط الفاتورة')}
+                onClick={() => toast.success('تم نسخ رابط الفاتورة')}
                 className="flex flex-col items-center gap-1 p-3 hover:bg-surface-container rounded-lg transition-colors group text-xs text-secondary"
               >
                 <span className="material-symbols-outlined text-lg group-hover:text-primary">share</span>

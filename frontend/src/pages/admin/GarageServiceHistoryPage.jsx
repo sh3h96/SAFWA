@@ -3,6 +3,7 @@ import SelectInput from '../../components/ui/SelectInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import { garageResponse } from '../../mock/admin/garage';
 import { formatCurrency } from '../../utils/formatters';
+import toast from 'react-hot-toast';
 
 export default function GarageServiceHistoryPage() {
   const [vehicles] = useState(garageResponse.vehicles);
@@ -24,11 +25,11 @@ export default function GarageServiceHistoryPage() {
   });
 
   const handleAddVehicle = () => {
-    alert('إضافة سيارة جديدة للمرآب');
+    toast.info('إضافة سيارة جديدة للمرآب');
   };
 
   const handleNewRepair = () => {
-    alert(`تسجيل عملية إصلاح جديدة لسيارة ${activeVehicle.name}`);
+    toast.info(`تسجيل عملية إصلاح جديدة لسيارة ${activeVehicle.name}`);
   };
 
   return (
@@ -211,7 +212,7 @@ export default function GarageServiceHistoryPage() {
                         </span>
                         {node.hasInvoice && (
                           <button 
-                            onClick={() => alert(`تحميل فاتورة ${node.title}`)}
+                            onClick={() => toast.success(`جاري تحميل فاتورة ${node.title}`)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border-slate rounded-lg text-xs hover:bg-surface transition-all font-bold"
                           >
                             <span className="material-symbols-outlined text-sm text-danger-text">picture_as_pdf</span>

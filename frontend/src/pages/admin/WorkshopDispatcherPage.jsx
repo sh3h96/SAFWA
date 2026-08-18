@@ -4,6 +4,7 @@ import LicensePlate from '../../components/common/LicensePlate';
 import StatusBadge from '../../components/common/StatusBadge';
 import ReassignBayModal from '../../components/workshop/ReassignBayModal';
 import { workshopResponse } from '../../mock/admin/workshop';
+import toast from 'react-hot-toast';
 
 export default function WorkshopDispatcherPage() {
   const [unassignedVehicles, setUnassignedVehicles] = useState(workshopResponse.unassignedVehicles);
@@ -34,7 +35,7 @@ export default function WorkshopDispatcherPage() {
   const handleAssignUnassigned = (vehicle) => {
     const emptyBay = bays.find(b => b.status === 'empty');
     if (!emptyBay) {
-      alert('لا توجد منصات فارغة متوفرة حالياً');
+      toast.error('لا توجد منصات فارغة متوفرة حالياً');
       return;
     }
 
@@ -176,7 +177,7 @@ export default function WorkshopDispatcherPage() {
                           if (unassignedVehicles.length > 0) {
                             handleAssignUnassigned(unassignedVehicles[0]);
                           } else {
-                            alert('لا توجد مركبات بانتظار التوزيع حالياً');
+                            toast.error('لا توجد مركبات بانتظار التوزيع حالياً');
                           }
                         }}
                         className="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-teal-hover transition-colors shadow-sm"

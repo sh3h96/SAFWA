@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import LicensePlate from '../../components/common/LicensePlate';
 import { bookingResponse } from '../../mock/admin/booking';
+import toast from 'react-hot-toast';
 
 export default function BookingWizardPage() {
   const [data] = useState(bookingResponse);
@@ -289,7 +290,7 @@ export default function BookingWizardPage() {
               </button>
             ) : (
               <button 
-                onClick={() => alert('تم إلغاء الحجز')}
+                onClick={() => toast.error('تم إلغاء الحجز')}
                 className="px-6 py-3 text-secondary hover:text-danger-text transition-colors font-medium text-sm"
               >
                 إلغاء
