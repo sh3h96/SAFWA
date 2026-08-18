@@ -821,11 +821,11 @@ module.exports = {
           </div>
         `;
 
-        sendEmail({
+        await sendEmail({
           email: user.email,
           subject: 'طلب إعادة تعيين كلمة المرور - صفوة',
           html: emailHtml
-        }).catch(e => console.error('Forgot password email error:', e));
+        });
       } catch (e) {
         console.error('Non-critical forgot password email error:', e);
       }

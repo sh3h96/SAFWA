@@ -5,12 +5,12 @@ export default function TermsOfUsePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-on-surface">
+    <div className="min-h-screen flex flex-col bg-surface text-on-surface pb-16">
       {/* Top Header */}
       <header className="bg-[#0D1F2D] text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shadow-md sticky top-0 z-50">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/login')}>
-          <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl p-1.5 flex items-center justify-center border border-white/20">
-            <img src={safwaLogo} alt="SAFWA Logo" className="w-full h-full object-contain" />
+          <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl p-1.5 flex items-center justify-center border border-white/20 overflow-hidden">
+            <img src={safwaLogo} alt="SAFWA Logo" className="w-full h-full object-contain rounded-lg" />
           </div>
           <div>
             <h1 className="font-bold text-lg text-white">منصة صفوة (SAFWA)</h1>
@@ -27,7 +27,7 @@ export default function TermsOfUsePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow max-w-4xl w-full mx-auto p-6 md:p-12 space-y-8">
+      <main className="flex-grow max-w-4xl w-full mx-auto p-6 md:p-12 pb-16 space-y-8">
         <div className="bg-white border border-border-slate rounded-2xl p-6 md:p-10 shadow-sm space-y-6">
           <div className="border-b border-border-slate pb-4">
             <h2 className="text-2xl font-bold text-on-surface">شروط وأحكام الاستخدام</h2>

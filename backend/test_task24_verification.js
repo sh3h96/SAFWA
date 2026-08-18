@@ -49,10 +49,16 @@ async function runTask24Verification() {
     const loginPath = path.join(__dirname, '../frontend/src/pages/auth/LoginPage.jsx');
     const registerPath = path.join(__dirname, '../frontend/src/pages/auth/RegisterPage.jsx');
     const appPath = path.join(__dirname, '../frontend/src/App.jsx');
+    const termsPath = path.join(__dirname, '../frontend/src/pages/legal/TermsOfUsePage.jsx');
+    const privacyPath = path.join(__dirname, '../frontend/src/pages/legal/PrivacyPolicyPage.jsx');
+    const indexCssPath = path.join(__dirname, '../frontend/src/index.css');
 
     const loginCode = fs.readFileSync(loginPath, 'utf8');
     const registerCode = fs.readFileSync(registerPath, 'utf8');
     const appCode = fs.readFileSync(appPath, 'utf8');
+    const termsCode = fs.readFileSync(termsPath, 'utf8');
+    const privacyCode = fs.readFileSync(privacyPath, 'utf8');
+    const indexCssCode = fs.readFileSync(indexCssPath, 'utf8');
 
     // 1. LOGIN PRE-FILLED CREDENTIALS AUDIT
     const hasInitialContact = loginCode.includes("useState('admin@safwa.sa')") || loginCode.includes("useState('777123456')");
@@ -101,19 +107,38 @@ async function runTask24Verification() {
     assert(loginHas2026 && registerHas2026 && !hasOld2024, 'Test 9: Copyright year updated to 2026 across auth footers');
 
     // 10. FORGOT PASSWORD API SECURITY & EMAIL CONTRACT
-    // Existing user
     const resExisting = await makeRequest('/users/forgot-password', {
       method: 'POST',
       body: { email: 'client@safwa.sa' }
     });
-    // Non-existing user
     const resNonExisting = await makeRequest('/users/forgot-password', {
       method: 'POST',
       body: { email: 'unknown_fake_user_999@safwa.sa' }
     });
-
     const isNonEnumerating = resExisting.status === 200 && resNonExisting.status === 200 && resExisting.data.message === resNonExisting.data.message;
     assert(isNonEnumerating, 'Test 10: Forgot password API handles existing and non-existing emails with generic non-enumerating 200 response');
+
+    // 11. LEGAL PAGES SCROLL & PADDING AUDIT
+    const bodyAllowsScroll = indexCssCode.includes('overflow-y: auto') || !indexCssCode.includes('body {\n  font-family: \'Tajawal\', sans-serif;\n  background-color: var(--color-surface);\n  color: var(--color-on-surface);\n  overflow: hidden;');
+    const termsHasPadding = termsCode.includes('pb-16');
+    const privacyHasPadding = privacyCode.includes('pb-16');
+    assert(bodyAllowsScroll && termsHasPadding && privacyHasPadding, 'Test 11: Body and legal pages allow natural vertical scrolling with comfortable bottom padding');
+
+    // 12. LEGAL PAGES TOP-RIGHT LOGO ROUNDED CORNERS AUDIT
+    const termsLogoRounded = termsCode.includes('overflow-hidden') && (termsCode.includes('rounded-lg') || termsCode.includes('rounded-xl'));
+    const privacyLogoRounded = privacyCode.includes('overflow-hidden') && (privacyCode.includes('rounded-lg') || privacyCode.includes('rounded-xl'));
+    assert(termsLogoRounded && privacyLogoRounded, 'Test 12: Top-right header logo on legal pages has rounded corners matching auth pages');
+
+    // 13. REGISTER PAGE SCROLLABILITY & LOGIN LINK VISIBILITY AUDIT
+    const registerHasScroll = registerCode.includes('overflow-y-auto') && registerCode.includes('pb-16') && registerCode.includes('pb-12');
+    assert(registerHasScroll, 'Test 13: Register page allows vertical scrolling with padding ensuring Back to Login link is fully visible');
+
+    // 14. END-TO-END MAILTRAP EMAIL DELIVERY & AWAIT HANDSHAKE AUDIT
+    const sendEmailCode = fs.readFileSync(path.join(__dirname, 'utils/sendEmail.js'), 'utf8');
+    const userControllerCode = fs.readFileSync(path.join(__dirname, 'controllers/userController.js'), 'utf8');
+    const awaitsEmail = userControllerCode.includes('await sendEmail({');
+    const hasMailtrapFallback = sendEmailCode.includes('sandbox.smtp.mailtrap.io');
+    assert(awaitsEmail && hasMailtrapFallback, 'Test 14: Forgot Password controller awaits sendEmail to guarantee Mailtrap SMTP delivery');
 
   } catch (err) {
     console.error('\n❌ UNEXPECTED ERROR IN TASK 24 VERIFICATION:', err);

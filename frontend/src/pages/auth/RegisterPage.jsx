@@ -156,8 +156,8 @@ export default function RegisterPage() {
       </section>
 
       {/* Right Panel: Form / Success State */}
-      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-between items-center p-6 md:p-12 relative overflow-y-auto">
-        <div className="w-full max-w-md my-auto space-y-8 py-6">
+      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-between items-center p-6 md:p-12 pb-16 min-h-screen relative overflow-y-auto">
+        <div className="w-full max-w-md my-auto space-y-8 py-6 pb-12">
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-4">
             <div className="w-20 h-20 bg-[#0D1F2D] p-3 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm overflow-hidden">
