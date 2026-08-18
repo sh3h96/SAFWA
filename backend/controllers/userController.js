@@ -6,6 +6,7 @@ const escapeHtml = require('../utils/htmlEscape');
 const { User, Appointment } = require('../models');
 const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
+const { recordLoginFailure, resetLoginFailure } = require('../middleware/loginRateLimiter');
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -43,10 +44,7 @@ module.exports = {
       });
 
       if (existingUser) {
-        if (existingUser.email && existingUser.email.toLowerCase() === email) {
-          return res.status(400).json({ message: 'البريد الإلكتروني مستخدم بالفعل' });
-        }
-        return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل' });
+        return res.status(400).json({ message: 'البريد الإلكتروني أو رقم الجوال مستخدم بالفعل' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -162,12 +160,14 @@ module.exports = {
       });
       
       if (!user) {
+        recordLoginFailure(req);
         await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', newValues: { attemptedInput: rawInput } });
         return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
 
       // Check if user is suspended
       if (user.status === 'suspended' || user.status === 'موقوف') {
+        recordLoginFailure(req);
         await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'suspended' } });
         return res.status(403).json({ message: 'عذراً، تم إيقاف حسابك. يرجى التواصل مع الإدارة.' });
       }
@@ -175,9 +175,13 @@ module.exports = {
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
+        recordLoginFailure(req);
         await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'invalid_password' } });
         return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
+
+      // Reset failure counter on successful authentication
+      resetLoginFailure(req);
 
       const token = jwt.sign(
         { id: user.id, role: user.role, email: user.email, tokenVersion: user.token_version },

@@ -25,6 +25,8 @@ const VALID_APPOINTMENT_STATUSES = ['pending', 'awaiting_assignment', 'under_ins
 const VALID_PART_APPROVAL_STATUSES = ['approved', 'rejected', 'pending'];
 const VALID_PAYMENT_METHODS = ['cash', 'card', 'credit_card', 'online', 'bank_transfer'];
 
+const YEMENI_PHONE_REGEX = /^7\d{8}$/;
+
 // 1. Auth Validation Rules
 const registerValidation = [
   body().custom((val, { req }) => {
@@ -40,12 +42,18 @@ const registerValidation = [
   body('email')
     .trim()
     .notEmpty().withMessage('البريد الإلكتروني مطلوب')
-    .isEmail().withMessage('صيغة البريد الإلكتروني غير صالحة')
+    .isEmail().withMessage('يرجى إدخال بريد إلكتروني صالح')
     .normalizeEmail(),
   body('phone')
-    .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 7, max: 20 }).withMessage('رقم الهاتف غير صالح'),
+    .notEmpty().withMessage('رقم الجوال مطلوب')
+    .custom((val) => {
+      const cleanVal = (val || '').trim();
+      if (!YEMENI_PHONE_REGEX.test(cleanVal)) {
+        throw new Error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+      }
+      return true;
+    }),
   body('password')
     .notEmpty().withMessage('كلمة المرور مطلوبة')
     .isLength({ min: 6 }).withMessage('كلمة المرور يجب أن لا تقل عن 6 أحرف'),
@@ -54,16 +62,20 @@ const registerValidation = [
 
 const loginValidation = [
   body().custom((val, { req }) => {
-    const input = req.body.email || req.body.contact || req.body.identifier || req.body.phone;
-    if (!input || typeof input !== 'string' || !input.trim()) {
+    const rawInput = req.body.email || req.body.contact || req.body.identifier || req.body.phone;
+    if (!rawInput || typeof rawInput !== 'string' || !rawInput.trim()) {
       throw new Error('يرجى إدخال البريد الإلكتروني أو رقم الجوال');
     }
-    const trimmed = input.trim();
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-    const cleanDigits = trimmed.replace(/[^0-9+]/g, '');
-    const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 20;
-    if (!isEmail && !isPhone) {
-      throw new Error('يرجى إدخال بريد إلكتروني صالح أو رقم جوال صحيح');
+    const input = rawInput.trim();
+    if (input.includes('@')) {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+      if (!isEmail) {
+        throw new Error('يرجى إدخال بريد إلكتروني صالح');
+      }
+      return true;
+    }
+    if (!YEMENI_PHONE_REGEX.test(input)) {
+      throw new Error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
     }
     return true;
   }),

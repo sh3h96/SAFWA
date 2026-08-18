@@ -36,29 +36,28 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Rate Limiter for Authentication Endpoints
-const authLimiter = rateLimit({
+const { loginRateLimiter } = require('./middleware/loginRateLimiter');
+
+// Rate Limiter for Account Recovery Endpoints
+const recoveryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'test' ? 1000 : 30, // 30 attempts per 15 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   statusCode: 429,
-  message: { message: 'تم تجاوز عدد محاولات الدخول المسموح بها، يرجى الانتظار 15 دقيقة' }
+  message: { message: 'تم تجاوز عدد المحاولات المسموح بها، يرجى الانتظار 15 دقيقة' }
 });
 
-// Apply rate limiting to authentication and account recovery routes
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/resend-verification', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
-app.use('/api/auth/reset-password', authLimiter);
-app.use('/api/auth/logout', authLimiter);
-app.use('/api/users/login', authLimiter);
-app.use('/api/users/register', authLimiter);
-app.use('/api/users/resend-verification', authLimiter);
-app.use('/api/users/forgot-password', authLimiter);
-app.use('/api/users/reset-password', authLimiter);
-app.use('/api/users/logout', authLimiter);
+// Apply rate limiting to authentication login (progressive) & recovery routes
+app.use('/api/auth/login', loginRateLimiter);
+app.use('/api/users/login', loginRateLimiter);
+
+app.use('/api/auth/resend-verification', recoveryLimiter);
+app.use('/api/auth/forgot-password', recoveryLimiter);
+app.use('/api/auth/reset-password', recoveryLimiter);
+app.use('/api/users/resend-verification', recoveryLimiter);
+app.use('/api/users/forgot-password', recoveryLimiter);
+app.use('/api/users/reset-password', recoveryLimiter);
 
 // Routes
 const userRoutes = require('./routes/userRoutes');

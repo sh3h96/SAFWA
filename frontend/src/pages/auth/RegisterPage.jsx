@@ -27,8 +27,29 @@ export default function RegisterPage() {
 
   const strength = getPasswordStrength();
 
+  const YEMENI_PHONE_REGEX = /^7\d{8}$/;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const cleanEmail = (email || '').trim();
+    const cleanPhone = (phone || '').trim();
+    const cleanName = (fullName || '').trim();
+
+    if (!cleanName || cleanName.length < 2) {
+      toast.error('الاسم الكامل مطلوب ويجب أن لا يقل عن حرفين');
+      return;
+    }
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      toast.error('يرجى إدخال بريد إلكتروني صالح');
+      return;
+    }
+
+    if (!cleanPhone || !YEMENI_PHONE_REGEX.test(cleanPhone)) {
+      toast.error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast.error('كلمة المرور وتأكيد كلمة المرور غير متطابقتين');
@@ -39,10 +60,10 @@ export default function RegisterPage() {
 
     try {
       const payload = {
-        fullName,
-        name: fullName,
-        phone,
-        email,
+        fullName: cleanName,
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
         password,
       };
 
@@ -200,7 +221,7 @@ export default function RegisterPage() {
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="5XXXXXXXX"
+                      placeholder="777123456"
                       className="block w-full pr-4 pl-20 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none text-right font-mono"
                     />
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center border-r border-gray-200 my-2 pr-3">

@@ -59,11 +59,37 @@ export default function LoginPage() {
     }
   };
 
+  const YEMENI_PHONE_REGEX = /^7\d{8}$/;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMsg('');
     setShowResendBtn(false);
-    loginMutation.mutate({ email: contact, password });
+
+    const input = (contact || '').trim();
+    if (!input) {
+      setErrorMsg('يرجى إدخال البريد الإلكتروني أو رقم الجوال');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('كلمة المرور مطلوبة');
+      return;
+    }
+
+    if (input.includes('@')) {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+      if (!isEmail) {
+        setErrorMsg('يرجى إدخال بريد إلكتروني صالح');
+        return;
+      }
+    } else {
+      if (!YEMENI_PHONE_REGEX.test(input)) {
+        setErrorMsg('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+        return;
+      }
+    }
+
+    loginMutation.mutate({ email: input, password });
   };
 
   const isLoading = loginMutation.isPending;
@@ -171,7 +197,7 @@ export default function LoginPage() {
                   type="text"
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
-                  placeholder="example@safwa.sa"
+                  placeholder="777123456 أو example@safwa.sa"
                   className="block w-full pr-12 pl-24 py-3.5 border border-border-slate rounded-xl focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all text-right text-sm"
                 />
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center border-r border-border-slate my-2 font-mono text-xs text-on-surface-variant font-bold pr-3">
