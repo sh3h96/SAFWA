@@ -19,6 +19,17 @@ const getJwtSecret = () => {
   return secret;
 };
 
+const getFrontendUrl = () => {
+  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL;
+  if (process.env.CLIENT_URL) {
+    const origins = process.env.CLIENT_URL.split(',').map(s => s.trim());
+    const prefer5173 = origins.find(o => o.includes('5173'));
+    if (prefer5173) return prefer5173;
+    return origins[0];
+  }
+  return 'http://localhost:5173';
+};
+
 const VALID_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 
 module.exports = {
@@ -73,7 +84,7 @@ module.exports = {
 
       // Send Welcome & Email Verification Link (Non-blocking catch)
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
         const escapedName = escapeHtml(newUser.name);
 
@@ -720,7 +731,7 @@ module.exports = {
       });
 
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
         const escapedName = escapeHtml(user.name);
 
@@ -789,7 +800,7 @@ module.exports = {
       });
 
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const resetUrl = `${frontendUrl}/reset-password?token=${rawResetToken}`;
         const escapedName = escapeHtml(user.name);
 

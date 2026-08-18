@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { authAPI } from '../../services/api';
+import { authAPI, getErrorMessage } from '../../services/api';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 import toast from 'react-hot-toast';
 
@@ -9,58 +9,53 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate();
 
   const token = searchParams.get('token');
-  const email = searchParams.get('email');
+  const initialEmail = searchParams.get('email') || '';
 
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
+  const [resendEmail, setResendEmail] = useState(initialEmail);
   const [isResending, setIsResending] = useState(false);
+  const hasAttemptedRef = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
+    if (hasAttemptedRef.current) return;
+    hasAttemptedRef.current = true;
 
     async function verify() {
-      if (!token || !email) {
-        if (isMounted) {
-          setStatus('error');
-          setErrorMessage('رابط التفعيل غير مكتمل أو غير صالح.');
-        }
+      if (!token) {
+        setStatus('error');
+        setErrorMessage('رابط التفعيل غير صالح أو لا يحتوي على رمز التفعيل.');
         return;
       }
 
       try {
-        const response = await authAPI.verifyEmail({ token, email });
-        if (isMounted) {
-          setStatus('success');
-          toast.success(response?.message || 'تم تفعيل البريد الإلكتروني بنجاح!');
-        }
+        const response = await authAPI.verifyEmail({ token });
+        setStatus('success');
+        toast.success(response?.message || 'تم تأكيد البريد الإلكتروني بنجاح.');
       } catch (error) {
-        if (isMounted) {
-          setStatus('error');
-          const msg = error.response?.data?.message || 'تعذر تفعيل البريد الإلكتروني. قد يكون الرابط منتهياً أو غير صالح.';
-          setErrorMessage(msg);
-        }
+        setStatus('error');
+        const msg = getErrorMessage(error, 'رابط تفعيل البريد الإلكتروني غير صالح أو انتهت صلاحيته.');
+        setErrorMessage(msg);
       }
     }
 
     verify();
+  }, [token]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [token, email]);
+  const handleResend = async (e) => {
+    if (e) e.preventDefault();
 
-  const handleResend = async () => {
-    if (!email) {
-      toast.error('البريد الإلكتروني غير متوفر في الرابط');
+    if (!resendEmail) {
+      toast.error('يرجى إدخال البريد الإلكتروني لإعادة إرسال رابط التفعيل');
       return;
     }
 
     setIsResending(true);
     try {
-      const res = await authAPI.resendVerification({ email });
-      toast.success(res?.message || 'تم إعادة إرسال رابط التفعيل إلى بريدك الإلكتروني');
+      const res = await authAPI.resendVerification({ email: resendEmail });
+      toast.success(res?.message || 'إذا كان البريد الإلكتروني مسجلاً لدينا، فقد تم إرسال رابط التفعيل');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'تعذر إرسال رابط التفعيل. حاول مرة أخرى.');
+      toast.error(getErrorMessage(error, 'تعذر إرسال رابط التفعيل. يرجى المحاولة مرة أخرى.'));
     } finally {
       setIsResending(false);
     }
@@ -70,7 +65,7 @@ export default function VerifyEmailPage() {
     <div className="min-h-screen flex flex-col bg-surface text-on-surface">
       {/* Top Bar */}
       <header className="bg-white border-b border-gray-200 flex justify-between items-center px-8 h-16 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
           <img src={safwaLogo} alt="SAFWA" className="h-8 w-auto object-contain" />
           <span className="font-bold text-xl text-teal-700">SAFWA</span>
         </div>
@@ -100,7 +95,7 @@ export default function VerifyEmailPage() {
           )}
 
           {status === 'success' && (
-            <div className="space-y-6 py-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="space-y-6 py-4 animate-in fade-in zoom-in-95 duration-300 w-full">
               <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
                 <span className="material-symbols-outlined text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                   check_circle
@@ -108,9 +103,9 @@ export default function VerifyEmailPage() {
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-gray-900">تم تفعيل حسابك بنجاح!</h2>
+                <h2 className="text-2xl font-bold text-gray-900">تم تأكيد البريد الإلكتروني بنجاح!</h2>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  تم تأكيد ملكية البريد الإلكتروني بنجاح. يمكنك الآن تسجيل الدخول واستخدام كافة خدمات صفوة.
+                  تم تفعيل حسابك بنجاح. يمكنك الآن تسجيل الدخول واستخدام كافة خدمات صفوة.
                 </p>
               </div>
 
@@ -125,7 +120,7 @@ export default function VerifyEmailPage() {
           )}
 
           {status === 'error' && (
-            <div className="space-y-6 py-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="space-y-6 py-4 animate-in fade-in zoom-in-95 duration-300 w-full">
               <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
                 <span className="material-symbols-outlined text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                   error
@@ -139,10 +134,19 @@ export default function VerifyEmailPage() {
                 </p>
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-gray-100 w-full">
-                {email && (
+              {/* Resend Verification Form */}
+              <div className="space-y-4 pt-4 border-t border-gray-100 w-full text-right">
+                <p className="text-xs text-gray-500 font-bold text-center">طلب رابط تفعيل جديد:</p>
+                <form onSubmit={handleResend} className="space-y-3">
+                  <input
+                    type="email"
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    placeholder="example@safwa.sa"
+                    className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none text-sm text-right font-mono"
+                  />
                   <button
-                    onClick={handleResend}
+                    type="submit"
                     disabled={isResending}
                     className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                   >
@@ -158,7 +162,7 @@ export default function VerifyEmailPage() {
                       </>
                     )}
                   </button>
-                )}
+                </form>
 
                 <button 
                   onClick={() => navigate('/login')}

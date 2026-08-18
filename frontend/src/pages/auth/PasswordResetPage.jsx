@@ -11,8 +11,8 @@ export default function PasswordResetPage() {
   const tokenParam = searchParams.get('token');
   const emailParam = searchParams.get('email');
 
-  // Mode: if token & email exist in query string, we are in Reset Mode. Otherwise Request Mode.
-  const isResetMode = Boolean(tokenParam && emailParam);
+  // Mode: if token exists in query string, we are in Reset Mode. Otherwise Request Mode.
+  const isResetMode = Boolean(tokenParam);
 
   // Form states
   const [email, setEmail] = useState(emailParam || '');
@@ -61,7 +61,6 @@ export default function PasswordResetPage() {
 
     try {
       const response = await authAPI.resetPassword({
-        email: emailParam,
         token: tokenParam,
         newPassword,
       });
@@ -176,15 +175,17 @@ export default function PasswordResetPage() {
           {/* MODE B: Reset Password Form (Token & Email in URL) */}
           {isResetMode && !isResetSuccess && (
             <form onSubmit={handleResetSubmit} className="w-full space-y-5">
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700">البريد الإلكتروني</label>
-                <input 
-                  type="email"
-                  disabled
-                  value={emailParam || ''}
-                  className="w-full h-12 px-4 bg-gray-100 border border-gray-300 rounded-xl font-mono text-sm text-gray-600 text-right cursor-not-allowed"
-                />
-              </div>
+              {emailParam && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700">البريد الإلكتروني</label>
+                  <input 
+                    type="email"
+                    disabled
+                    value={emailParam}
+                    className="w-full h-12 px-4 bg-gray-100 border border-gray-300 rounded-xl font-mono text-sm text-gray-600 text-right cursor-not-allowed"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-gray-700">كلمة المرور الجديدة</label>
