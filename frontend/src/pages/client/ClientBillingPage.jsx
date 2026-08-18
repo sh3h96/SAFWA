@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import ViewInvoiceModal from '../../components/admin/ViewInvoiceModal';
+import toast from 'react-hot-toast';
 
 export default function ClientBillingPage() {
   const queryClient = useQueryClient();
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
-  const { data: invoicesRaw = [], isLoading, isError } = useQuery({
+  const { data: invoicesRaw = [], isLoading, isError, error } = useQuery({
     queryKey: ['client', 'invoices'],
     queryFn: clientAPI.getMyInvoices
   });
@@ -16,7 +19,11 @@ export default function ClientBillingPage() {
   const payMutation = useMutation({
     mutationFn: (id) => clientAPI.payInvoice(id, {}),
     onSuccess: () => {
+      toast.success('تمت عملية الدفع بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'invoices'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تنفيذ عملية الدفع'));
     }
   });
 
@@ -34,9 +41,12 @@ export default function ClientBillingPage() {
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل الفواتير</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل الفواتير"
+        message={getErrorMessage(error)}
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['client', 'invoices'] })}
+      />
     </div>
   );
 

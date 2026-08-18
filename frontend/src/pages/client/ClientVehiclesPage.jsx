@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
+import toast from 'react-hot-toast';
 
 export default function ClientVehiclesPage() {
   const queryClient = useQueryClient();
@@ -24,16 +27,24 @@ export default function ClientVehiclesPage() {
   const createMutation = useMutation({
     mutationFn: clientAPI.createVehicle,
     onSuccess: () => {
+      toast.success('تمت إضافة المركبة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] });
       closeModal();
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إضافة المركبة'));
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => clientAPI.updateVehicle(id, data),
     onSuccess: () => {
+      toast.success('تم تعديل بيانات المركبة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] });
       closeModal();
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تعديل المركبة'));
     }
   });
 
@@ -75,9 +86,12 @@ export default function ClientVehiclesPage() {
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل بيانات المركبات</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل مركباتك"
+        message={getErrorMessage(error)}
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] })}
+      />
     </div>
   );
 
@@ -104,18 +118,14 @@ export default function ClientVehiclesPage() {
       {/* Vehicle Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vehicles.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">directions_car</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد مركبات</h3>
-            <p className="text-slate-500 text-sm max-w-xs">قم بإضافة مركبتك الأولى للبدء في طلب خدمات الصيانة.</p>
-            <button
-              onClick={() => openModal()}
-              className="mt-6 text-primary font-bold hover:underline"
-            >
-              إضافة مركبة الآن
-            </button>
+          <div className="col-span-full">
+            <EmptyState
+              icon="directions_car"
+              title="لا توجد مركبات مسجلة"
+              message="قم بإضافة مركبتك الأولى للبدء في طلب خدمات الصيانة والتأكد من متابعتها."
+              actionLabel="إضافة مركبة الآن"
+              onAction={() => openModal()}
+            />
           </div>
         ) : (
           vehicles.map((vehicle) => (

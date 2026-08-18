@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { inventoryAPI, requiredPartsAPI } from '../../services/api';
+import { inventoryAPI, requiredPartsAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import ProductDetailsModal from '../../components/admin/ProductDetailsModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import toast from 'react-hot-toast';
 
 export default function InventoryPage() {
   const queryClient = useQueryClient();

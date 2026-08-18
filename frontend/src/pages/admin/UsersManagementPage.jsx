@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { usersAPI } from '../../services/api';
+import { usersAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import EditUserModal from '../../components/admin/EditUserModal';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
 
@@ -37,7 +39,7 @@ export default function UsersManagementPage() {
       setName(''); setEmail(''); setPhone(''); setRole('client'); setPassword('');
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء إنشاء المستخدم');
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إنشاء المستخدم'));
     }
   });
 
@@ -48,7 +50,7 @@ export default function UsersManagementPage() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تغيير حالة المستخدم');
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تغيير حالة المستخدم'));
     }
   });
 
@@ -92,7 +94,17 @@ export default function UsersManagementPage() {
     createUserMutation.mutate({ name, email, phone, password, role });
   };
 
-  if (isError) return <div className="text-center text-red-500 font-bold py-10">حدث خطأ أثناء تحميل البيانات: {error?.message}</div>;
+  if (isError) {
+    return (
+      <div className="py-8">
+        <ErrorState
+          title="حدث خطأ في تحميل قائمة المستخدمين"
+          message={getErrorMessage(error)}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">

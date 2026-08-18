@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { authAPI } from '../../services/api';
+import { authAPI, getErrorMessage } from '../../services/api';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 import toast from 'react-hot-toast';
 
@@ -37,8 +37,7 @@ export default function PasswordResetPage() {
       toast.success(response?.message || 'إذا كان البريد الإلكتروني مسجلاً، فقد تم إرسال رابط إعادة الضبط.');
       setIsRequestSent(true);
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'حدث خطأ أثناء طلب إعادة الضبط. حاول لاحقاً.';
-      toast.error(errorMsg);
+      toast.error(getErrorMessage(error, 'حدث خطأ أثناء طلب إعادة الضبط. حاول لاحقاً.'));
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +69,7 @@ export default function PasswordResetPage() {
       toast.success(response?.message || 'تم إعادة ضبط كلمة المرور بنجاح!');
       setIsResetSuccess(true);
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'تعذر إعادة ضبط كلمة المرور. قد يكون الرابط منتهياً أو غير صالح.';
-      toast.error(errorMsg);
+      toast.error(getErrorMessage(error, 'تعذر إعادة ضبط كلمة المرور. قد يكون الرابط منتهياً أو غير صالح.'));
     } finally {
       setIsLoading(false);
     }

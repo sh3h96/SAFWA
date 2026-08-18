@@ -10,6 +10,52 @@ const api = axios.create({
   },
 });
 
+// Centralized Error Normalization Helper
+export const getErrorMessage = (error, defaultMsg = 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.') => {
+  if (!error) return defaultMsg;
+  
+  if (!error.response) {
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return 'انتهت مهلة الاتصال بالخادم. يرجى التأكد من الاتصال بالإنترنت والمحاولة مرة أخرى.';
+    }
+    return 'تعذر الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.';
+  }
+
+  const status = error.response.status;
+  const data = error.response.data;
+
+  // Prefer backend-provided error message if present
+  if (data && data.message && typeof data.message === 'string') {
+    return data.message;
+  }
+  if (data && data.error && typeof data.error === 'string') {
+    return data.error;
+  }
+
+  // Fallback status code explanations in Arabic
+  switch (status) {
+    case 400:
+      return 'البيانات المدخلة غير صالحة. يرجى التأكد والمحاولة مرة أخرى.';
+    case 401:
+      return 'انتهت صلاحة الجلسة أو يجب تسجيل الدخول لطلب هذه البيانات.';
+    case 403:
+      return 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
+    case 404:
+      return 'العنصر المطلوب غير موجود أو غير متاح.';
+    case 409:
+      return 'تعارض في العملية: البيانات صالحة لكن لا يمكن إكمال الإجراء حالياً.';
+    case 422:
+      return 'البيانات المرسلة غير صحيحة أو غير كاملة.';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً.';
+    default:
+      return defaultMsg;
+  }
+};
+
 // Request interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
@@ -29,11 +75,19 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login on 401
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      const requestUrl = error.config?.url || '';
+      const isAuthPath = requestUrl.includes('/auth/login') ||
+                         requestUrl.includes('/auth/register') ||
+                         requestUrl.includes('/auth/verify-email') ||
+                         requestUrl.includes('/auth/forgot-password') ||
+                         requestUrl.includes('/auth/reset-password');
+
+      if (!isAuthPath) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import toast from 'react-hot-toast';
 
 export default function ClientReviewsPage() {
-  const { data: appointmentsRaw = [], isLoading } = useQuery({
+  const { data: appointmentsRaw = [], isLoading, isError, error } = useQuery({
     queryKey: ['client', 'appointments'],
     queryFn: clientAPI.getMyAppointments
   });
@@ -19,6 +20,10 @@ export default function ClientReviewsPage() {
     mutationFn: clientAPI.submitReview,
     onSuccess: () => {
       setIsSuccess(true);
+      toast.success('شاطراً لك! تم إرسال تقييمك بنجاح');
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إرسال التقييم'));
     }
   });
 

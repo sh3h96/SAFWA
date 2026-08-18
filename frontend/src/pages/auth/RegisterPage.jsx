@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import safwaLogo from '../../assets/images/safwa-logo.png';
-import { authAPI } from '../../services/api';
+import { authAPI, getErrorMessage } from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -50,8 +50,7 @@ export default function RegisterPage() {
       toast.success(response?.message || 'تم إنشاء الحساب بنجاح! يرجى تفعيل البريد الإلكتروني.');
       setIsSubmitted(true);
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'حدث خطأ أثناء التسجيل. حاول مرة أخرى.';
-      toast.error(errorMsg);
+      toast.error(getErrorMessage(error, 'حدث خطأ أثناء التسجيل. حاول مرة أخرى.'));
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +63,7 @@ export default function RegisterPage() {
       const res = await authAPI.resendVerification({ email });
       toast.success(res?.message || 'تم إعادة إرسال رابط التفعيل بنجاح');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'تعذر إرسال رابط التفعيل. حاول لاحقاً.');
+      toast.error(getErrorMessage(error, 'تعذر إرسال رابط التفعيل. حاول لاحقاً.'));
     } finally {
       setIsResending(false);
     }

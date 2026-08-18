@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { vehiclesAPI } from '../../services/api';
+import { vehiclesAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminVehiclesPage() {
@@ -112,10 +114,12 @@ export default function AdminVehiclesPage() {
 
   if (isError) {
     return (
-      <div className="max-w-7xl mx-auto py-12 text-center text-rose-500 font-bold space-y-3">
-        <span className="material-symbols-outlined text-5xl">error</span>
-        <p className="text-lg">حدث خطأ أثناء تحميل قائمة المركبات: {error?.message}</p>
-        <button onClick={() => queryClient.invalidateQueries({ queryKey: ['vehicles'] })} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs">إعادة المحاولة</button>
+      <div className="max-w-7xl mx-auto py-8">
+        <ErrorState
+          title="حدث خطأ في تحميل قائمة المركبات"
+          message={getErrorMessage(error)}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['vehicles'] })}
+        />
       </div>
     );
   }
@@ -226,9 +230,14 @@ export default function AdminVehiclesPage() {
       ) : (
         <div className={`bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-opacity duration-300 ${isFetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           {vehicles.length === 0 ? (
-            <div className="text-center py-20 text-slate-400 space-y-3">
-              <span className="material-symbols-outlined text-5xl">directions_car_filled</span>
-              <p className="font-bold">لا توجد مركبات مطابقة للبحث أو الفلاتر المختارة.</p>
+            <div className="p-8">
+              <EmptyState
+                icon="directions_car_filled"
+                title="لا توجد مركبات مطابقة"
+                message={searchTerm || makeFilter || modelFilter || yearFilter ? "لم يتم العثور على نتائج تطابق فلاتر البحث والفرز المختارة." : "لم يتم تسجيل أي مركبات في النظام بعد."}
+                actionLabel={(searchTerm || makeFilter || modelFilter || yearFilter) ? "مسح جميع الفلاتر" : null}
+                onAction={handleClearFilters}
+              />
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { appointmentsAPI, usersAPI } from '../../services/api';
+import { appointmentsAPI, usersAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import AppointmentDetailsModal from '../../components/admin/AppointmentDetailsModal';
+import toast from 'react-hot-toast';
 
 export default function AppointmentsControlPage() {
   const queryClient = useQueryClient();
@@ -36,6 +39,9 @@ export default function AppointmentsControlPage() {
     mutationFn: ({ id, data }) => appointmentsAPI.updateStatus(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
     }
   });
 
@@ -78,7 +84,17 @@ export default function AppointmentsControlPage() {
     );
   };
 
-  if (isError) return <div className="text-center text-red-500 font-bold py-10">حدث خطأ أثناء تحميل البيانات: {error?.message}</div>;
+  if (isError) {
+    return (
+      <div className="py-8">
+        <ErrorState
+          title="حدث خطأ في تحميل جدول المواعيد"
+          message={getErrorMessage(error)}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['appointments'] })}
+        />
+      </div>
+    );
+  }
 
   const filteredAppointments = appointments.filter(a => a.status === activeFilter || (activeFilter === 'in_progress' && ['under_inspection', 'waiting_parts'].includes(a.status)));
 
@@ -142,13 +158,11 @@ export default function AppointmentsControlPage() {
             <p className="text-sm font-bold animate-pulse">جاري تحميل المواعيد...</p>
           </div>
         ) : filteredAppointments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center h-64 mt-4">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">inbox</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد بطاقات هنا</h3>
-            <p className="text-slate-500 text-sm max-w-xs">لا يوجد أي مواعيد حالياً في هذه القائمة.</p>
-          </div>
+          <EmptyState
+            icon="event_busy"
+            title="لا توجد مواعيد في هذا القسم"
+            message={searchTerm ? "لم يتم العثور على أي مواعيد تطابق بحثك الحالي." : "لا توجد مواعيد مدرجة ضمن هذا التصنيف حالياً."}
+          />
         ) : (
           <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-300 ${isFetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
             {filteredAppointments.map(app => {

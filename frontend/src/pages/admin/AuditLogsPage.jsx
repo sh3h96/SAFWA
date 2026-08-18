@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { auditLogsAPI } from '../../services/api';
+import { auditLogsAPI, getErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 
 // Action Label & Color Mapping
 const actionMap = {
@@ -90,18 +92,12 @@ export default function AuditLogsPage() {
 
   if (isError) {
     return (
-      <div className="max-w-4xl mx-auto py-16 text-center space-y-4">
-        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto">
-          <span className="material-symbols-outlined text-4xl">error</span>
-        </div>
-        <h2 className="text-xl font-bold text-slate-800">حدث خطأ أثناء تحميل سجل التدقيق</h2>
-        <p className="text-rose-600 text-sm font-bold">{error?.response?.data?.message || error?.message}</p>
-        <button
-          onClick={() => refetch()}
-          className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors"
-        >
-          إعادة المحاولة
-        </button>
+      <div className="max-w-4xl mx-auto py-8">
+        <ErrorState
+          title="حدث خطأ في تحميل سجل التدقيق"
+          message={getErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

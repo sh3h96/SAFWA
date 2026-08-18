@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mechanicAPI } from '../../services/api';
+import { mechanicAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import DiagnosisModal from '../../components/mechanic/DiagnosisModal';
 import PartsRequestDrawer from '../../components/mechanic/PartsRequestDrawer';
+import toast from 'react-hot-toast';
 
 // ─── Status Configuration ────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -47,22 +50,31 @@ export default function MechanicTasksPage() {
   // Filter State
   const [activeFilter, setActiveFilter] = useState('active');
 
-  const { data: tasks = [], isLoading, isError } = useQuery({
+  const { data: tasks = [], isLoading, isError, error } = useQuery({
     queryKey: ['mechanic', 'tasks'],
     queryFn: mechanicAPI.getTasks,
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => mechanicAPI.updateAppointmentStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] }),
+    onSuccess: () => {
+      toast.success('تم تغيير حالة المهمة بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تغيير حالة المهمة'));
+    }
   });
 
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-20 text-rose-500 space-y-3">
-      <span className="material-symbols-outlined text-5xl block">error</span>
-      <p className="font-bold">حدث خطأ أثناء تحميل جدول العمل</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل جدول العمل"
+        message={getErrorMessage(error)}
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] })}
+      />
     </div>
   );
 

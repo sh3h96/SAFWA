@@ -35,7 +35,7 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
-      const msg = error.response?.data?.message || 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.';
+      const msg = getErrorMessage(error, 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.');
       setErrorMsg(msg);
       // Check if error is related to email verification
       if (msg.includes('تأكيد') || msg.includes('تفعيل') || msg.includes('البريد')) {
@@ -53,7 +53,7 @@ export default function LoginPage() {
       const res = await authAPI.resendVerification({ email: contact });
       toast.success(res?.message || 'تم إرسال رابط التفعيل إلى بريدك الإلكتروني.');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'تعذر إرسال رابط التفعيل.');
+      toast.error(getErrorMessage(err, 'تعذر إرسال رابط التفعيل.'));
     } finally {
       setIsResending(false);
     }
@@ -262,7 +262,7 @@ export default function LoginPage() {
           {/* Google Login */}
           <button 
             type="button"
-            onClick={() => alert('تسجيل الدخول عبر Google غير مفعل حالياً')}
+            onClick={() => toast.error('تسجيل الدخول عبر Google غير مفعل حالياً')}
             className="w-full bg-white border border-gray-300 text-gray-700 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">

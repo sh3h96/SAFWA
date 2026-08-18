@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import PartsApproval from '../../components/client/PartsApproval';
 
 export default function ClientAppointmentsPage() {
-  const { data: appointmentsRaw = [], isLoading, isError } = useQuery({
+  const { data: appointmentsRaw = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['client', 'appointments'],
     queryFn: clientAPI.getMyAppointments
   });
@@ -38,14 +40,15 @@ export default function ClientAppointmentsPage() {
     return true; // for 'all'
   });
 
-
-
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل سجل المواعيد</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل سجل المواعيد"
+        message={getErrorMessage(error)}
+        onRetry={() => refetch()}
+      />
     </div>
   );
 
@@ -81,13 +84,11 @@ export default function ClientAppointmentsPage() {
 
       <div className="space-y-6">
         {appointments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">لا يوجد مواعيد</h3>
-            <p className="text-slate-500 text-sm max-w-xs">لم تقم بحجز أي مواعيد صيانة حتى الآن.</p>
-          </div>
+          <EmptyState
+            icon="event_busy"
+            title="لا توجد مواعيد"
+            message="لم يتم العثور على أي مواعيد في هذا التصنيف حالياً."
+          />
         ) : (
           appointments.map((app) => {
             const needsPartsStage = app.status === 'waiting_parts' || (app.requestedParts && app.requestedParts.length > 0);
