@@ -31,7 +31,7 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error('كلمة المرور غير متطابقة');
+      toast.error('كلمة المرور وتأكيد كلمة المرور غير متطابقتين');
       return;
     }
 
@@ -39,6 +39,7 @@ export default function RegisterPage() {
 
     try {
       const payload = {
+        fullName,
         name: fullName,
         phone,
         email,

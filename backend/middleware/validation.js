@@ -12,8 +12,10 @@ const handleValidation = (req, res, next) => {
     message: err.msg
   }));
 
+  const mainMessage = formattedErrors.length > 0 ? formattedErrors[0].message : 'بيانات غير صالحة';
+
   return res.status(400).json({
-    message: 'Validation failed',
+    message: mainMessage,
     errors: formattedErrors
   });
 };
@@ -25,10 +27,16 @@ const VALID_PAYMENT_METHODS = ['cash', 'card', 'credit_card', 'online', 'bank_tr
 
 // 1. Auth Validation Rules
 const registerValidation = [
-  body('fullName')
-    .trim()
-    .notEmpty().withMessage('الاسم الكامل مطلوب')
-    .isLength({ min: 2, max: 100 }).withMessage('الاسم يجب أن يكون بين حرفين و 100 حرف'),
+  body().custom((val, { req }) => {
+    const nameVal = req.body.fullName || req.body.name;
+    if (!nameVal || typeof nameVal !== 'string' || !nameVal.trim()) {
+      throw new Error('الاسم الكامل مطلوب');
+    }
+    if (nameVal.trim().length < 2 || nameVal.trim().length > 100) {
+      throw new Error('الاسم يجب أن يكون بين حرفين و 100 حرف');
+    }
+    return true;
+  }),
   body('email')
     .trim()
     .notEmpty().withMessage('البريد الإلكتروني مطلوب')
@@ -45,11 +53,20 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-  body('email')
-    .trim()
-    .notEmpty().withMessage('البريد الإلكتروني مطلوب')
-    .isEmail().withMessage('صيغة البريد الإلكتروني غير صالحة')
-    .normalizeEmail(),
+  body().custom((val, { req }) => {
+    const input = req.body.email || req.body.contact || req.body.identifier || req.body.phone;
+    if (!input || typeof input !== 'string' || !input.trim()) {
+      throw new Error('يرجى إدخال البريد الإلكتروني أو رقم الجوال');
+    }
+    const trimmed = input.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const cleanDigits = trimmed.replace(/[^0-9+]/g, '');
+    const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 20;
+    if (!isEmail && !isPhone) {
+      throw new Error('يرجى إدخال بريد إلكتروني صالح أو رقم جوال صحيح');
+    }
+    return true;
+  }),
   body('password')
     .notEmpty().withMessage('كلمة المرور مطلوبة'),
   handleValidation

@@ -24,20 +24,29 @@ module.exports = {
   // POST /api/auth/register
   register: async (req, res) => {
     try {
-      const { fullName, phone, email, password } = req.body;
+      const name = (req.body.fullName || req.body.name || '').trim();
+      const email = (req.body.email || '').trim().toLowerCase();
+      const phone = (req.body.phone || '').trim();
+      const password = req.body.password;
 
-      if (!fullName || !email || !password) {
+      if (!name || !email || !password) {
         return res.status(400).json({ message: 'الاسم والبريد الإلكتروني وكلمة المرور مطلوبة' });
       }
 
+      const checkConditions = [{ email }];
+      if (phone) {
+        checkConditions.push({ phone });
+      }
+
       const existingUser = await User.findOne({ 
-        where: { 
-          [Op.or]: [{ email }, { phone: phone || '' }] 
-        } 
+        where: { [Op.or]: checkConditions } 
       });
 
       if (existingUser) {
-        return res.status(400).json({ message: 'البريد الإلكتروني أو رقم الجوال مستخدم بالفعل' });
+        if (existingUser.email && existingUser.email.toLowerCase() === email) {
+          return res.status(400).json({ message: 'البريد الإلكتروني مستخدم بالفعل' });
+        }
+        return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -48,9 +57,9 @@ module.exports = {
       const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       const newUser = await User.create({
-        name: fullName,
+        name,
         email,
-        phone,
+        phone: phone || null,
         password: hashedPassword,
         role: 'client', // Hardcoded role for security on public registration
         is_email_verified: false,
@@ -112,24 +121,49 @@ module.exports = {
       });
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'حدث خطأ في الخادم أثناء إنشاء الحساب' });
     }
   },
 
   // POST /api/auth/login
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, contact, identifier, phone, password } = req.body;
+      const rawInput = (email || contact || identifier || phone || '').trim();
 
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+      if (!rawInput || !password) {
+        return res.status(400).json({ message: 'البريد الإلكتروني/رقم الجوال وكلمة المرور مطلوبة' });
       }
 
-      const user = await User.findOne({ where: { email } });
+      const cleanDigits = rawInput.replace(/[^0-9+]/g, '');
+      const isEmail = rawInput.includes('@');
+
+      const phoneVariants = [
+        rawInput,
+        cleanDigits,
+        cleanDigits.startsWith('967') ? cleanDigits.slice(3) : null,
+        cleanDigits.startsWith('967') ? '0' + cleanDigits.slice(3) : null,
+        cleanDigits.startsWith('0') ? cleanDigits.slice(1) : null,
+        cleanDigits.startsWith('0') ? '967' + cleanDigits.slice(1) : null,
+        cleanDigits.startsWith('0') ? '+967' + cleanDigits.slice(1) : null,
+        !cleanDigits.startsWith('0') && !cleanDigits.startsWith('+') ? '0' + cleanDigits : null,
+        !cleanDigits.startsWith('0') && !cleanDigits.startsWith('+') ? '+967' + cleanDigits : null
+      ].filter(Boolean);
+
+      const whereConditions = isEmail
+        ? [{ email: rawInput.toLowerCase() }]
+        : [
+            { email: rawInput.toLowerCase() },
+            ...phoneVariants.map(p => ({ phone: p }))
+          ];
+
+      const user = await User.findOne({
+        where: { [Op.or]: whereConditions }
+      });
       
       if (!user) {
-        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', newValues: { attemptedEmail: email } });
-        return res.status(401).json({ message: 'Invalid credentials' });
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', newValues: { attemptedInput: rawInput } });
+        return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
 
       // Check if user is suspended
@@ -142,7 +176,7 @@ module.exports = {
 
       if (!isMatch) {
         await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'invalid_password' } });
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
 
       const token = jwt.sign(
@@ -170,7 +204,7 @@ module.exports = {
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'حدث خطأ في الخادم أثناء تسجيل الدخول' });
     }
   },
 

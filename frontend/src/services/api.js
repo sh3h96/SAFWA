@@ -5,6 +5,7 @@ const API_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,8 +25,16 @@ export const getErrorMessage = (error, defaultMsg = 'حدث خطأ غير متو
   const status = error.response.status;
   const data = error.response.data;
 
-  // Prefer backend-provided error message if present
-  if (data && data.message && typeof data.message === 'string') {
+  // Extract validation field errors if present
+  if (data && Array.isArray(data.errors) && data.errors.length > 0) {
+    const fieldMsgs = data.errors.map(err => err.message).filter(Boolean);
+    if (fieldMsgs.length > 0) {
+      return fieldMsgs.join(' | ');
+    }
+  }
+
+  // Prefer backend-provided error message if present and meaningful
+  if (data && data.message && typeof data.message === 'string' && data.message !== 'Validation failed') {
     return data.message;
   }
   if (data && data.error && typeof data.error === 'string') {

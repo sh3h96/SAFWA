@@ -39,11 +39,11 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Rate Limiter for Authentication Endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'test' ? 1000 : 15, // 15 attempts per 15 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 30, // 30 attempts per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   statusCode: 429,
-  message: { message: 'Too many authentication attempts, please try again after 15 minutes' }
+  message: { message: 'تم تجاوز عدد محاولات الدخول المسموح بها، يرجى الانتظار 15 دقيقة' }
 });
 
 // Apply rate limiting to authentication and account recovery routes
