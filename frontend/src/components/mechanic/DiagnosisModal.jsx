@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { mechanicAPI } from '../../services/api';
+import { mechanicAPI, getErrorMessage } from '../../services/api';
+import toast from 'react-hot-toast';
 
 const URGENCY_OPTIONS = [
   { value: 'low',    label: 'منخفض — يمكن تأجيله' },
@@ -11,27 +12,31 @@ const URGENCY_OPTIONS = [
 export default function DiagnosisModal({ task, onClose }) {
   const queryClient = useQueryClient();
 
-  // Form fields
-  const [odometer,    setOdometer]    = useState('');
-  const [obd2Codes,   setObd2Codes]   = useState('');
-  const [visualNotes, setVisualNotes] = useState('');
-  const [diagnostics, setDiagnostics] = useState('');
-  const [repairPlan,  setRepairPlan]  = useState('');
-  const [urgency,     setUrgency]     = useState('normal');
+  // Form fields pre-filled from existing report if available
+  const [odometer,    setOdometer]    = useState(task?.report?.odometer !== undefined && task?.report?.odometer !== null ? String(task.report.odometer) : '');
+  const [obd2Codes,   setObd2Codes]   = useState(task?.report?.obd2_codes || '');
+  const [visualNotes, setVisualNotes] = useState(task?.report?.visual_notes || '');
+  const [diagnostics, setDiagnostics] = useState(task?.report?.diagnostics || '');
+  const [repairPlan,  setRepairPlan]  = useState(task?.report?.repair_plan || '');
+  const [urgency,     setUrgency]     = useState(task?.report?.urgency_level || 'normal');
 
   // Submit diagnosis report
   const reportMutation = useMutation({
     mutationFn: mechanicAPI.submitDiagnosis,
     onSuccess: () => {
+      toast.success('تم اعتماد تقرير الفحص الفني بنجاح');
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] });
-      onClose(); // Close the modal on success
+      onClose();
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء حفظ التقرير'));
+    }
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     reportMutation.mutate({
-      appointment_id: task.appointment_id,
+      appointment_id: task.appointment_id || task.id,
       odometer:       odometer ? parseInt(odometer) : null,
       obd2_codes:     obd2Codes,
       visual_notes:   visualNotes,

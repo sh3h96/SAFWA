@@ -83,6 +83,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', technicalReportRoutes);
+app.use('/api/technical-reports', technicalReportRoutes);
 app.use('/api/required-parts', requiredPartRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 

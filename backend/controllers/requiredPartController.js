@@ -181,14 +181,30 @@ module.exports = {
         return res.status(400).json({ message: 'Decisions list is required' });
       }
 
-      // Pass 1: Stock verification for approvals
+      // Pass 1: Stock verification and status checks
       for (const decision of decisions) {
+        if (!decision.status || !['approved', 'rejected', 'pending'].includes(decision.status)) {
+          await transaction.rollback();
+          return res.status(400).json({ message: `Invalid status decision: ${decision.status}` });
+        }
+
+        const reqPart = await RequiredPart.findByPk(decision.id, {
+          include: [{ model: SparePart, as: 'partDetails' }],
+          transaction
+        });
+
+        if (!reqPart) {
+          await transaction.rollback();
+          return res.status(404).json({ message: `Required parts request #${decision.id} not found` });
+        }
+
         if (decision.status === 'approved') {
-          const reqPart = await RequiredPart.findByPk(decision.id, {
-            include: [{ model: SparePart, as: 'partDetails' }],
-            transaction
-          });
-          if (reqPart && reqPart.status !== 'approved') {
+          if (reqPart.status === 'rejected') {
+            await transaction.rollback();
+            return res.status(400).json({ message: `Cannot approve an already rejected parts request (ID: ${decision.id})` });
+          }
+
+          if (reqPart.status !== 'approved') {
             const availableStock = reqPart.partDetails?.stock_quantity ?? 0;
             if (availableStock < reqPart.quantity) {
               await transaction.rollback();
