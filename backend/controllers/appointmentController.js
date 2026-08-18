@@ -79,26 +79,47 @@ module.exports = {
   // POST /api/appointments
   createAppointment: async (req, res) => {
     try {
-      const { vehicle_id, appointment_date, description } = req.body;
+      const { vehicle_id, appointment_date, scheduled_date, description, problem_description } = req.body;
+      const targetVehicleId = vehicle_id;
+      const targetDate = appointment_date || scheduled_date;
+      const targetDesc = description || problem_description;
       
-      if (!vehicle_id) {
+      if (!targetVehicleId) {
         return res.status(400).json({ message: 'vehicle_id is required' });
       }
 
-      // Ownership Verification: Check if vehicle belongs to current user
-      const vehicle = await Vehicle.findOne({
-        where: { id: vehicle_id, client_id: req.user.id }
-      });
-
-      if (!vehicle) {
-        return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+      // Check if client is attempting to set privileged fields
+      if (req.user && req.user.role === 'client') {
+        const privilegedFields = ['status', 'mechanic_id', 'mechanic_ids', 'financial_status', 'payment_status'];
+        const hasPrivileged = privilegedFields.some(f => req.body[f] !== undefined);
+        if (hasPrivileged) {
+          return res.status(400).json({ message: 'Clients cannot set privileged appointment fields' });
+        }
       }
 
+      // Ownership Verification: Check if vehicle belongs to current user
+      let vehicle;
+      if (req.user && req.user.role === 'client') {
+        vehicle = await Vehicle.findOne({
+          where: { id: targetVehicleId, client_id: req.user.id }
+        });
+        if (!vehicle) {
+          return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+        }
+      } else {
+        vehicle = await Vehicle.findByPk(targetVehicleId);
+        if (!vehicle) {
+          return res.status(404).json({ message: 'Vehicle not found' });
+        }
+      }
+
+      const clientId = (req.user && req.user.role === 'client') ? req.user.id : (vehicle.client_id || req.user.id);
+
       const newAppointment = await Appointment.create({
-        client_id: req.user.id,
-        vehicle_id,
-        scheduled_date: appointment_date || new Date(),
-        problem_description: description || 'صيانة عامة',
+        client_id: clientId,
+        vehicle_id: targetVehicleId,
+        scheduled_date: targetDate || new Date(),
+        problem_description: targetDesc || 'صيانة عامة',
         status: 'pending'
       });
 
@@ -108,8 +129,8 @@ module.exports = {
         entityType: 'Appointment',
         entityId: newAppointment.id,
         newValues: {
-          client_id: req.user.id,
-          vehicle_id,
+          client_id: clientId,
+          vehicle_id: targetVehicleId,
           scheduled_date: newAppointment.scheduled_date,
           problem_description: newAppointment.problem_description,
           status: 'pending'
