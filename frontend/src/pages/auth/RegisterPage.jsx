@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import safwaLogo from '../../assets/images/safwa-logo.png';
 import { authAPI, getErrorMessage } from '../../services/api';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -12,17 +11,34 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  // Dynamic Password Strength Meter
+  // Comprehensive Password Strength Meter
   const getPasswordStrength = () => {
-    if (password.length === 0) return { label: '', color: 'bg-gray-200', level: 0 };
-    if (password.length < 5) return { label: 'ضعيفة', color: 'bg-red-500', level: 1 };
-    if (password.length < 8) return { label: 'متوسطة', color: 'bg-yellow-500', level: 2 };
-    return { label: 'قوية', color: 'bg-green-500', level: 3 };
+    if (!password) return { label: '', color: 'bg-gray-200', level: 0 };
+    if (password.length < 6) {
+      return { label: 'ضعيفة (قصيرة جداً)', color: 'bg-red-500', level: 1 };
+    }
+
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    const charTypes = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
+
+    if (charTypes <= 1) {
+      return { label: 'ضعيفة', color: 'bg-red-500', level: 1 };
+    }
+    if (password.length >= 8 && charTypes >= 3) {
+      return { label: 'قوية', color: 'bg-green-500', level: 3 };
+    }
+    return { label: 'متوسطة', color: 'bg-yellow-500', level: 2 };
   };
 
   const strength = getPasswordStrength();
@@ -47,7 +63,7 @@ export default function RegisterPage() {
     }
 
     if (!cleanPhone || !YEMENI_PHONE_REGEX.test(cleanPhone)) {
-      toast.error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+      toast.error('يرجى إدخال رقم صحيح مكون من تسعة أرقام فقط.');
       return;
     }
 
@@ -103,45 +119,50 @@ export default function RegisterPage() {
             verified
           </span>
           <span className="text-teal-400 text-sm font-bold">
-            نظام إدارة الورش وصيانة السيارات الأول
+            نظام إدارة الورش وصيانة السيارات المتكامل
           </span>
         </div>
 
         {/* Central Content */}
-        <div className="relative z-10 flex flex-col items-center w-full transform -translate-y-8 text-center">
-          <div className="mb-8 w-64 h-64 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-2xl">
+        <div className="relative z-10 flex flex-col items-center w-full transform -translate-y-4 text-center">
+          <div className="mb-8 w-64 h-64 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-2xl overflow-hidden">
             <img
               src={safwaLogo}
               alt="SAFWA Logo"
-              className="w-48 h-auto object-contain"
+              className="w-48 h-auto object-contain rounded-2xl"
             />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">SAFWA (صفوة)</h1>
           <p className="text-slate-300 text-base max-w-sm leading-relaxed">
-            التحول الرقمي المتكامل لخدمات صيانة المركبات في الجمهورية اليمنية.
+            التحول الرقمي المتكامل لخدمات صيانة المركبات ومتابعة الورش.
           </p>
         </div>
 
-        {/* Footer Stats */}
-        <div className="relative z-10 flex items-center justify-around w-full pt-6 border-t border-white/10">
+        {/* Product Messaging Footer Highlights */}
+        <div className="relative z-10 grid grid-cols-3 gap-4 w-full pt-6 border-t border-white/10 text-center">
           <div className="flex flex-col items-center">
-            <span className="text-teal-400 text-3xl font-bold font-mono">+500</span>
-            <span className="text-slate-400 text-xs uppercase tracking-wider mt-0.5">ورشة مفعلة</span>
+            <span className="material-symbols-outlined text-teal-400 text-2xl mb-1">directions_car</span>
+            <span className="text-slate-300 text-xs font-bold">إدارة المركبات</span>
           </div>
-          <div className="h-10 w-px bg-white/20" />
           <div className="flex flex-col items-center">
-            <span className="text-teal-400 text-3xl font-bold font-mono">24/7</span>
-            <span className="text-slate-400 text-xs uppercase tracking-wider mt-0.5">دعم فني</span>
+            <span className="material-symbols-outlined text-teal-400 text-2xl mb-1">build_circle</span>
+            <span className="text-slate-300 text-xs font-bold">سير العمل الفني</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="material-symbols-outlined text-teal-400 text-2xl mb-1">receipt_long</span>
+            <span className="text-slate-300 text-xs font-bold">متابعة الفواتير</span>
           </div>
         </div>
       </section>
 
       {/* Right Panel: Form / Success State */}
-      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-start items-center p-6 md:p-12 relative overflow-y-auto max-h-screen">
-        <div className="w-full max-w-md space-y-8 my-auto py-8">
+      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-between items-center p-6 md:p-12 relative overflow-y-auto">
+        <div className="w-full max-w-md my-auto space-y-8 py-6">
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-4">
-            <img src={safwaLogo} alt="SAFWA Logo" className="h-16 w-auto object-contain" />
+            <div className="w-20 h-20 bg-[#0D1F2D] p-3 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm overflow-hidden">
+              <img src={safwaLogo} alt="SAFWA Logo" className="h-full w-auto object-contain rounded-xl" />
+            </div>
           </div>
 
           {isSubmitted ? (
@@ -166,7 +187,7 @@ export default function RegisterPage() {
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => navigate('/login')}
-                  className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 hover:bg-teal-700 transition-all flex items-center justify-center gap-2 text-sm"
+                  className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 hover:bg-teal-700 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
                 >
                   <span>الانتقال إلى تسجيل الدخول</span>
                   <span className="material-symbols-outlined text-lg">login</span>
@@ -175,7 +196,7 @@ export default function RegisterPage() {
                 <button
                   onClick={handleResend}
                   disabled={isResending}
-                  className="w-full py-3 bg-gray-50 text-teal-700 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50"
+                  className="w-full py-3 bg-gray-50 text-teal-700 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50 cursor-pointer"
                 >
                   {isResending ? (
                     <>
@@ -221,7 +242,7 @@ export default function RegisterPage() {
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="777123456"
+                      placeholder="7XXXXXXXX"
                       className="block w-full pr-4 pl-20 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none text-right font-mono"
                     />
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center border-r border-gray-200 my-2 pr-3">
@@ -247,14 +268,26 @@ export default function RegisterPage() {
                   {/* Password */}
                   <div className="space-y-2">
                     <label className="block text-sm font-bold text-gray-700">كلمة المرور</label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="********"
-                      className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none font-mono text-right"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="block w-full pr-4 pl-10 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none font-mono text-right"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                        className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-lg">
+                          {showPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
 
                     {/* Dynamic Strength Meter */}
                     {password.length > 0 && (
@@ -274,14 +307,26 @@ export default function RegisterPage() {
                   {/* Confirm Password */}
                   <div className="space-y-2">
                     <label className="block text-sm font-bold text-gray-700">تأكيد كلمة المرور</label>
-                    <input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="********"
-                      className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none font-mono text-right"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="block w-full pr-4 pl-10 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all text-sm outline-none font-mono text-right"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                        className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-lg">
+                          {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -295,7 +340,23 @@ export default function RegisterPage() {
                     className="mt-1 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-600/20 cursor-pointer"
                   />
                   <label htmlFor="terms" className="text-xs text-gray-600 leading-relaxed">
-                    بإنشاء حساب، فإنك توافق على <a href="#" className="text-teal-600 font-bold hover:underline">الشروط والأحكام</a> و <a href="#" className="text-teal-600 font-bold hover:underline">سياسة الخصوصية</a> الخاصة بمنصة صفوة.
+                    بإنشاء حساب، فإنك توافق على{' '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/terms')}
+                      className="text-teal-600 font-bold hover:underline bg-transparent border-0 p-0 cursor-pointer"
+                    >
+                      الشروط والأحكام
+                    </button>{' '}
+                    و{' '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/privacy')}
+                      className="text-teal-600 font-bold hover:underline bg-transparent border-0 p-0 cursor-pointer"
+                    >
+                      سياسة الخصوصية
+                    </button>{' '}
+                    الخاصة بمنصة صفوة.
                   </label>
                 </div>
 
@@ -303,7 +364,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={!agreeTerms || isLoading}
-                  className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 hover:bg-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 hover:bg-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -324,12 +385,34 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-600">
                   لديك حساب بالفعل؟{' '}
                   <button
+                    type="button"
                     onClick={() => navigate('/login')}
-                    className="text-teal-600 font-bold hover:underline transition-all"
+                    className="text-teal-600 font-bold hover:underline transition-all bg-transparent border-0 p-0 cursor-pointer"
                   >
                     تسجيل الدخول
                   </button>
                 </p>
+              </div>
+
+              {/* Bottom Legal Footer */}
+              <div className="pt-6 flex flex-wrap justify-center items-center gap-4 text-gray-500 text-xs">
+                <button
+                  type="button"
+                  onClick={() => navigate('/privacy')}
+                  className="hover:text-teal-600 transition-colors bg-transparent border-0 p-0 cursor-pointer"
+                >
+                  سياسة الخصوصية
+                </button>
+                <span className="text-gray-300">•</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/terms')}
+                  className="hover:text-teal-600 transition-colors bg-transparent border-0 p-0 cursor-pointer"
+                >
+                  شروط الاستخدام
+                </button>
+                <span className="text-gray-300">•</span>
+                <span>© 2026 صفوة (SAFWA)</span>
               </div>
             </>
           )}

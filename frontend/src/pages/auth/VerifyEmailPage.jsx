@@ -142,7 +142,7 @@ export default function VerifyEmailPage() {
                     type="email"
                     value={resendEmail}
                     onChange={(e) => setResendEmail(e.target.value)}
-                    placeholder="example@safwa.sa"
+                    placeholder="example@domain.com"
                     className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none text-sm text-right font-mono"
                   />
                   <button

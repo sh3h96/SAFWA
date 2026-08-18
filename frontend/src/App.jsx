@@ -14,11 +14,13 @@ import MechanicLayout from './layouts/MechanicLayout';
 // Create a client
 const queryClient = new QueryClient();
 
-// Auth Pages
+// Auth & Legal Pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const PasswordResetPage = lazy(() => import('./pages/auth/PasswordResetPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
+const TermsOfUsePage = lazy(() => import('./pages/legal/TermsOfUsePage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage'));
 
 // Admin Pages
 const AppointmentsControlPage = lazy(() => import('./pages/admin/AppointmentsControlPage'));
@@ -51,7 +53,7 @@ function App() {
             {/* Default Landing Page -> Login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Auth routes */}
+            {/* Auth & Legal routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -60,6 +62,10 @@ function App() {
             <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
             <Route path="/reset-password" element={<PasswordResetPage />} />
             <Route path="/auth/reset-password" element={<PasswordResetPage />} />
+            <Route path="/terms" element={<TermsOfUsePage />} />
+            <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
             {/* Admin & Super Admin Dashboard */}
             <Route element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} />}>

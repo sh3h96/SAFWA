@@ -50,7 +50,7 @@ const registerValidation = [
     .custom((val) => {
       const cleanVal = (val || '').trim();
       if (!YEMENI_PHONE_REGEX.test(cleanVal)) {
-        throw new Error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+        throw new Error('يرجى إدخال رقم صحيح مكون من تسعة أرقام فقط.');
       }
       return true;
     }),
@@ -75,7 +75,7 @@ const loginValidation = [
       return true;
     }
     if (!YEMENI_PHONE_REGEX.test(input)) {
-      throw new Error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+      throw new Error('يرجى إدخال رقم صحيح مكون من تسعة أرقام فقط.');
     }
     return true;
   }),

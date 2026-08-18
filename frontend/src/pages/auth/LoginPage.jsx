@@ -9,8 +9,8 @@ import toast from 'react-hot-toast';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [contact, setContact] = useState('admin@safwa.sa'); // using the known admin email
-  const [password, setPassword] = useState('password123'); // real default password from seeder
+  const [contact, setContact] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -84,7 +84,7 @@ export default function LoginPage() {
       }
     } else {
       if (!YEMENI_PHONE_REGEX.test(input)) {
-        setErrorMsg('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام ويبدأ بالرقم 7');
+        setErrorMsg('يرجى إدخال رقم صحيح مكون من تسعة أرقام فقط.');
         return;
       }
     }
@@ -106,45 +106,50 @@ export default function LoginPage() {
             verified
           </span>
           <span className="text-primary-fixed-dim text-sm font-bold">
-            نظام إدارة الورش وصيانة السيارات الأول
+            نظام إدارة الورش وصيانة السيارات المتكامل
           </span>
         </div>
 
         {/* Central Content */}
-        <div className="relative z-10 flex flex-col items-center w-full transform -translate-y-8 text-center">
-          <div className="mb-8 w-64 h-64 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-2xl">
+        <div className="relative z-10 flex flex-col items-center w-full transform -translate-y-4 text-center">
+          <div className="mb-8 w-64 h-64 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-2xl overflow-hidden">
             <img
               src={safwaLogo}
               alt="SAFWA Logo"
-              className="w-48 h-auto object-contain"
+              className="w-48 h-auto object-contain rounded-2xl"
             />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">SAFWA (صفوة)</h1>
           <p className="text-slate-300 text-base max-w-sm leading-relaxed">
-            التحول الرقمي المتكامل لخدمات صيانة المركبات في الجمهورية اليمنية.
+            التحول الرقمي المتكامل لخدمات صيانة المركبات ومتابعة الورش.
           </p>
         </div>
 
-        {/* Footer Stats */}
-        <div className="relative z-10 flex items-center justify-around w-full pt-6 border-t border-white/10">
+        {/* Product Messaging Footer Highlights */}
+        <div className="relative z-10 grid grid-cols-3 gap-4 w-full pt-6 border-t border-white/10 text-center">
           <div className="flex flex-col items-center">
-            <span className="text-primary-fixed-dim text-3xl font-bold data-mono">+500</span>
-            <span className="text-slate-400 text-xs uppercase tracking-wider mt-0.5">ورشة مفعلة</span>
+            <span className="material-symbols-outlined text-primary-fixed-dim text-2xl mb-1">directions_car</span>
+            <span className="text-slate-300 text-xs font-bold">إدارة المركبات</span>
           </div>
-          <div className="h-10 w-[1px] bg-white/20" />
           <div className="flex flex-col items-center">
-            <span className="text-primary-fixed-dim text-3xl font-bold data-mono">24/7</span>
-            <span className="text-slate-400 text-xs uppercase tracking-wider mt-0.5">دعم فني</span>
+            <span className="material-symbols-outlined text-primary-fixed-dim text-2xl mb-1">build_circle</span>
+            <span className="text-slate-300 text-xs font-bold">سير العمل الفني</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="material-symbols-outlined text-primary-fixed-dim text-2xl mb-1">receipt_long</span>
+            <span className="text-slate-300 text-xs font-bold">متابعة الفواتير</span>
           </div>
         </div>
       </section>
 
       {/* Right Panel: Login Form */}
-      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-center items-center p-6 md:p-12 relative">
-        <div className="w-full max-w-md space-y-8">
+      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-between items-center p-6 md:p-12 relative overflow-y-auto">
+        <div className="w-full max-w-md my-auto space-y-8 py-6">
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-4">
-            <img src={safwaLogo} alt="SAFWA Logo" className="h-16 w-auto object-contain" />
+            <div className="w-20 h-20 bg-[#0D1F2D] p-3 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm overflow-hidden">
+              <img src={safwaLogo} alt="SAFWA Logo" className="h-full w-auto object-contain rounded-xl" />
+            </div>
           </div>
 
           {/* Header */}
@@ -197,7 +202,7 @@ export default function LoginPage() {
                   type="text"
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
-                  placeholder="777123456 أو example@safwa.sa"
+                  placeholder="7XXXXXXXX أو example@domain.com"
                   className="block w-full pr-12 pl-24 py-3.5 border border-border-slate rounded-xl focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all text-right text-sm"
                 />
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center border-r border-border-slate my-2 font-mono text-xs text-on-surface-variant font-bold pr-3">
@@ -212,13 +217,13 @@ export default function LoginPage() {
                 <label className="block text-sm font-bold text-on-surface" htmlFor="password">
                   كلمة المرور
                 </label>
-                <a
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); navigate('/reset-password'); }}
-                  className="text-sm text-teal-600 hover:text-teal-700 hover:underline"
+                <button
+                  type="button"
+                  onClick={() => navigate('/reset-password')}
+                  className="text-sm text-teal-600 hover:text-teal-700 hover:underline bg-transparent border-0 p-0 cursor-pointer"
                 >
                   نسيت كلمة المرور؟
-                </a>
+                </button>
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
@@ -235,7 +240,8 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 hover:text-on-surface transition-colors"
+                  aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                  className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 hover:text-on-surface transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined">
                     {showPassword ? 'visibility_off' : 'visibility'}
@@ -262,7 +268,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary-container text-white py-4 rounded-xl font-bold text-base hover:bg-teal-hover active:scale-[0.98] transition-all shadow-lg shadow-primary/10 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full bg-primary-container text-white py-4 rounded-xl font-bold text-base hover:bg-teal-hover active:scale-[0.98] transition-all shadow-lg shadow-primary/10 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -278,47 +284,39 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-border-slate" />
-            <span className="flex-shrink mx-4 text-on-surface-variant text-xs font-bold">أو من خلال</span>
-            <div className="flex-grow border-t border-border-slate" />
-          </div>
-
-          {/* Google Login */}
-          <button
-            type="button"
-            onClick={() => toast.error('تسجيل الدخول عبر Google غير مفعل حالياً')}
-            className="w-full bg-white border border-gray-300 text-gray-700 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            <span>الدخول عبر Google</span>
-          </button>
-
           {/* Registration Footer */}
-          <footer className="pt-4 text-center">
+          <footer className="pt-2 text-center">
             <p className="text-sm text-on-surface-variant">
               ليس لديك حساب؟{' '}
-              <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); navigate('/register'); }}
-                className="text-primary font-bold hover:underline transition-all"
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-primary font-bold hover:underline transition-all bg-transparent border-0 p-0 cursor-pointer"
               >
                 إنشاء حساب جديد
-              </a>
+              </button>
             </p>
           </footer>
 
-          {/* Bottom Legal */}
-          <div className="pt-8 flex justify-center gap-6 text-on-surface-variant/60 text-xs">
-            <a href="#" className="hover:text-primary transition-colors">سياسة الخصوصية</a>
-            <a href="#" className="hover:text-primary transition-colors">شروط الاستخدام</a>
-            <span>© 2024 صفوة (SAFWA)</span>
+          {/* Bottom Legal Footer */}
+          <div className="pt-6 border-t border-gray-100 flex flex-wrap justify-center items-center gap-4 text-on-surface-variant/70 text-xs">
+            <button
+              type="button"
+              onClick={() => navigate('/privacy')}
+              className="hover:text-primary transition-colors bg-transparent border-0 p-0 cursor-pointer"
+            >
+              سياسة الخصوصية
+            </button>
+            <span className="text-gray-300">•</span>
+            <button
+              type="button"
+              onClick={() => navigate('/terms')}
+              className="hover:text-primary transition-colors bg-transparent border-0 p-0 cursor-pointer"
+            >
+              شروط الاستخدام
+            </button>
+            <span className="text-gray-300">•</span>
+            <span>© 2026 صفوة (SAFWA)</span>
           </div>
         </div>
       </section>

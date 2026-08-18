@@ -94,7 +94,7 @@ async function runTask20VerificationTests() {
       method: 'POST',
       body: { contact: '055512345', password: 'Password123!' }
     });
-    assert(res4.status === 400 && res4.data.message?.includes('7'), `Test 4: Invalid phone format rejected with 400 ("${res4.data.message}")`);
+    assert(res4.status === 400 && (res4.data.message?.includes('رقم') || res4.data.message?.includes('7')), `Test 4: Invalid phone format rejected with 400 ("${res4.data.message}")`);
 
     // Test 5: Phone starting with non-7 (677123456) -> rejected with 400
     const res5 = await makeRequest('/auth/login', {
@@ -161,7 +161,7 @@ async function runTask20VerificationTests() {
         password: 'Password123!'
       }
     });
-    assert(res12.status === 400 && res12.data.message?.includes('7'), `Test 12: Invalid registration phone rejected with 400 ("${res12.data.message}")`);
+    assert(res12.status === 400 && (res12.data.message?.includes('رقم') || res12.data.message?.includes('7')), `Test 12: Invalid registration phone rejected with 400 ("${res12.data.message}")`);
 
     // Test 13: Duplicate email registration -> unified duplicate message
     const res13 = await makeRequest('/auth/register', {
