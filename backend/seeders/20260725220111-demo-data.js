@@ -6,38 +6,89 @@ const superAdminPasswordHash = '$2b$10$TgZ2fKyCjDx9jnfQd081H.WfjgPUrScJZjGMQwaN5
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    // 1. Users
-    const clientsData = Array.from({ length: 5 }).map(() => factories.createFakeUser('client'));
-    clientsData[0].email = 'client@safwa.sa';
+    // Canonical Users List conforming strictly to Yemeni phone rule (/^7\d{8}$/) and removing personal developer data
+    const canonicalUsers = [
+      factories.createFakeUser('super_admin', {
+        name: 'Super Admin',
+        email: 'super_admin@safwa.sa',
+        phone: '777123456',
+        password: superAdminPasswordHash,
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('admin', {
+        name: 'مدير النظام',
+        email: 'admin@safwa.sa',
+        phone: '777123457',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('mechanic', {
+        name: 'مهندس الصيانة',
+        email: 'mechanic@safwa.sa',
+        phone: '777123458',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('mechanic', {
+        name: 'فني السيارات',
+        email: 'mechanic2@safwa.sa',
+        phone: '777123459',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('client', {
+        name: 'عميل صفوة',
+        email: 'client@safwa.sa',
+        phone: '777123460',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('client', {
+        name: 'علي أحمد',
+        email: 'client2@safwa.sa',
+        phone: '777123461',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('client', {
+        name: 'محمد صالح',
+        email: 'client3@safwa.sa',
+        phone: '777123462',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('client', {
+        name: 'سارَة خالد',
+        email: 'client4@safwa.sa',
+        phone: '777123463',
+        is_email_verified: true,
+        status: 'active'
+      }),
+      factories.createFakeUser('client', {
+        name: 'عمر حسن',
+        email: 'client5@safwa.sa',
+        phone: '777123464',
+        is_email_verified: true,
+        status: 'active'
+      }),
+    ];
 
-    const mechanicsData = Array.from({ length: 2 }).map(() => factories.createFakeUser('mechanic'));
-    mechanicsData[0].email = 'mechanic@safwa.sa';
+    // Clean up old/invalid demo data if present to ensure referential integrity
+    await queryInterface.bulkDelete('reviews', null, {});
+    await queryInterface.bulkDelete('payments', null, {});
+    await queryInterface.bulkDelete('invoice_items', null, {});
+    await queryInterface.bulkDelete('invoices', null, {});
+    await queryInterface.bulkDelete('required_parts', null, {});
+    await queryInterface.bulkDelete('technical_reports', null, {});
+    await queryInterface.bulkDelete('appointment_mechanics', null, {});
+    await queryInterface.bulkDelete('appointments', null, {});
+    await queryInterface.bulkDelete('spare_parts', null, {});
+    await queryInterface.bulkDelete('vehicles', null, {});
+    await queryInterface.bulkDelete('users', null, {});
 
-    const adminData = [factories.createFakeUser('admin', { email: 'admin@safwa.sa' })];
-    
-    // Primary Super Admin (Shehab) - Idempotent Handling
-    const [existingSuperAdmin] = await queryInterface.sequelize.query(
-      `SELECT id FROM users WHERE email = 'shehabshawgi@gmail.com' LIMIT 1;`
-    );
-
-    if (existingSuperAdmin.length > 0) {
-      await queryInterface.sequelize.query(
-        `UPDATE users SET name = 'Shehab', phone = '777537842', role = 'super_admin', status = 'active', is_email_verified = true, password = '${superAdminPasswordHash}', updated_at = NOW() WHERE email = 'shehabshawgi@gmail.com';`
-      );
-      await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData], {});
-    } else {
-      const superAdminData = [
-        factories.createFakeUser('super_admin', {
-          name: 'Shehab',
-          email: 'shehabshawgi@gmail.com',
-          phone: '777537842',
-          password: superAdminPasswordHash,
-          is_email_verified: true,
-          status: 'active'
-        })
-      ];
-      await queryInterface.bulkInsert('users', [...clientsData, ...mechanicsData, ...adminData, ...superAdminData], {});
-    }
+    // Insert Canonical Users
+    await queryInterface.bulkInsert('users', canonicalUsers, {});
 
     const [users] = await queryInterface.sequelize.query(`SELECT id, role FROM users;`);
 
@@ -69,7 +120,6 @@ module.exports = {
     const createdPairs = new Set();
 
     appointments.forEach((app, idx) => {
-      // Primary mechanic assignment
       if (app.mechanic_id) {
         const pairKey = `${app.id}_${app.mechanic_id}`;
         if (!createdPairs.has(pairKey)) {
@@ -84,7 +134,6 @@ module.exports = {
         }
       }
 
-      // Additional mechanic for multi-mechanic seed demonstration
       if (idx === 0 && mechanics.length > 1) {
         const secondMech = mechanics.find(m => m.id !== app.mechanic_id);
         if (secondMech) {
@@ -135,7 +184,7 @@ module.exports = {
     });
     await queryInterface.bulkInsert('invoice_items', invoiceItemsData, {});
 
-    // 9. Payments (Financial Business Logic Consistency)
+    // 9. Payments
     const paymentsData = [];
     invoices.forEach(invoice => {
       const total = parseFloat(invoice.total_amount);

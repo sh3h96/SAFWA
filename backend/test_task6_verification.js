@@ -45,13 +45,13 @@ async function runTask6Verification() {
 
     // --- TEST 6 to 14: Canonical Super Admin Verification ---
     console.log('\n[2/23] Testing Canonical Super Admin Account...');
-    const superAdmin = await User.findOne({ where: { email: 'shehabshawgi@gmail.com' } });
-    check(!!superAdmin, 'Super Admin account (shehabshawgi@gmail.com) exists');
+    const superAdmin = await User.findOne({ where: { email: 'super_admin@safwa.sa' } });
+    check(!!superAdmin, 'Super Admin account (super_admin@safwa.sa) exists');
 
     if (superAdmin) {
       check(superAdmin.role === 'super_admin', 'Super Admin role === super_admin');
-      check(superAdmin.name === 'Shehab', 'Super Admin name === Shehab');
-      check(superAdmin.phone === '777537842', 'Super Admin phone === 777537842');
+      check(superAdmin.name === 'Super Admin', 'Super Admin name === Super Admin');
+      check(superAdmin.phone === '777123456', 'Super Admin phone === 777123456');
       check(superAdmin.status === 'active', 'Super Admin status === active');
       check(superAdmin.is_email_verified === true, 'Super Admin is_email_verified === true');
 
@@ -62,8 +62,8 @@ async function runTask6Verification() {
       check(!isPassInvalid, 'Super Admin password DOES NOT match "password123"');
     }
 
-    const superAdminCount = await User.count({ where: { email: 'shehabshawgi@gmail.com' } });
-    check(superAdminCount === 1, 'Exactly one Super Admin account exists for shehabshawgi@gmail.com');
+    const superAdminCount = await User.count({ where: { email: 'super_admin@safwa.sa' } });
+    check(superAdminCount === 1, 'Exactly one Super Admin account exists for super_admin@safwa.sa');
 
     // --- TEST 15: Receptionist Absence Check ---
     console.log('\n[3/23] Testing Receptionist Role Absence in DB Active Users...');

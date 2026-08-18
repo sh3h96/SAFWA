@@ -5,6 +5,8 @@ const defaultPasswordHash = '$2b$10$4IitGBlTUeVQD39z3LVlFuqUzfQ/knLbevrijkORTxco
 
 const ALLOWED_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 
+let phoneSeq = 770000000;
+
 const createFakeUser = (role = 'client', options = {}) => {
   let targetRole = role;
   if (targetRole === 'receptionist') {
@@ -13,11 +15,17 @@ const createFakeUser = (role = 'client', options = {}) => {
     targetRole = 'client';
   }
 
+  let userPhone = options.phone;
+  if (userPhone === undefined) {
+    phoneSeq++;
+    userPhone = `77${String(phoneSeq % 10000000).padStart(7, '0')}`;
+  }
+
   return {
     name: options.name || faker.person.fullName(),
     email: options.email || faker.internet.email(),
     password: options.password || defaultPasswordHash,
-    phone: options.phone !== undefined ? options.phone : faker.phone.number(),
+    phone: userPhone,
     role: targetRole,
     status: options.status || 'active',
     is_email_verified: options.is_email_verified !== undefined ? options.is_email_verified : true,
