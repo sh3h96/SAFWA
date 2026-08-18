@@ -642,6 +642,11 @@ module.exports = {
         return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
       }
 
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'لا يمكن استخدام كلمة المرور الحالية. يرجى اختيار كلمة مرور جديدة.' });
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await user.update({
         password: hashedPassword,
@@ -858,6 +863,11 @@ module.exports = {
 
       if (user.reset_token_expires_at && new Date() > new Date(user.reset_token_expires_at)) {
         return res.status(400).json({ message: 'انتهت صلاحية رابط إعادة التعيين. يرجى طلب رابط جديد' });
+      }
+
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'لا يمكن استخدام كلمة المرور الحالية. يرجى اختيار كلمة مرور جديدة.' });
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);

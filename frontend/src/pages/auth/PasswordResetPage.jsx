@@ -18,9 +18,37 @@ export default function PasswordResetPage() {
   const [email, setEmail] = useState(emailParam || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isRequestSent, setIsRequestSent] = useState(false);
   const [isResetSuccess, setIsResetSuccess] = useState(false);
+
+  // Comprehensive Password Strength Meter
+  const getPasswordStrength = () => {
+    if (!newPassword) return { label: '', color: 'bg-gray-200', level: 0 };
+    if (newPassword.length < 6) {
+      return { label: 'ضعيفة (قصيرة جداً)', color: 'bg-red-500', level: 1 };
+    }
+
+    const hasLower = /[a-z]/.test(newPassword);
+    const hasUpper = /[A-Z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+
+    const charTypes = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
+
+    if (charTypes <= 1) {
+      return { label: 'ضعيفة', color: 'bg-red-500', level: 1 };
+    }
+    if (newPassword.length >= 8 && charTypes >= 3) {
+      return { label: 'قوية', color: 'bg-green-500', level: 3 };
+    }
+    return { label: 'متوسطة', color: 'bg-yellow-500', level: 2 };
+  };
+
+  const strength = getPasswordStrength();
 
   // Request Link Submission (Forgot Password)
   const handleRequestSubmit = async (e) => {
@@ -48,7 +76,7 @@ export default function PasswordResetPage() {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      toast.error('كلمة المرور وتأكيد كلمة المرور غير متطابقين');
+      toast.error('كلمتا المرور غير متطابقتين');
       return;
     }
 
@@ -85,14 +113,14 @@ export default function PasswordResetPage() {
 
         <button 
           onClick={() => navigate('/login')}
-          className="px-4 py-2 text-teal-700 font-bold text-sm hover:bg-gray-50 rounded-lg transition-colors"
+          className="px-4 py-2 text-teal-700 font-bold text-sm hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
         >
           تسجيل الدخول
         </button>
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow flex items-center justify-center p-4">
+      <main className="flex-grow flex items-center justify-center p-4 py-12">
         <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-8 flex flex-col items-center shadow-sm space-y-6">
           
           {/* Top Shield Icon */}
@@ -135,7 +163,7 @@ export default function PasswordResetPage() {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm shadow-md shadow-teal-600/20 disabled:opacity-50"
+                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm shadow-md shadow-teal-600/20 disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
                   <>
@@ -165,14 +193,14 @@ export default function PasswordResetPage() {
 
               <button 
                 onClick={() => navigate('/login')}
-                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all text-sm shadow-md"
+                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all text-sm shadow-md cursor-pointer"
               >
                 الانتقال إلى تسجيل الدخول
               </button>
             </div>
           )}
 
-          {/* MODE B: Reset Password Form (Token & Email in URL) */}
+          {/* MODE B: Reset Password Form (Token in URL) */}
           {isResetMode && !isResetSuccess && (
             <form onSubmit={handleResetSubmit} className="w-full space-y-5">
               {emailParam && (
@@ -187,36 +215,86 @@ export default function PasswordResetPage() {
                 </div>
               )}
 
+              {/* New Password Field with Visibility Toggle */}
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-gray-700">كلمة المرور الجديدة</label>
-                <input 
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none font-mono text-sm text-right"
-                />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-12 px-4 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none font-mono text-sm text-right"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-0 p-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xl block">
+                      {showPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Password Strength Indicator */}
+                {newPassword && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500">قوة كلمة المرور:</span>
+                      <span className={`font-bold ${
+                        strength.level === 1 ? 'text-red-500' :
+                        strength.level === 2 ? 'text-yellow-600' : 'text-green-600'
+                      }`}>
+                        {strength.label}
+                      </span>
+                    </div>
+                    <div className="flex gap-1 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-300 ${strength.level >= 1 ? strength.color : 'bg-transparent'}`} style={{ width: '33.33%' }} />
+                      <div className={`h-full transition-all duration-300 ${strength.level >= 2 ? strength.color : 'bg-transparent'}`} style={{ width: '33.33%' }} />
+                      <div className={`h-full transition-all duration-300 ${strength.level >= 3 ? strength.color : 'bg-transparent'}`} style={{ width: '33.33%' }} />
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Confirm Password Field with Visibility Toggle */}
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-gray-700">تأكيد كلمة المرور الجديدة</label>
-                <input 
-                  type="password"
-                  required
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none font-mono text-sm text-right"
-                />
+                <div className="relative">
+                  <input 
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-12 px-4 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none font-mono text-sm text-right"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-0 p-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xl block">
+                      {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-xs text-red-500 font-bold mt-1">
+                    كلمتا المرور غير متطابقتين
+                  </p>
+                )}
               </div>
 
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 active:scale-[0.98] transition-all text-sm shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 active:scale-[0.98] transition-all text-sm shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
                   <>
@@ -244,7 +322,7 @@ export default function PasswordResetPage() {
 
               <button 
                 onClick={() => navigate('/login')}
-                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all text-sm shadow-md"
+                className="w-full h-12 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all text-sm shadow-md cursor-pointer"
               >
                 الانتقال إلى تسجيل الدخول
               </button>
@@ -254,7 +332,7 @@ export default function PasswordResetPage() {
           {/* Back Navigation Link */}
           <button 
             onClick={() => navigate('/login')}
-            className="pt-2 flex items-center gap-2 text-teal-700 hover:underline transition-all text-sm font-bold"
+            className="pt-2 flex items-center gap-2 text-teal-700 hover:underline transition-all text-sm font-bold bg-transparent border-0 cursor-pointer"
           >
             <span>العودة لشاشة تسجيل الدخول</span>
             <span className="material-symbols-outlined text-sm rotate-180">arrow_forward</span>
