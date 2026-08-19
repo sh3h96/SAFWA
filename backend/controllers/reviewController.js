@@ -5,13 +5,17 @@ module.exports = {
   // GET /api/reviews
   getAllReviews: async (req, res) => {
     try {
+      const { Vehicle } = require('../models');
       const reviews = await Review.findAll({
         include: [
-          { model: User, as: 'client', attributes: ['name'] },
+          { model: User, as: 'client', attributes: ['id', 'name', 'email', 'phone'] },
           { 
             model: Appointment, 
             as: 'appointment',
-            include: [{ model: User, as: 'mechanic', attributes: ['name'] }]
+            include: [
+              { model: User, as: 'mechanic', attributes: ['id', 'name'] },
+              { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] }
+            ]
           }
         ],
         order: [['created_at', 'DESC']]
@@ -19,11 +23,19 @@ module.exports = {
 
       const formatted = reviews.map(r => ({
         id: r.id,
+        client_id: r.client_id || r.client?.id,
         client: r.client?.name || 'غير معروف',
+        clientEmail: r.client?.email || '',
+        clientPhone: r.client?.phone || '',
         rating: r.rating,
         date: r.created_at,
         comment: r.comment || '',
-        mechanic: r.appointment?.mechanic?.name || 'غير محدد'
+        appointment_id: r.appointment_id,
+        mechanic_id: r.appointment?.mechanic_id || r.appointment?.mechanic?.id,
+        mechanic: r.appointment?.mechanic?.name || 'غير محدد',
+        vehicle_id: r.appointment?.vehicle_id || r.appointment?.vehicle?.id,
+        vehicle: r.appointment?.vehicle ? `${r.appointment.vehicle.make} ${r.appointment.vehicle.model}` : null,
+        vehiclePlate: r.appointment?.vehicle?.license_plate || null
       }));
 
       res.json(formatted);
