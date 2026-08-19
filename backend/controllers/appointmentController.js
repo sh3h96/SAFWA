@@ -34,9 +34,9 @@ module.exports = {
         const d = new Date();
         d.setDate(d.getDate() + i);
         availableDates.push({
-          dayName: d.toLocaleDateString('ar-SA', { weekday: 'long' }),
+          dayName: getDayName(d),
           dayNumber: d.getDate().toString(),
-          month: d.toLocaleDateString('ar-SA', { month: 'long' })
+          month: getMonthName(d)
         });
       }
 
@@ -48,7 +48,7 @@ module.exports = {
           id: v.id,
           model: `${v.make} ${v.model}`,
           plateNumber: v.license_plate,
-          lastServiceDate: new Date(v.created_at).toLocaleDateString('ar-SA')
+          lastServiceDate: v.created_at
         }));
       }
 
@@ -185,8 +185,8 @@ module.exports = {
 
         return {
           id: app.id,
-          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
-          time: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+          date: app.scheduled_date || app.created_at,
+          time: app.scheduled_date || app.created_at,
           vehicleMake: app.vehicle?.make || 'غير معروف',
           vehicleModel: app.vehicle?.model || '',
           plateNumber: app.vehicle?.license_plate || '',
@@ -266,8 +266,8 @@ module.exports = {
           status: app.status,
           hasReport: !!app.report,
           requestedParts,
-          timeAssigned: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA')
+          timeAssigned: app.scheduled_date || app.created_at,
+          date: app.scheduled_date || app.created_at
         };
       });
 
@@ -310,8 +310,8 @@ module.exports = {
         clientName: app.customer?.name || 'غير معروف',
         car: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''} - ${app.vehicle?.license_plate || ''}`.trim(),
         issue: app.problem_description,
-        time: new Date(app.scheduled_date || app.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+        time: app.scheduled_date || app.created_at,
+        date: app.scheduled_date || app.created_at,
         status: app.status,
         mechanics: app.mechanics && app.mechanics.length > 0 ? app.mechanics : (app.mechanic ? [app.mechanic] : [])
       }));
@@ -570,8 +570,8 @@ module.exports = {
         clientPhone: appointment.customer?.phone || '',
         car: `${appointment.vehicle?.make || ''} ${appointment.vehicle?.model || ''} - ${appointment.vehicle?.license_plate || ''}`.trim(),
         issue: appointment.problem_description,
-        time: new Date(appointment.scheduled_date || appointment.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date(appointment.scheduled_date || appointment.created_at).toLocaleDateString('ar-SA'),
+        time: appointment.scheduled_date || appointment.created_at,
+        date: appointment.scheduled_date || appointment.created_at,
         status: appointment.status,
         mechanicName: appointment.mechanic?.name || (appointment.mechanics && appointment.mechanics[0]?.name) || 'غير محدد',
         mechanics: appointment.mechanics || [],

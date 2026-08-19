@@ -9,28 +9,63 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage on initial load
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    // Check local storage on initial load and fetch fresh profile from backend
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
-      try {
+      if (storedToken) {
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse user from localStorage', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (error) {
+            console.error('Failed to parse user from localStorage', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        }
+
+        // Synchronize latest profile data from backend database
+        try {
+          const freshUser = await authAPI.getMe();
+          if (freshUser && freshUser.id) {
+            const normalizedUser = {
+              id: freshUser.id,
+              name: freshUser.name,
+              email: freshUser.email,
+              phone: freshUser.phone || '',
+              role: freshUser.role,
+              status: freshUser.status,
+              is_email_verified: freshUser.is_email_verified
+            };
+            localStorage.setItem('user', JSON.stringify(normalizedUser));
+            setUser(normalizedUser);
+          }
+        } catch (error) {
+          console.warn('Auth context sync notice:', error?.response?.data?.message || error?.message);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = (newToken, userData) => {
+    const normalizedUser = {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone || '',
+      role: userData.role,
+      status: userData.status,
+      is_email_verified: userData.is_email_verified || userData.isEmailVerified
+    };
     localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
     setToken(newToken);
-    setUser(userData);
+    setUser(normalizedUser);
   };
 
   const logout = async () => {
@@ -54,7 +89,11 @@ export const AuthProvider = ({ children }) => {
   const isClient = user?.role === 'client';
 
   const updateUserContext = (updatedUserData) => {
-    const newUserData = { ...user, ...updatedUserData };
+    const newUserData = { 
+      ...user, 
+      ...updatedUserData,
+      phone: updatedUserData.phone !== undefined ? updatedUserData.phone : user?.phone
+    };
     localStorage.setItem('user', JSON.stringify(newUserData));
     setUser(newUserData);
   };

@@ -1,3 +1,5 @@
+import { formatDate } from '../../utils/formatters';
+
 export default function UserDetailsModal({ user, onClose }) {
   if (!user) return null;
 
@@ -91,7 +93,7 @@ export default function UserDetailsModal({ user, onClose }) {
                 <div>
                   <div className="text-xs font-bold text-slate-400 mb-0.5">تاريخ الانضمام</div>
                   <div className="font-medium text-slate-700">
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString('ar-SA') : 'غير محدد'}
+                    {user.created_at ? formatDate(user.created_at) : 'غير محدد'}
                   </div>
                 </div>
               </div>

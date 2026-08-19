@@ -6,6 +6,7 @@ import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import AppointmentDetailsModal from '../../components/admin/AppointmentDetailsModal';
+import { formatDate, formatTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function AppointmentsControlPage() {
@@ -203,7 +204,7 @@ export default function AppointmentsControlPage() {
                             <span className="material-symbols-outlined text-[16px] text-slate-400">event</span>
                             <span className="text-xs font-bold text-slate-500">الموعد</span>
                           </div>
-                          <span className="text-sm font-bold text-primary" dir="ltr">{app.date} | {app.time}</span>
+                          <span className="text-sm font-bold text-primary font-mono">{formatDate(app.date)} | {formatTime(app.time)}</span>
                         </div>
                       )}
 
@@ -213,7 +214,7 @@ export default function AppointmentsControlPage() {
                             <span className="material-symbols-outlined text-[16px] text-emerald-500">done_all</span>
                             <span className="text-xs font-bold text-emerald-600">الانتهاء</span>
                           </div>
-                          <span className="text-sm font-bold text-emerald-700" dir="ltr">{app.date}</span>
+                          <span className="text-sm font-bold text-emerald-700 font-mono">{formatDate(app.date)}</span>
                         </div>
                       )}
                     </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { auditLogsAPI, getErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateTime } from '../../utils/formatters';
 import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
@@ -238,7 +239,7 @@ export default function AuditLogsPage() {
                       <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                         {/* Date / Time */}
                         <td className="py-4 px-6 text-xs font-mono font-medium text-slate-600">
-                          {new Date(log.created_at).toLocaleString('ar-SA')}
+                          {formatDateTime(log.created_at)}
                         </td>
 
                         {/* Actor */}
@@ -353,7 +354,7 @@ export default function AuditLogsPage() {
                 </div>
                 <div>
                   <span className="text-slate-400 font-bold block mb-0.5">التاريخ والوقت:</span>
-                  <span className="font-bold text-slate-800 font-mono">{new Date(selectedLog.created_at).toLocaleString('ar-SA')}</span>
+                  <span className="font-bold text-slate-800 font-mono">{formatDateTime(selectedLog.created_at)}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 font-bold block mb-0.5">نوع الكيان (Entity):</span>

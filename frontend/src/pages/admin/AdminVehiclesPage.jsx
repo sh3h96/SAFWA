@@ -5,6 +5,7 @@ import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import { useAuth } from '../../context/AuthContext';
+import { formatDate } from '../../utils/formatters';
 
 export default function AdminVehiclesPage() {
   const queryClient = useQueryClient();
@@ -296,8 +297,8 @@ export default function AdminVehiclesPage() {
                       </td>
 
                       {/* Added Date */}
-                      <td className="py-4 px-6 text-xs text-slate-500 font-medium">
-                        {v.created_at ? new Date(v.created_at).toLocaleDateString('ar-SA') : (v.addedDate || '-')}
+                      <td className="py-4 px-6 text-xs text-slate-500 font-medium font-mono">
+                        {v.created_at ? formatDate(v.created_at) : (v.addedDate ? formatDate(v.addedDate) : '-')}
                       </td>
 
                       {/* Actions */}
@@ -463,7 +464,7 @@ export default function AdminVehiclesPage() {
                     </div>
                     {item.notes && <p className="text-xs text-slate-600">{item.notes}</p>}
                     <div className="text-[11px] text-slate-400 flex justify-between font-mono pt-1 border-t border-slate-200/50">
-                      <span>تاريخ الموعد: {item.date || (item.created_at ? new Date(item.created_at).toLocaleDateString('ar-SA') : '-')}</span>
+                      <span>تاريخ الموعد: {item.date ? formatDate(item.date) : (item.created_at ? formatDate(item.created_at) : '-')}</span>
                       <span>الفني: {item.mechanic_name || item.mechanicName || 'غير محدد'}</span>
                     </div>
                   </div>

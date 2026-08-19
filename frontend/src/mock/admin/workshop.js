@@ -4,15 +4,15 @@ export const workshopResponse = {
       id: 'uv_1',
       makeModel: 'تويوتا كامري',
       yearColor: '2023 • فضي',
-      plateNumber: 'ح ص ل ٥٥١',
-      waitingTime: 'منذ ٣٠ دقيقة'
+      plateNumber: 'ح ص ل 551',
+      waitingTime: 'منذ 30 دقيقة'
     },
     {
       id: 'uv_2',
       makeModel: 'مازدا 6',
       yearColor: '2022 • أحمر',
-      plateNumber: 'ر ق م ٩٩٢',
-      waitingTime: 'منذ ٤٥ دقيقة'
+      plateNumber: 'ر ق م 992',
+      waitingTime: 'منذ 45 دقيقة'
     }
   ],
   bays: [
@@ -57,7 +57,7 @@ export const workshopResponse = {
       technician: 'عمر',
       warningNotice: {
         item: 'فلتر زيت - غير متوفر',
-        eta: 'يتوفر خلال: ٢ ساعة'
+        eta: 'يتوفر خلال: 2 ساعة'
       },
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIZ_MeY2fDmzlE8Ut1UduZI4plzTkFUuMuDTH_DxRO4J--N6JSDmhiYEBeDo38KsjDr1cqEVSHL8-DjDLLq222WYKutyfanBR0SRUOTB8zbtBAbcY1QUUDqx9wFu5jsiYYEwOpL4f39dvFpp77bu-fpbekSwI6DFla3WlOAhVtpHNFZpBPm2Sh4ltl5tr3ptm-yxyLHI2_BLDlH6rSUvcdU1EJZd3Rx6s7vTB0GX-BX4PzPjbH9XOGaoj0s8BW5bMnbeqAmT71xUM'
     },

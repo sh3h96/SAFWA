@@ -5,6 +5,7 @@ import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import ViewInvoiceModal from '../../components/admin/ViewInvoiceModal';
+import { formatDate, formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function ClientBillingPage() {
@@ -79,7 +80,7 @@ export default function ClientBillingPage() {
                     {invoice.displayId}
                   </span>
                   <h3 className="text-lg font-bold text-slate-800">{invoice.vehicle}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{invoice.date}</p>
+                  <p className="text-xs text-slate-400 mt-1 font-mono">{formatDate(invoice.date)}</p>
                 </div>
                 <div className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                   invoice.status === 'paid' 
@@ -100,12 +101,12 @@ export default function ClientBillingPage() {
                 {invoice.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between text-sm">
                     <span className="text-slate-600 font-medium">{item.name}</span>
-                    <span className="font-mono text-slate-800">{item.cost} ر.س</span>
+                    <span className="font-mono text-slate-800">{formatCurrency(item.cost)}</span>
                   </div>
                 ))}
                 <div className="pt-3 mt-3 border-t border-slate-200 border-dashed flex justify-between font-bold">
                   <span className="text-slate-800">الإجمالي</span>
-                  <span className="text-primary font-mono text-lg">{invoice.total} ر.س</span>
+                  <span className="text-primary font-mono text-lg">{formatCurrency(invoice.total)}</span>
                 </div>
               </div>
 

@@ -5,6 +5,7 @@ import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import PartsApproval from '../../components/client/PartsApproval';
+import { formatDate } from '../../utils/formatters';
 
 export default function ClientAppointmentsPage() {
   const { data: appointmentsRaw = [], isLoading, isError, error, refetch } = useQuery({
@@ -139,7 +140,7 @@ export default function ClientAppointmentsPage() {
                   <div className="text-right">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم الطلب</p>
                     <p className="font-mono font-bold text-slate-700">{app.id}</p>
-                    <p className="text-xs text-slate-500 mt-1">{app.date}</p>
+                    <p className="text-xs text-slate-500 mt-1 font-mono">{formatDate(app.date)}</p>
                   </div>
                 </div>
 

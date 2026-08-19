@@ -104,7 +104,7 @@ module.exports = {
         d.setDate(d.getDate() - i);
         days.push({ 
           date: d, 
-          dayName: d.toLocaleDateString('ar-SA', { weekday: 'long' }),
+          dayName: d.toISOString().split('T')[0],
           revenue: 0, 
           laborCost: 0 
         });

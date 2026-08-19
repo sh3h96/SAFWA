@@ -21,7 +21,7 @@ module.exports = {
         id: r.id,
         client: r.client?.name || 'غير معروف',
         rating: r.rating,
-        date: new Date(r.created_at).toLocaleDateString('ar-SA'),
+        date: r.created_at,
         comment: r.comment || '',
         mechanic: r.appointment?.mechanic?.name || 'غير محدد'
       }));

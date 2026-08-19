@@ -1,8 +1,10 @@
+import { formatDate, formatCurrency } from '../../utils/formatters';
+
 export default function ProductDetailsModal({ product, onClose }) {
   if (!product) return null;
 
   const isLowStock = product.stock <= product.minStock;
-  const addedDate = product.createdAt ? new Date(product.createdAt).toLocaleDateString('ar-SA') : 'غير محدد';
+  const addedDate = product.createdAt ? formatDate(product.createdAt) : 'غير محدد';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -42,7 +44,7 @@ export default function ProductDetailsModal({ product, onClose }) {
             {/* Unit Price */}
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100/50">
               <span className="block text-xs font-bold text-slate-400 mb-1">سعر الوحدة</span>
-              <span className="text-lg font-bold text-primary font-mono">{product.purchasePrice} ر.س</span>
+              <span className="text-lg font-bold text-primary font-mono">{formatCurrency(product.purchasePrice)}</span>
             </div>
 
             {/* Current Stock */}

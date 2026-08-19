@@ -72,7 +72,7 @@ module.exports = {
         license_plate: v.license_plate,
         name: `${v.make} ${v.model} ${v.year || ''}`.trim(),
         plateNumber: v.license_plate,
-        addedDate: new Date(v.created_at).toLocaleDateString('ar-SA'),
+        addedDate: v.created_at,
         isActive: true,
         vin: v.vin || '-',
         odometer: '-',
@@ -136,7 +136,7 @@ module.exports = {
           title: app.problem_description ? `صيانة - ${app.problem_description}` : 'صيانة دورية',
           serviceType: app.problem_description || 'صيانة دورية',
           year: new Date(app.scheduled_date || app.created_at).getFullYear().toString(),
-          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+          date: app.scheduled_date || app.created_at,
           technician: app.mechanic?.name || 'غير محدد',
           cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
           status: 'completed',
@@ -169,7 +169,7 @@ module.exports = {
         year: v.year,
         plateNumber: v.license_plate,
         vin: v.vin || '',
-        addedDate: new Date(v.created_at).toLocaleDateString('ar-SA'),
+        addedDate: v.created_at,
       }));
 
       res.json(formattedVehicles);

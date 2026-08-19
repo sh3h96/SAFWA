@@ -4,7 +4,7 @@ import LicensePlate from '../../components/common/LicensePlate';
 import StatusBadge from '../../components/common/StatusBadge';
 import DataTable from '../../components/common/DataTable';
 import { customerResponse } from '../../mock/customer/customer';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function CustomerDashboardPage() {
@@ -29,7 +29,7 @@ export default function CustomerDashboardPage() {
     {
       key: 'date',
       label: 'التاريخ',
-      render: (row) => <span className="text-sm text-secondary">{row.date}</span>
+      render: (row) => <span className="text-sm text-secondary font-mono">{formatDate(row.date)}</span>
     },
     {
       key: 'amount',

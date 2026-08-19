@@ -124,6 +124,7 @@ module.exports = {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
+          phone: newUser.phone,
           role: newUser.role,
           isEmailVerified: newUser.is_email_verified
         }
@@ -214,6 +215,7 @@ module.exports = {
           id: user.id,
           name: user.name,
           email: user.email,
+          phone: user.phone,
           role: user.role,
         }
       });

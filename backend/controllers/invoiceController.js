@@ -80,7 +80,7 @@ module.exports = {
           appointment_id: app.id,
           vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`.trim(),
           client: app.customer?.name || 'غير معروف',
-          date: new Date(app.scheduled_date || app.created_at).toLocaleDateString('ar-SA'),
+          date: app.scheduled_date || app.created_at,
           status,
           amount,
           approvedPartsCost,
@@ -431,7 +431,7 @@ module.exports = {
         return {
           id: `INV-${inv.id}`,
           originalId: inv.id,
-          date: new Date(inv.created_at).toLocaleDateString('ar-SA'),
+          date: inv.created_at,
           amount: totalAmount,
           totalPaid,
           remainingBalance,

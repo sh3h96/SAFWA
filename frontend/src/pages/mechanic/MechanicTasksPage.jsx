@@ -7,6 +7,7 @@ import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import DiagnosisModal from '../../components/mechanic/DiagnosisModal';
 import PartsRequestDrawer from '../../components/mechanic/PartsRequestDrawer';
+import { formatDate, formatDateLong, formatTime, formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 // ─── Status Configuration ────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ export default function MechanicTasksPage() {
         </div>
         <div className="bg-white px-5 py-2.5 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-3">
           <span className="material-symbols-outlined text-primary">calendar_today</span>
-          <span className="text-sm font-bold text-slate-700">{new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <span className="text-sm font-bold text-slate-700">{formatDateLong(new Date())}</span>
         </div>
       </div>
 
@@ -199,8 +200,8 @@ export default function MechanicTasksPage() {
                 {/* Footer with date and action */}
                 <div className="border-t border-slate-50 pt-4 space-y-3">
                   <div className="flex justify-between text-xs text-slate-400 font-bold">
-                    <span>{task.date}</span>
-                    <span className="font-mono">{task.timeAssigned}</span>
+                    <span>{formatDate(task.date)}</span>
+                    <span className="font-mono">{formatTime(task.timeAssigned)}</span>
                   </div>
 
                   {/* ── STATE 1: PENDING ── */}
@@ -362,7 +363,7 @@ export default function MechanicTasksPage() {
                     <span className="font-bold text-slate-700 block mb-1">{part.name}</span>
                     <div className="flex items-center gap-3 text-xs text-slate-500">
                       <span>الكمية: {part.quantity}</span>
-                      <span className="font-bold text-emerald-600">{Number(part.price || 0).toFixed(2)} ر.س</span>
+                      <span className="font-bold text-emerald-600">{formatCurrency(part.price)}</span>
                     </div>
                   </div>
                   <div>
@@ -389,7 +390,7 @@ export default function MechanicTasksPage() {
                 return (
                   <div className="flex justify-between items-center pt-4 px-2 border-t border-slate-100 mt-4">
                     <span className="font-bold text-slate-700">التكلفة الإجمالية للقطع:</span>
-                    <span className="text-xl font-bold text-emerald-600">{totalCost.toFixed(2)} ر.س</span>
+                    <span className="text-xl font-bold text-emerald-600">{formatCurrency(totalCost)}</span>
                   </div>
                 );
               })()}
