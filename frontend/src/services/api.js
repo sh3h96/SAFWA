@@ -151,6 +151,10 @@ export const usersAPI = {
     const response = await api.get('/users', { params: { search } });
     return response.data;
   },
+  getById: async (id) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
   create: async (userData) => {
     const response = await api.post('/users', userData);
     return response.data;

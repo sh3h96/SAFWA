@@ -297,8 +297,8 @@ module.exports = {
       const appointments = await Appointment.findAll({
         where: whereClause,
         include: [
-          { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
-          { model: User, as: 'customer', attributes: ['name', 'phone'] },
+          { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+          { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
           { model: User, as: 'mechanic', attributes: ['id', 'name'] },
           { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } }
         ],
@@ -307,12 +307,19 @@ module.exports = {
 
       const formatted = appointments.map(app => ({
         id: app.id.toString(),
+        client_id: app.client_id,
+        vehicle_id: app.vehicle_id,
         clientName: app.customer?.name || 'غير معروف',
+        clientPhone: app.customer?.phone || '',
         car: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''} - ${app.vehicle?.license_plate || ''}`.trim(),
+        vehicleMake: app.vehicle?.make || '',
+        vehicleModel: app.vehicle?.model || '',
+        vehiclePlate: app.vehicle?.license_plate || '',
         issue: app.problem_description,
         time: app.scheduled_date || app.created_at,
         date: app.scheduled_date || app.created_at,
         status: app.status,
+        mechanic_id: app.mechanic_id,
         mechanics: app.mechanics && app.mechanics.length > 0 ? app.mechanics : (app.mechanic ? [app.mechanic] : [])
       }));
 
@@ -558,7 +565,9 @@ module.exports = {
           id: rp.id,
           part_id: rp.part_id,
           name: rp.partDetails?.name || 'قطعة غير معروفة',
+          part_number: rp.partDetails?.part_number || '',
           quantity: rp.quantity,
+          stock_quantity: rp.partDetails?.stock_quantity !== undefined ? rp.partDetails.stock_quantity : null,
           price: rp.partDetails?.price || 0,
           status: rp.status || 'pending'
         }));
@@ -566,9 +575,14 @@ module.exports = {
 
       const formatted = {
         id: appointment.id,
+        client_id: appointment.client_id,
+        vehicle_id: appointment.vehicle_id,
         clientName: appointment.customer?.name || 'غير معروف',
         clientPhone: appointment.customer?.phone || '',
         car: `${appointment.vehicle?.make || ''} ${appointment.vehicle?.model || ''} - ${appointment.vehicle?.license_plate || ''}`.trim(),
+        vehicleMake: appointment.vehicle?.make || '',
+        vehicleModel: appointment.vehicle?.model || '',
+        vehiclePlate: appointment.vehicle?.license_plate || '',
         issue: appointment.problem_description,
         time: appointment.scheduled_date || appointment.created_at,
         date: appointment.scheduled_date || appointment.created_at,

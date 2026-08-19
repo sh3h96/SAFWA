@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const escapeHtml = require('../utils/htmlEscape');
-const { User, Appointment } = require('../models');
+const { User, Appointment, Vehicle } = require('../models');
 const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
 const { recordLoginFailure, resetLoginFailure } = require('../middleware/loginRateLimiter');
@@ -269,6 +269,91 @@ module.exports = {
       res.json(users);
     } catch (error) {
       console.error('Get users error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // GET /api/users/:id
+  getUserById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findByPk(id, {
+        attributes: { exclude: ['password'] }
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Fetch registered vehicles for client
+      let vehicles = [];
+      if (user.role === 'client') {
+        vehicles = await Vehicle.findAll({
+          where: { client_id: user.id },
+          attributes: ['id', 'make', 'model', 'year', 'license_plate', 'vin', 'created_at']
+        });
+      }
+
+      // Fetch appointment history for client or mechanic
+      let appointments = [];
+      if (user.role === 'client') {
+        appointments = await Appointment.findAll({
+          where: { client_id: user.id },
+          include: [
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+            { model: User, as: 'mechanic', attributes: ['id', 'name'] }
+          ],
+          order: [['created_at', 'DESC']],
+          limit: 20
+        });
+      } else if (user.role === 'mechanic') {
+        const { AppointmentMechanic } = require('../models');
+        const assignedMechRecords = await AppointmentMechanic.findAll({
+          where: { mechanic_id: user.id },
+          attributes: ['appointment_id']
+        });
+        const assignedAppIds = assignedMechRecords.map(am => am.appointment_id);
+
+        appointments = await Appointment.findAll({
+          where: {
+            [Op.or]: [
+              { mechanic_id: user.id },
+              { id: { [Op.in]: assignedAppIds.length > 0 ? assignedAppIds : [0] } }
+            ]
+          },
+          include: [
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+            { model: User, as: 'customer', attributes: ['id', 'name'] }
+          ],
+          order: [['created_at', 'DESC']],
+          limit: 20
+        });
+      }
+
+      const userData = user.toJSON();
+      userData.vehicles = vehicles.map(v => ({
+        id: v.id,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        license_plate: v.license_plate,
+        vin: v.vin || '',
+        name: `${v.make} ${v.model} ${v.year || ''}`.trim()
+      }));
+
+      userData.appointments = appointments.map(app => ({
+        id: app.id,
+        vehicle_id: app.vehicle_id,
+        vehicle_name: app.vehicle ? `${app.vehicle.make} ${app.vehicle.model}` : 'غير محددة',
+        problem_description: app.problem_description || 'خدمة صيانة',
+        status: app.status,
+        date: app.scheduled_date || app.created_at,
+        created_at: app.created_at
+      }));
+
+      res.json(userData);
+    } catch (error) {
+      console.error('Get user by id error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   },

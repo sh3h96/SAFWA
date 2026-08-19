@@ -103,6 +103,74 @@ module.exports = {
     }
   },
 
+  // GET /api/vehicles/:id
+  getVehicleById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vehicle = await Vehicle.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'name', 'email', 'phone', 'role', 'status']
+          },
+          {
+            model: Appointment,
+            as: 'appointments',
+            include: [
+              { model: User, as: 'mechanic', attributes: ['id', 'name'] },
+              { model: TechnicalReport, as: 'report' },
+              { model: Invoice, as: 'invoice', attributes: ['total_amount', 'status'] }
+            ]
+          }
+        ]
+      });
+
+      if (!vehicle) {
+        return res.status(404).json({ message: 'Vehicle not found' });
+      }
+
+      if (req.user.role === 'client' && vehicle.client_id !== req.user.id) {
+        return res.status(403).json({ message: 'Access forbidden: Not your vehicle' });
+      }
+
+      res.json({
+        id: vehicle.id,
+        client_id: vehicle.client_id,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        license_plate: vehicle.license_plate,
+        vin: vehicle.vin || '',
+        name: `${vehicle.make} ${vehicle.model} ${vehicle.year || ''}`.trim(),
+        plateNumber: vehicle.license_plate,
+        addedDate: vehicle.created_at,
+        created_at: vehicle.created_at,
+        updated_at: vehicle.updated_at,
+        owner: vehicle.owner ? {
+          id: vehicle.owner.id,
+          name: vehicle.owner.name,
+          email: vehicle.owner.email,
+          phone: vehicle.owner.phone,
+          role: vehicle.owner.role,
+          status: vehicle.owner.status
+        } : null,
+        appointments: (vehicle.appointments || []).map(app => ({
+          id: app.id,
+          serviceType: app.problem_description || 'صيانة دورية',
+          date: app.scheduled_date || app.created_at,
+          technician: app.mechanic?.name || 'غير محدد',
+          technician_id: app.mechanic?.id,
+          cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
+          status: app.status
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching vehicle by id:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
   // GET /api/vehicles/:id/history
   getVehicleHistory: async (req, res) => {
     try {
@@ -118,8 +186,7 @@ module.exports = {
 
       const appointments = await Appointment.findAll({
         where: { 
-          vehicle_id: req.params.id, 
-          status: 'completed' 
+          vehicle_id: req.params.id
         },
         include: [
           { model: User, as: 'mechanic', attributes: ['name'] },
@@ -139,8 +206,8 @@ module.exports = {
           date: app.scheduled_date || app.created_at,
           technician: app.mechanic?.name || 'غير محدد',
           cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
-          status: 'completed',
-          statusLabel: 'مكتمل',
+          status: app.status || 'completed',
+          statusLabel: app.status === 'completed' ? 'مكتمل' : 'قيد الصيانة',
           hasInvoice: !!app.invoice,
           partsTitle: 'القطع المرفقة:',
           partsPhotos: [],
