@@ -98,7 +98,7 @@ const createFakeRequiredPart = (technicalReportId, partId) => ({
   technical_report_id: technicalReportId,
   part_id: partId,
   quantity: faker.number.int({ min: 1, max: 4 }),
-  status: faker.helpers.arrayElement(['pending', 'ordered', 'installed']),
+  status: faker.helpers.arrayElement(['pending', 'approved', 'rejected']),
   created_at: new Date(),
   updated_at: new Date(),
 });

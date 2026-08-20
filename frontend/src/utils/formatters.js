@@ -5,7 +5,7 @@
 
 /**
  * Helper to convert any Arabic-Indic digits (٠-٩) to Western/Latin digits (0-9).
- * @param {string|number} input 
+ * @param {string|number} input
  * @returns {string}
  */
 export function toWesternNumerals(input) {
@@ -16,11 +16,11 @@ export function toWesternNumerals(input) {
 
 /**
  * Formats a numeric monetary value into a currency string with Western numerals (e.g. 1250 -> "1,250 ر.س").
- * @param {number|string} amount 
- * @param {string} currencySymbol 
+ * @param {number|string} amount
+ * @param {string} currencySymbol
  * @returns {string}
  */
-export function formatCurrency(amount, currencySymbol = 'ر.س') {
+export function formatCurrency(amount, currencySymbol = 'ر.ي') {
   if (amount === undefined || amount === null || amount === '' || isNaN(amount)) {
     return `0 ${currencySymbol}`;
   }
@@ -35,7 +35,7 @@ export function formatCurrency(amount, currencySymbol = 'ر.س') {
 /**
  * Formats a number using Western numerals with thousands separators (e.g. 1250 -> "1,250").
  * Do NOT use for IDs, invoice numbers, phone numbers, or license plates.
- * @param {number|string} val 
+ * @param {number|string} val
  * @returns {string}
  */
 export function formatNumber(val) {
@@ -49,12 +49,12 @@ export function formatNumber(val) {
 
 /**
  * Formats a Date object or date string into a standard Gregorian Date string (e.g. "2026/08/19").
- * @param {Date|string} dateInput 
+ * @param {Date|string} dateInput
  * @returns {string}
  */
 export function formatDate(dateInput) {
   if (!dateInput) return '-';
-  
+
   // Handle plain YYYY-MM-DD or YYYY/MM/DD strings directly to prevent timezone offsets
   if (typeof dateInput === 'string') {
     const trimmed = dateInput.trim();
@@ -79,7 +79,7 @@ export function formatDate(dateInput) {
 
 /**
  * Formats a Date object or date string into a localized Gregorian Date string with Arabic month names & Western numerals (e.g. "19 أغسطس 2026").
- * @param {Date|string} dateInput 
+ * @param {Date|string} dateInput
  * @returns {string}
  */
 export function formatDateLong(dateInput) {
@@ -115,7 +115,7 @@ export function formatDateLong(dateInput) {
 
 /**
  * Formats a Date object, ISO string, or HH:mm time string into a 12-hour time format with Western numerals (e.g. "09:30 ص" or "02:15 م").
- * @param {Date|string} dateInput 
+ * @param {Date|string} dateInput
  * @returns {string}
  */
 export function formatTime(dateInput) {
@@ -145,7 +145,7 @@ export function formatTime(dateInput) {
 
 /**
  * Formats a Date object or ISO string into combined Gregorian Date and 12-Hour Time with Western numerals (e.g. "2026/08/19 - 02:15 م").
- * @param {Date|string} dateInput 
+ * @param {Date|string} dateInput
  * @returns {string}
  */
 export function formatDateTime(dateInput) {

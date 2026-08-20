@@ -52,34 +52,76 @@ module.exports = {
                 model: Appointment,
                 as: 'appointment',
                 include: [
-                  { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate', 'year'] },
-                  { model: User, as: 'customer', attributes: ['name', 'phone'] }
+                  { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate', 'year'] },
+                  { model: User, as: 'customer', attributes: ['id', 'name', 'phone', 'email'] },
+                  { model: User, as: 'mechanic', attributes: ['id', 'name', 'phone', 'email'] },
+                  { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone', 'email'], through: { attributes: [] } }
                 ]
               },
-              { model: User, as: 'mechanic', attributes: ['id', 'name'] }
+              { model: User, as: 'mechanic', attributes: ['id', 'name', 'phone', 'email'] }
             ]
           }
         ],
         order: [['created_at', 'DESC']]
       });
 
-      const formatted = requests.map(reqItem => ({
-        id: reqItem.id,
-        part_id: reqItem.part_id,
-        part_name: reqItem.partDetails?.name || 'غير معروف',
-        sku: reqItem.partDetails?.part_number || '-',
-        quantity: reqItem.quantity,
-        status: reqItem.status || 'pending',
-        current_stock: reqItem.partDetails?.stock_quantity ?? 0,
-        unit_price: reqItem.partDetails?.price ? parseFloat(reqItem.partDetails.price) : 0,
-        created_at: reqItem.created_at,
-        appointment_id: reqItem.technicalReport?.appointment_id,
-        vehicle_info: reqItem.technicalReport?.appointment?.vehicle
-          ? `${reqItem.technicalReport.appointment.vehicle.make} ${reqItem.technicalReport.appointment.vehicle.model} (${reqItem.technicalReport.appointment.vehicle.license_plate})`
-          : 'غير محدد',
-        client_name: reqItem.technicalReport?.appointment?.customer?.name || 'غير معروف',
-        mechanic_name: reqItem.technicalReport?.mechanic?.name || 'ميكانيكي'
-      }));
+      const formatted = requests.map(reqItem => {
+        const appt = reqItem.technicalReport?.appointment;
+        const vehicle = appt?.vehicle;
+        const customer = appt?.customer;
+        const reportMechanic = reqItem.technicalReport?.mechanic;
+        const apptMechanic = appt?.mechanic;
+        const apptMechanics = appt?.mechanics || [];
+
+        const assignedMechanics = apptMechanics.length > 0
+          ? apptMechanics.map(m => ({ id: m.id, name: m.name }))
+          : (reportMechanic ? [{ id: reportMechanic.id, name: reportMechanic.name }] : (apptMechanic ? [{ id: apptMechanic.id, name: apptMechanic.name }] : []));
+
+        return {
+          id: reqItem.id,
+          part_id: reqItem.part_id,
+          part: reqItem.partDetails ? {
+            id: reqItem.partDetails.id,
+            name: reqItem.partDetails.name,
+            sku: reqItem.partDetails.part_number || '-',
+            manufacturer: reqItem.partDetails.brand || 'غير محدد',
+            purchasePrice: parseFloat(reqItem.partDetails.price || 0),
+            stock: reqItem.partDetails.stock_quantity ?? 0,
+            minStock: reqItem.partDetails.min_stock_level ?? 5,
+            createdAt: reqItem.partDetails.created_at
+          } : null,
+          part_name: reqItem.partDetails?.name || 'غير معروف',
+          sku: reqItem.partDetails?.part_number || '-',
+          quantity: reqItem.quantity,
+          status: reqItem.status || 'pending',
+          current_stock: reqItem.partDetails?.stock_quantity ?? 0,
+          unit_price: reqItem.partDetails?.price ? parseFloat(reqItem.partDetails.price) : 0,
+          created_at: reqItem.created_at,
+          appointment_id: reqItem.technicalReport?.appointment_id,
+          vehicle_id: vehicle?.id || null,
+          vehicle_info: vehicle
+            ? `${vehicle.make} ${vehicle.model} (${vehicle.license_plate})`
+            : 'غير محدد',
+          vehicle: vehicle ? {
+            id: vehicle.id,
+            make: vehicle.make,
+            model: vehicle.model,
+            license_plate: vehicle.license_plate,
+            year: vehicle.year
+          } : null,
+          client_id: customer?.id || null,
+          client_name: customer?.name || 'غير معروف',
+          customer: customer ? {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email
+          } : null,
+          mechanic_id: assignedMechanics.length > 0 ? assignedMechanics[0].id : (reportMechanic?.id || null),
+          mechanic_name: assignedMechanics.map(m => m.name).join('، ') || reportMechanic?.name || 'غير محدد',
+          mechanics: assignedMechanics
+        };
+      });
 
       res.json(formatted);
     } catch (error) {
@@ -171,7 +213,7 @@ module.exports = {
 
   // PUT /api/required-parts/approval
   updateApproval: async (req, res) => {
-    const { sequelize } = require('../models');
+    const { sequelize, SparePart, RequiredPart } = require('../models');
     const transaction = await sequelize.transaction();
     try {
       const { decisions } = req.body;
@@ -181,16 +223,17 @@ module.exports = {
         return res.status(400).json({ message: 'Decisions list is required' });
       }
 
-      // Pass 1: Stock verification and status checks
+      // Pass 1: Strict Validation with Row Locking
       for (const decision of decisions) {
-        if (!decision.status || !['approved', 'rejected', 'pending'].includes(decision.status)) {
+        if (!decision.status || !['approved', 'rejected', 'installed', 'pending'].includes(decision.status)) {
           await transaction.rollback();
           return res.status(400).json({ message: `Invalid status decision: ${decision.status}` });
         }
 
         const reqPart = await RequiredPart.findByPk(decision.id, {
           include: [{ model: SparePart, as: 'partDetails' }],
-          transaction
+          transaction,
+          lock: transaction.LOCK.UPDATE
         });
 
         if (!reqPart) {
@@ -205,7 +248,11 @@ module.exports = {
           }
 
           if (reqPart.status !== 'approved') {
-            const availableStock = reqPart.partDetails?.stock_quantity ?? 0;
+            const sparePart = await SparePart.findByPk(reqPart.part_id, {
+              transaction,
+              lock: transaction.LOCK.UPDATE
+            });
+            const availableStock = sparePart?.stock_quantity ?? 0;
             if (availableStock < reqPart.quantity) {
               await transaction.rollback();
               return res.status(400).json({
@@ -214,13 +261,21 @@ module.exports = {
             }
           }
         }
+
+        if (decision.status === 'installed') {
+          if (reqPart.status !== 'approved' && reqPart.status !== 'installed') {
+            await transaction.rollback();
+            return res.status(400).json({ message: `لا يمكن تركيب القطعة إلا بعد اعتمادها أولاً (ID: ${decision.id})` });
+          }
+        }
       }
 
-      // Pass 2: Execute updates & stock deduction
+      // Pass 2: Execute updates & stock adjustments
       for (const decision of decisions) {
         const oldPart = await RequiredPart.findByPk(decision.id, {
           include: [{ model: SparePart, as: 'partDetails' }],
-          transaction
+          transaction,
+          lock: transaction.LOCK.UPDATE
         });
         const oldStatus = oldPart ? oldPart.status : 'pending';
 
@@ -229,8 +284,12 @@ module.exports = {
           { where: { id: decision.id }, transaction }
         );
 
+        // Scenario A: Transitioning to 'approved' for the first time -> Deduct Stock
         if (decision.status === 'approved' && oldStatus !== 'approved' && oldPart?.partDetails) {
-          const sparePart = await SparePart.findByPk(oldPart.part_id, { transaction });
+          const sparePart = await SparePart.findByPk(oldPart.part_id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+          });
           if (sparePart) {
             const oldQty = sparePart.stock_quantity;
             const newQty = Math.max(0, sparePart.stock_quantity - oldPart.quantity);
@@ -248,7 +307,35 @@ module.exports = {
           }
         }
 
-        const auditAction = decision.status === 'approved' ? 'PARTS_REQUEST_APPROVED' : (decision.status === 'rejected' ? 'PARTS_REQUEST_REJECTED' : 'PARTS_REQUEST_UPDATED');
+        // Scenario B: Transitioning to 'rejected' from 'approved' -> Restore Previously Deducted Stock
+        if (decision.status === 'rejected' && oldStatus === 'approved' && oldPart?.partDetails) {
+          const sparePart = await SparePart.findByPk(oldPart.part_id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+          });
+          if (sparePart) {
+            const oldQty = sparePart.stock_quantity;
+            const newQty = sparePart.stock_quantity + oldPart.quantity;
+            sparePart.stock_quantity = newQty;
+            await sparePart.save({ transaction });
+
+            await logAudit({
+              req,
+              action: 'PART_STOCK_RESTORED',
+              entityType: 'SparePart',
+              entityId: sparePart.id,
+              oldValues: { stock_quantity: oldQty },
+              newValues: { stock_quantity: newQty }
+            });
+          }
+        }
+
+        // Scenario C: Transitioning to 'installed' -> No stock change needed (stock was already deducted at 'approved')
+
+        const auditAction = decision.status === 'approved' ? 'PARTS_REQUEST_APPROVED'
+          : (decision.status === 'rejected' ? 'PARTS_REQUEST_REJECTED'
+          : (decision.status === 'installed' ? 'PARTS_REQUEST_INSTALLED' : 'PARTS_REQUEST_UPDATED'));
+
         await logAudit({
           req,
           action: auditAction,
@@ -260,7 +347,7 @@ module.exports = {
       }
 
       await transaction.commit();
-      res.json({ message: 'Parts approval updated successfully' });
+      res.json({ message: 'تم تحديث حالة طلب قطعة الغيار بنجاح' });
     } catch (error) {
       await transaction.rollback();
       console.error('Error updating parts approval:', error);

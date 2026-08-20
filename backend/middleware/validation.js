@@ -22,7 +22,7 @@ const handleValidation = (req, res, next) => {
 
 const VALID_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 const VALID_APPOINTMENT_STATUSES = ['pending', 'awaiting_assignment', 'under_inspection', 'in_progress', 'waiting_parts', 'ready_for_pickup', 'completed', 'cancelled'];
-const VALID_PART_APPROVAL_STATUSES = ['approved', 'rejected', 'pending'];
+const VALID_PART_APPROVAL_STATUSES = ['approved', 'rejected', 'installed', 'pending'];
 const VALID_PAYMENT_METHODS = ['cash', 'card', 'credit_card', 'online', 'bank_transfer'];
 
 const YEMENI_PHONE_REGEX = /^7\d{8}$/;

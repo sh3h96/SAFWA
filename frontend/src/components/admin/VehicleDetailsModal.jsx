@@ -116,7 +116,7 @@ export default function VehicleDetailsModal({ vehicleId, vehicleObj, onClose }) 
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-2">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">رقم الهيكل (VIN)</span>
                   <p className="text-sm font-mono font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 truncate">
-                    {vehicle.vin || 'غير متوفر'}
+                    {vehicle.vin || 'غير مسجل'}
                   </p>
                 </div>
               </div>
@@ -140,14 +140,39 @@ export default function VehicleDetailsModal({ vehicleId, vehicleObj, onClose }) 
                 ) : (
                   <div className="space-y-3">
                     {(history.length > 0 ? history : vehicle.appointments).map(item => (
-                      <div key={item.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between gap-3 text-xs">
-                        <div>
-                          <p className="font-bold text-slate-800">{item.serviceType || item.title || 'صيانة دورية'}</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">الفني: {item.technician || 'غير محدد'}</p>
+                      <div key={item.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-bold text-slate-800 text-sm">{item.serviceType || item.title || 'صيانة دورية'}</p>
+                          <span className="px-2 py-0.5 bg-teal-50 border border-teal-100 text-teal-800 rounded-md font-bold text-[11px]">
+                            {item.statusLabel || item.status || 'مكتملة'}
+                          </span>
                         </div>
-                        <div className="text-left">
-                          <span className="font-mono text-slate-600 block">{formatDate(item.date)}</span>
-                          <span className="font-bold text-teal-700 font-mono block mt-0.5">{item.cost ? `${item.cost} ر.س` : ''}</span>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+                          {/* Technician(s) */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-slate-400 font-bold text-[11px]">الفني المسؤول:</span>
+                            {item.mechanics && item.mechanics.length > 0 ? (
+                              item.mechanics.map(m => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => setSelectedUserId(m.id)}
+                                  className="inline-flex items-center gap-1 bg-white border border-slate-200 hover:border-teal-300 hover:bg-teal-50 px-2 py-0.5 rounded-lg text-xs font-bold text-slate-700 hover:text-teal-800 transition-all group"
+                                  title="عرض ملف الفني"
+                                >
+                                  <span className="material-symbols-outlined text-[12px] text-slate-400 group-hover:text-teal-600">engineering</span>
+                                  {m.name}
+                                  <span className="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+                                </button>
+                              ))
+                            ) : (
+                              <span className="text-slate-600 font-bold text-[11px]">{item.technician || 'غير محدد'}</span>
+                            )}
+                          </div>
+
+                          <div className="text-left font-mono">
+                            <span className="text-slate-500 block text-[11px]">{formatDate(item.date)}</span>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -118,7 +118,8 @@ module.exports = {
             model: Appointment,
             as: 'appointments',
             include: [
-              { model: User, as: 'mechanic', attributes: ['id', 'name'] },
+              { model: User, as: 'mechanic', attributes: ['id', 'name', 'email', 'phone', 'role'] },
+              { model: User, as: 'mechanics', attributes: ['id', 'name', 'email', 'phone', 'role'], through: { attributes: [] } },
               { model: TechnicalReport, as: 'report' },
               { model: Invoice, as: 'invoice', attributes: ['total_amount', 'status'] }
             ]
@@ -134,6 +135,17 @@ module.exports = {
         return res.status(403).json({ message: 'Access forbidden: Not your vehicle' });
       }
 
+      const statusMap = {
+        pending: 'قيد الانتظار',
+        awaiting_assignment: 'بانتظار التعيين',
+        in_progress: 'قيد التنفيذ',
+        under_inspection: 'قيد الفحص',
+        ready_for_pickup: 'جاهزة للاستلام',
+        completed: 'مكتملة',
+        cancelled: 'ملغاة',
+        canceled: 'ملغاة'
+      };
+
       res.json({
         id: vehicle.id,
         client_id: vehicle.client_id,
@@ -141,7 +153,7 @@ module.exports = {
         model: vehicle.model,
         year: vehicle.year,
         license_plate: vehicle.license_plate,
-        vin: vehicle.vin || '',
+        vin: vehicle.vin || null,
         name: `${vehicle.make} ${vehicle.model} ${vehicle.year || ''}`.trim(),
         plateNumber: vehicle.license_plate,
         addedDate: vehicle.created_at,
@@ -155,15 +167,23 @@ module.exports = {
           role: vehicle.owner.role,
           status: vehicle.owner.status
         } : null,
-        appointments: (vehicle.appointments || []).map(app => ({
-          id: app.id,
-          serviceType: app.problem_description || 'صيانة دورية',
-          date: app.scheduled_date || app.created_at,
-          technician: app.mechanic?.name || 'غير محدد',
-          technician_id: app.mechanic?.id,
-          cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
-          status: app.status
-        }))
+        appointments: (vehicle.appointments || []).map(app => {
+          const assignedMechanics = (app.mechanics && app.mechanics.length > 0)
+            ? app.mechanics.map(m => ({ id: m.id, name: m.name, role: m.role || 'mechanic' }))
+            : (app.mechanic ? [{ id: app.mechanic.id, name: app.mechanic.name, role: app.mechanic.role || 'mechanic' }] : []);
+
+          return {
+            id: app.id,
+            serviceType: app.problem_description || 'صيانة دورية',
+            date: app.scheduled_date || app.created_at,
+            technician: assignedMechanics.map(m => m.name).join('، ') || 'غير محدد',
+            technician_id: assignedMechanics.length > 0 ? assignedMechanics[0].id : null,
+            mechanics: assignedMechanics,
+            cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
+            status: app.status,
+            statusLabel: statusMap[app.status] || app.status || 'غير محدد'
+          };
+        })
       });
     } catch (error) {
       console.error('Error fetching vehicle by id:', error);
@@ -179,24 +199,39 @@ module.exports = {
         return res.status(404).json({ message: 'Vehicle not found' });
       }
 
-      // Ownership Verification: Client can only view history of their own vehicle
       if (req.user.role === 'client' && vehicle.client_id !== req.user.id) {
         return res.status(404).json({ message: 'Vehicle not found' });
       }
 
       const appointments = await Appointment.findAll({
-        where: { 
+        where: {
           vehicle_id: req.params.id
         },
         include: [
-          { model: User, as: 'mechanic', attributes: ['name'] },
+          { model: User, as: 'mechanic', attributes: ['id', 'name', 'phone', 'email', 'role'] },
+          { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone', 'email', 'role'], through: { attributes: [] } },
           { model: TechnicalReport, as: 'report' },
           { model: Invoice, as: 'invoice', attributes: ['total_amount', 'status'] }
         ],
         order: [['scheduled_date', 'DESC']]
       });
 
+      const statusMap = {
+        pending: 'قيد الانتظار',
+        awaiting_assignment: 'بانتظار التعيين',
+        in_progress: 'قيد التنفيذ',
+        under_inspection: 'قيد الفحص',
+        ready_for_pickup: 'جاهزة للاستلام',
+        completed: 'مكتملة',
+        cancelled: 'ملغاة',
+        canceled: 'ملغاة'
+      };
+
       const history = appointments.map(app => {
+        const assignedMechanics = (app.mechanics && app.mechanics.length > 0)
+          ? app.mechanics.map(m => ({ id: m.id, name: m.name, role: m.role || 'mechanic' }))
+          : (app.mechanic ? [{ id: app.mechanic.id, name: app.mechanic.name, role: app.mechanic.role || 'mechanic' }] : []);
+
         return {
           id: app.id,
           vehicleId: req.params.id,
@@ -204,10 +239,12 @@ module.exports = {
           serviceType: app.problem_description || 'صيانة دورية',
           year: new Date(app.scheduled_date || app.created_at).getFullYear().toString(),
           date: app.scheduled_date || app.created_at,
-          technician: app.mechanic?.name || 'غير محدد',
+          technician: assignedMechanics.map(m => m.name).join('، ') || 'غير محدد',
+          technician_id: assignedMechanics.length > 0 ? assignedMechanics[0].id : null,
+          mechanics: assignedMechanics,
           cost: app.invoice?.total_amount ? parseFloat(app.invoice.total_amount) : 0,
           status: app.status || 'completed',
-          statusLabel: app.status === 'completed' ? 'مكتمل' : 'قيد الصيانة',
+          statusLabel: statusMap[app.status] || app.status || 'غير محدد',
           hasInvoice: !!app.invoice,
           partsTitle: 'القطع المرفقة:',
           partsPhotos: [],
@@ -250,7 +287,7 @@ module.exports = {
   createVehicle: async (req, res) => {
     try {
       const { make, model, year, license_plate, vin, client_id } = req.body;
-      
+
       let targetClientId = req.user.id;
       if (req.user.role === 'admin' || req.user.role === 'super_admin') {
         if (client_id !== undefined && client_id !== null) {
@@ -291,7 +328,7 @@ module.exports = {
     try {
       const { id } = req.params;
       const { make, model, year, license_plate, vin } = req.body;
-      
+
       const whereClause = { id };
       if (req.user.role === 'client') {
         whereClause.client_id = req.user.id;
