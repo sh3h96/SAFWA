@@ -148,7 +148,6 @@ const createFakeNewPartRequest = (appointmentId, mechanicId, options = {}) => ({
 const createFakeInvoice = (appointmentId, options = {}) => ({
   appointment_id: appointmentId,
   total_amount: options.total_amount !== undefined ? options.total_amount : 15000.0,
-  discount: options.discount || 0,
   status: options.status || 'unpaid',
   issued_at: options.issued_at || new Date(),
   created_at: options.created_at || new Date(),
