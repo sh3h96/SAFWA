@@ -72,7 +72,8 @@ body {
   font-family: 'Tajawal', sans-serif;
   background-color: var(--color-surface);
   color: var(--color-on-surface);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: 0;
   padding: 0;
 }

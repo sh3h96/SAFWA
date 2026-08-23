@@ -9,10 +9,12 @@ const {
 } = require('../middleware/validation');
 
 // Protected Vehicle routes (RBAC Restricted)
-router.get('/', authenticateToken, requireRole('admin', 'receptionist'), vehicleController.getAllVehicles);
+router.get('/', authenticateToken, requireRole('admin'), vehicleController.getAllVehicles);
 router.get('/my', authenticateToken, requireRole('client'), vehicleController.getMyVehicles);
-router.post('/', authenticateToken, requireRole('client', 'admin', 'receptionist'), createVehicleValidation, vehicleController.createVehicle);
-router.put('/:id', authenticateToken, requireRole('admin', 'receptionist', 'client'), updateVehicleValidation, vehicleController.updateVehicle);
-router.get('/:id/history', authenticateToken, requireRole('admin', 'receptionist', 'mechanic', 'client'), paramIdValidation, vehicleController.getVehicleHistory);
+router.post('/', authenticateToken, requireRole('client', 'admin'), createVehicleValidation, vehicleController.createVehicle);
+router.get('/:id/history', authenticateToken, requireRole('admin', 'mechanic', 'client'), paramIdValidation, vehicleController.getVehicleHistory);
+router.get('/:id', authenticateToken, paramIdValidation, vehicleController.getVehicleById);
+router.put('/:id', authenticateToken, requireRole('admin', 'client'), updateVehicleValidation, vehicleController.updateVehicle);
+router.delete('/:id', authenticateToken, requireRole('admin'), paramIdValidation, vehicleController.deleteVehicle);
 
 module.exports = router;

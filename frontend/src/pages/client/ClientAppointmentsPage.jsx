@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import PartsApproval from '../../components/client/PartsApproval';
+import { formatDate } from '../../utils/formatters';
 
 export default function ClientAppointmentsPage() {
-  const { data: appointmentsRaw = [], isLoading, isError } = useQuery({
+  const { data: appointmentsRaw = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['client', 'appointments'],
     queryFn: clientAPI.getMyAppointments
   });
@@ -38,14 +41,15 @@ export default function ClientAppointmentsPage() {
     return true; // for 'all'
   });
 
-
-
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل سجل المواعيد</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل سجل المواعيد"
+        message={getErrorMessage(error)}
+        onRetry={() => refetch()}
+      />
     </div>
   );
 
@@ -81,13 +85,11 @@ export default function ClientAppointmentsPage() {
 
       <div className="space-y-6">
         {appointments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">لا يوجد مواعيد</h3>
-            <p className="text-slate-500 text-sm max-w-xs">لم تقم بحجز أي مواعيد صيانة حتى الآن.</p>
-          </div>
+          <EmptyState
+            icon="event_busy"
+            title="لا توجد مواعيد"
+            message="لم يتم العثور على أي مواعيد في هذا التصنيف حالياً."
+          />
         ) : (
           appointments.map((app) => {
             const needsPartsStage = app.status === 'waiting_parts' || (app.requestedParts && app.requestedParts.length > 0);
@@ -103,21 +105,23 @@ export default function ClientAppointmentsPage() {
 
             stages.push(
               { id: 'in_progress', label: 'جاري الإصلاح', icon: 'build' },
+              { id: 'ready_for_pickup', label: 'جاهز للاستلام', icon: 'mark_email_read' },
               { id: 'completed', label: 'مكتمل', icon: 'check_circle' }
             );
 
             const getStageIndex = (status) => {
-              if (status === 'completed' || status === 'ready') return stages.length - 1;
-              if (status === 'in_progress' || status === 'repairing') return stages.length - 2;
-              if (needsPartsStage && status === 'waiting_parts') return 2; 
-              if (status === 'under_inspection' || status === 'inspection') return 1; 
+              if (status === 'completed') return stages.length - 1;
+              if (status === 'ready_for_pickup' || status === 'ready') return stages.findIndex(s => s.id === 'ready_for_pickup');
+              if (status === 'in_progress' || status === 'repairing') return stages.findIndex(s => s.id === 'in_progress');
+              if (needsPartsStage && status === 'waiting_parts') return stages.findIndex(s => s.id === 'waiting_parts'); 
+              if (status === 'under_inspection' || status === 'inspection') return stages.findIndex(s => s.id === 'under_inspection'); 
               return 0; // pending or confirmed fallback
             };
 
             let currentStageIdx = getStageIndex(app.status);
             if (currentStageIdx === -1) currentStageIdx = 0; // fallback to pending
             
-            const isCompleted = currentStageIdx === stages.length - 1;
+            const isCompleted = status === 'completed';
 
             return (
               <div 
@@ -138,7 +142,7 @@ export default function ClientAppointmentsPage() {
                   <div className="text-right">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم الطلب</p>
                     <p className="font-mono font-bold text-slate-700">{app.id}</p>
-                    <p className="text-xs text-slate-500 mt-1">{app.date}</p>
+                    <p className="text-xs text-slate-500 mt-1 font-mono">{formatDate(app.date)}</p>
                   </div>
                 </div>
 

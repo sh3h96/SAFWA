@@ -87,8 +87,13 @@ public_html/storage
 public_html/hot
 storage/*.key
 /public/build
-/storage/pail
-Homestead.yaml
-Homestead.json
-/.vagrant
-.phpactor.json
+# ===========================
+# Local Scratch & Uploads
+# ===========================
+scratch/
+backend/scratch/
+backend/scratch_api_test.js
+backend/test_mechanic_workflow_verification.js
+backend/uploads/*
+!backend/uploads/.gitkeep
+

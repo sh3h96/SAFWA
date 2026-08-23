@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+
 /**
  * SecuritySettingsTab — 2FA, session timeout, language, automated backups.
  */
@@ -80,7 +82,7 @@ export default function SecuritySettingsTab({ data, onChange }) {
           <button
             type="button"
             onClick={() => {
-              alert('جارٍ إنشاء نسخة احتياطية كاملة لقاعدة البيانات...');
+              toast.info('جارٍ إنشاء نسخة احتياطية كاملة لقاعدة البيانات...');
             }}
             className="flex items-center gap-2 bg-inverse-surface hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
           >

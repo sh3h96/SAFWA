@@ -3,8 +3,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const escapeHtml = require('../utils/htmlEscape');
-const { User, Appointment } = require('../models');
+const { User, Appointment, Vehicle, WalkInCustomer } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
+const { recordLoginFailure, resetLoginFailure } = require('../middleware/loginRateLimiter');
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -17,22 +19,39 @@ const getJwtSecret = () => {
   return secret;
 };
 
-const VALID_ROLES = ['admin', 'client', 'mechanic', 'receptionist'];
+const getFrontendUrl = () => {
+  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL;
+  if (process.env.CLIENT_URL) {
+    const origins = process.env.CLIENT_URL.split(',').map(s => s.trim());
+    const prefer5173 = origins.find(o => o.includes('5173'));
+    if (prefer5173) return prefer5173;
+    return origins[0];
+  }
+  return 'http://localhost:5173';
+};
+
+const VALID_ROLES = ['super_admin', 'admin', 'mechanic', 'client'];
 
 module.exports = {
   // POST /api/auth/register
   register: async (req, res) => {
     try {
-      const { fullName, phone, email, password } = req.body;
+      const name = (req.body.fullName || req.body.name || '').trim();
+      const email = (req.body.email || '').trim().toLowerCase();
+      const phone = (req.body.phone || '').trim();
+      const password = req.body.password;
 
-      if (!fullName || !email || !password) {
+      if (!name || !email || !password) {
         return res.status(400).json({ message: 'الاسم والبريد الإلكتروني وكلمة المرور مطلوبة' });
       }
 
+      const checkConditions = [{ email }];
+      if (phone) {
+        checkConditions.push({ phone });
+      }
+
       const existingUser = await User.findOne({ 
-        where: { 
-          [Op.or]: [{ email }, { phone: phone || '' }] 
-        } 
+        where: { [Op.or]: checkConditions } 
       });
 
       if (existingUser) {
@@ -47,9 +66,9 @@ module.exports = {
       const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       const newUser = await User.create({
-        name: fullName,
+        name,
         email,
-        phone,
+        phone: phone || null,
         password: hashedPassword,
         role: 'client', // Hardcoded role for security on public registration
         is_email_verified: false,
@@ -65,7 +84,7 @@ module.exports = {
 
       // Send Welcome & Email Verification Link (Non-blocking catch)
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
         const escapedName = escapeHtml(newUser.name);
 
@@ -105,41 +124,76 @@ module.exports = {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
+          phone: newUser.phone,
           role: newUser.role,
           isEmailVerified: newUser.is_email_verified
         }
       });
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'حدث خطأ في الخادم أثناء إنشاء الحساب' });
     }
   },
 
   // POST /api/auth/login
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, contact, identifier, phone, password } = req.body;
+      const rawInput = (email || contact || identifier || phone || '').trim();
 
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+      if (!rawInput || !password) {
+        return res.status(400).json({ message: 'البريد الإلكتروني/رقم الجوال وكلمة المرور مطلوبة' });
       }
 
-      const user = await User.findOne({ where: { email } });
+      const cleanDigits = rawInput.replace(/[^0-9+]/g, '');
+      const isEmail = rawInput.includes('@');
+
+      const phoneVariants = [
+        rawInput,
+        cleanDigits,
+        cleanDigits.startsWith('967') ? cleanDigits.slice(3) : null,
+        cleanDigits.startsWith('967') ? '0' + cleanDigits.slice(3) : null,
+        cleanDigits.startsWith('0') ? cleanDigits.slice(1) : null,
+        cleanDigits.startsWith('0') ? '967' + cleanDigits.slice(1) : null,
+        cleanDigits.startsWith('0') ? '+967' + cleanDigits.slice(1) : null,
+        !cleanDigits.startsWith('0') && !cleanDigits.startsWith('+') ? '0' + cleanDigits : null,
+        !cleanDigits.startsWith('0') && !cleanDigits.startsWith('+') ? '+967' + cleanDigits : null
+      ].filter(Boolean);
+
+      const whereConditions = isEmail
+        ? [{ email: rawInput.toLowerCase() }]
+        : [
+            { email: rawInput.toLowerCase() },
+            ...phoneVariants.map(p => ({ phone: p }))
+          ];
+
+      const user = await User.findOne({
+        where: { [Op.or]: whereConditions }
+      });
       
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        recordLoginFailure(req);
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', newValues: { attemptedInput: rawInput } });
+        return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
 
       // Check if user is suspended
       if (user.status === 'suspended' || user.status === 'موقوف') {
+        recordLoginFailure(req);
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'suspended' } });
         return res.status(403).json({ message: 'عذراً، تم إيقاف حسابك. يرجى التواصل مع الإدارة.' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        recordLoginFailure(req);
+        await logAudit({ req: null, action: 'AUTH_LOGIN_FAILED', entityType: 'User', entityId: user.id, newValues: { reason: 'invalid_password' } });
+        return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
       }
+
+      // Reset failure counter on successful authentication
+      resetLoginFailure(req);
 
       const token = jwt.sign(
         { id: user.id, role: user.role, email: user.email, tokenVersion: user.token_version },
@@ -147,18 +201,27 @@ module.exports = {
         { expiresIn: '1d' }
       );
 
+      await logAudit({
+        req: { user: { id: user.id }, ip: req.ip, headers: req.headers },
+        action: 'AUTH_LOGIN_SUCCESS',
+        entityType: 'User',
+        entityId: user.id,
+        newValues: { email: user.email, role: user.role }
+      });
+
       res.json({
         token,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
+          phone: user.phone,
           role: user.role,
         }
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'حدث خطأ في الخادم أثناء تسجيل الدخول' });
     }
   },
 
@@ -210,17 +273,100 @@ module.exports = {
     }
   },
 
+  // GET /api/users/:id
+  getUserById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findByPk(id, {
+        attributes: { exclude: ['password'] }
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Fetch registered vehicles for client
+      let vehicles = [];
+      if (user.role === 'client') {
+        vehicles = await Vehicle.findAll({
+          where: { client_id: user.id },
+          attributes: ['id', 'make', 'model', 'year', 'license_plate', 'vin', 'created_at']
+        });
+      }
+
+      // Fetch appointment history for client or mechanic
+      let appointments = [];
+      if (user.role === 'client') {
+        appointments = await Appointment.findAll({
+          where: { client_id: user.id },
+          include: [
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+            { model: User, as: 'mechanic', attributes: ['id', 'name'] }
+          ],
+          order: [['created_at', 'DESC']],
+          limit: 20
+        });
+      } else if (user.role === 'mechanic') {
+        const { AppointmentMechanic } = require('../models');
+        const assignedMechRecords = await AppointmentMechanic.findAll({
+          where: { mechanic_id: user.id },
+          attributes: ['appointment_id']
+        });
+        const assignedAppIds = assignedMechRecords.map(am => am.appointment_id);
+
+        appointments = await Appointment.findAll({
+          where: {
+            [Op.or]: [
+              { mechanic_id: user.id },
+              { id: { [Op.in]: assignedAppIds.length > 0 ? assignedAppIds : [0] } }
+            ]
+          },
+          include: [
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+            { model: User, as: 'customer', attributes: ['id', 'name'] }
+          ],
+          order: [['created_at', 'DESC']],
+          limit: 20
+        });
+      }
+
+      const userData = user.toJSON();
+      userData.vehicles = vehicles.map(v => ({
+        id: v.id,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        license_plate: v.license_plate,
+        vin: v.vin || '',
+        name: `${v.make} ${v.model} ${v.year || ''}`.trim()
+      }));
+
+      userData.appointments = appointments.map(app => ({
+        id: app.id,
+        vehicle_id: app.vehicle_id,
+        vehicle_name: app.vehicle ? `${app.vehicle.make} ${app.vehicle.model}` : 'غير محددة',
+        problem_description: app.problem_description || 'خدمة صيانة',
+        status: app.status,
+        date: app.scheduled_date || app.created_at,
+        created_at: app.created_at
+      }));
+
+      res.json(userData);
+    } catch (error) {
+      console.error('Get user by id error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
   // GET /api/users/staff-highlights
   getStaffHighlights: async (req, res) => {
     try {
-      // Corrected role name from 'technician' to 'mechanic'
       const mechanics = await User.findAll({
         where: { role: 'mechanic' },
         attributes: ['id', 'name', 'role'],
         limit: 5
       });
       
-      // Compute REAL performance metrics from Appointment model instead of Math.random()
       const highlights = await Promise.all(mechanics.map(async (mechanic) => {
         const activeVehicles = await Appointment.count({
           where: {
@@ -264,7 +410,29 @@ module.exports = {
         return res.status(400).json({ message: 'Name and email are required' });
       }
 
-      const userRole = role && VALID_ROLES.includes(role) ? role : 'client';
+      const targetRole = role && VALID_ROLES.includes(role) ? role : 'client';
+
+      // Super Admin Creation Protection: No user may create a new super_admin account
+      if (targetRole === 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          newValues: { attemptedRole: 'super_admin', email }
+        });
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن إنشاء حساب Super Admin جديد' });
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can create Admin accounts
+      if (targetRole === 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          newValues: { attemptedRole: 'admin', email }
+        });
+        return res.status(403).json({ message: 'غير مصرح: إنشاء وتجهيز حسابات المدراء محصور بـ Super Admin فقط' });
+      }
 
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
@@ -277,8 +445,18 @@ module.exports = {
         name,
         email,
         password: hashedPassword,
-        role: userRole,
-        phone
+        role: targetRole,
+        phone,
+        is_email_verified: true
+      });
+
+      const auditAction = targetRole === 'admin' ? 'ADMIN_CREATED' : 'USER_CREATED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: newUser.id,
+        newValues: { name: newUser.name, email: newUser.email, role: newUser.role, phone: newUser.phone }
       });
 
       const userWithoutPassword = newUser.toJSON();
@@ -302,6 +480,73 @@ module.exports = {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Prevent users from changing their own role
+      if (String(req.user.id) === String(user.id) && role && role !== user.role) {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكنك تغيير دورك بنفسك' });
+      }
+
+      // Super Admin Immutability Protection: Super Admin cannot be updated by normal admins
+      if (user.role === 'super_admin') {
+        if (String(req.user.id) !== String(user.id) && req.user.role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedEdit: true }
+          });
+          return res.status(403).json({ message: 'غير مصرح: لا يمكن تعديل حساب Super Admin' });
+        }
+        if (role && role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedRoleRemoval: true }
+          });
+          return res.status(403).json({ message: 'غير مصرح: لا يمكن إزالة صلاحيات Super Admin' });
+        }
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can edit other Admin accounts or promote users to admin
+      if (user.role === 'admin' && String(user.id) !== String(req.user.id)) {
+        if (req.user.role !== 'super_admin') {
+          await logAudit({
+            req,
+            action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+            entityType: 'User',
+            entityId: id,
+            newValues: { attemptedAdminEdit: true }
+          });
+          return res.status(403).json({ message: 'غير مصرح: تعديل حسابات المدراء محصور بـ Super Admin فقط' });
+        }
+      }
+
+      // Admin Hierarchy Protection: Normal Admin cannot promote any user to admin
+      if (role === 'admin' && user.role !== 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedPromotionToAdmin: true }
+        });
+        return res.status(403).json({ message: 'غير مصرح: منح صلاحيات Admin محصور بـ Super Admin فقط' });
+      }
+
+      // Prevent promotion of any user to super_admin
+      if (role === 'super_admin' && user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedPromotion: 'super_admin' }
+        });
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن ترقية حساب إلى Super Admin' });
+      }
+
       // Check email uniqueness if changing email
       if (email && email !== user.email) {
         const existing = await User.findOne({ where: { email } });
@@ -309,6 +554,23 @@ module.exports = {
           return res.status(400).json({ message: 'Email already in use' });
         }
       }
+
+      // Check phone uniqueness if changing phone
+      if (phone !== undefined && phone !== user.phone) {
+        const trimmedPhone = phone ? phone.trim() : null;
+        if (trimmedPhone) {
+          const existingUser = await User.findOne({ where: { phone: trimmedPhone, id: { [Op.ne]: user.id } } });
+          if (existingUser) {
+            return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل من قبل حساب آخر' });
+          }
+          const existingWalkIn = await WalkInCustomer.findOne({ where: { phone: trimmedPhone } });
+          if (existingWalkIn) {
+            return res.status(400).json({ message: 'رقم الجوال مسجل حالياً لعميل حضوري. يرجى مراجعة إدارة العملاء.' });
+          }
+        }
+      }
+
+      const oldValues = { name: user.name, email: user.email, phone: user.phone, role: user.role };
 
       const updateData = {};
       if (name !== undefined) updateData.name = name;
@@ -321,6 +583,27 @@ module.exports = {
 
       await user.update(updateData);
       
+      const auditAction = user.role === 'admin' ? 'ADMIN_UPDATED' : 'USER_UPDATED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: user.id,
+        oldValues,
+        newValues: updateData
+      });
+
+      if (role && role !== oldValues.role) {
+        await logAudit({
+          req,
+          action: 'USER_ROLE_CHANGED',
+          entityType: 'User',
+          entityId: user.id,
+          oldValues: { role: oldValues.role },
+          newValues: { role }
+        });
+      }
+
       const userWithoutPassword = user.toJSON();
       delete userWithoutPassword.password;
       
@@ -340,11 +623,51 @@ module.exports = {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Prevent users from suspending their own account
+      if (String(req.user.id) === String(user.id)) {
+        return res.status(403).json({ message: 'غير مصرح: لا يمكنك تغيير حالة حسابك بنفسك' });
+      }
+
+      // Super Admin Immutability Protection: Super Admin cannot be suspended
+      if (user.role === 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedSuspension: true }
+        });
+        return res.status(403).json({ message: 'غير مصرح: لا يمكن إيقاف أو تعطيل حساب Super Admin' });
+      }
+
+      // Admin Hierarchy Protection: Only Super Admin can suspend/activate Admin accounts
+      if (user.role === 'admin' && req.user.role !== 'super_admin') {
+        await logAudit({
+          req,
+          action: 'SECURITY_SUPER_ADMIN_MODIFICATION_BLOCKED',
+          entityType: 'User',
+          entityId: id,
+          newValues: { attemptedAdminSuspension: true }
+        });
+        return res.status(403).json({ message: 'غير مصرح: إيقاف أو تفعيل حسابات المدراء محصور بـ Super Admin فقط' });
+      }
+
+      const oldStatus = user.status;
       // Toggle status between active and suspended
       const newStatus = user.status === 'active' ? 'suspended' : 'active';
       await user.update({
         status: newStatus,
         token_version: user.token_version + 1
+      });
+
+      const auditAction = user.role === 'admin' ? 'ADMIN_STATUS_CHANGED' : 'USER_STATUS_CHANGED';
+      await logAudit({
+        req,
+        action: auditAction,
+        entityType: 'User',
+        entityId: user.id,
+        oldValues: { status: oldStatus },
+        newValues: { status: newStatus }
       });
 
       const userWithoutPassword = user.toJSON();
@@ -353,6 +676,113 @@ module.exports = {
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Update user status error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/users/profile
+  updateProfile: async (req, res) => {
+    try {
+      const { name, phone, avatar, avatar_url } = req.body;
+      const user = await User.findByPk(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const oldValues = { name: user.name, phone: user.phone, avatar_url: user.avatar_url };
+      const updateData = {};
+      if (name !== undefined && name.trim().length > 0) updateData.name = name.trim();
+      if (avatar !== undefined || avatar_url !== undefined) {
+        updateData.avatar_url = avatar_url !== undefined ? avatar_url : avatar;
+      }
+      if (phone !== undefined) {
+        const trimmedPhone = phone.trim();
+        if (trimmedPhone !== user.phone) {
+          if (trimmedPhone.length > 0) {
+            const existingUser = await User.findOne({ where: { phone: trimmedPhone, id: { [Op.ne]: user.id } } });
+            if (existingUser) {
+              return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل من قبل حساب آخر' });
+            }
+            const existingWalkIn = await WalkInCustomer.findOne({ where: { phone: trimmedPhone } });
+            if (existingWalkIn) {
+              return res.status(400).json({ message: 'رقم الجوال مسجل حالياً لعميل حضوري. يرجى التواصل مع الدعم الفني.' });
+            }
+          }
+          updateData.phone = trimmedPhone;
+        }
+      }
+
+      await user.update(updateData);
+
+      await logAudit({
+        req,
+        action: 'USER_PROFILE_UPDATED',
+        entityType: 'User',
+        entityId: user.id,
+        oldValues,
+        newValues: updateData
+      });
+
+      const userWithoutPassword = user.toJSON();
+      delete userWithoutPassword.password;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/users/change-password
+  changePassword: async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'كلمة المرور الحالية وكلمة المرور الجديدة مطلوبة' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف' });
+      }
+
+      const user = await User.findByPk(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        await logAudit({
+          req,
+          action: 'AUTH_PASSWORD_CHANGE_FAILED',
+          entityType: 'User',
+          entityId: user.id,
+          newValues: { reason: 'invalid_current_password' }
+        });
+        return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
+      }
+
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'لا يمكن استخدام كلمة المرور الحالية. يرجى اختيار كلمة مرور جديدة.' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await user.update({
+        password: hashedPassword,
+        token_version: user.token_version + 1
+      });
+
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_CHANGED',
+        entityType: 'User',
+        entityId: user.id
+      });
+
+      res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
+    } catch (error) {
+      console.error('Change password error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   },
@@ -384,6 +814,13 @@ module.exports = {
         is_email_verified: true,
         verification_token_hash: null,
         verification_token_expires_at: null
+      });
+
+      await logAudit({
+        req,
+        action: 'AUTH_EMAIL_VERIFIED',
+        entityType: 'User',
+        entityId: user.id
       });
 
       res.json({ message: 'تم تفعيل البريد الإلكتروني بنجاح' });
@@ -419,7 +856,7 @@ module.exports = {
       });
 
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const verifyUrl = `${frontendUrl}/verify-email?token=${rawVerificationToken}`;
         const escapedName = escapeHtml(user.name);
 
@@ -480,8 +917,15 @@ module.exports = {
         reset_token_expires_at: resetTokenExpiresAt
       });
 
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_RESET_REQUEST',
+        entityType: 'User',
+        entityId: user.id
+      });
+
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getFrontendUrl();
         const resetUrl = `${frontendUrl}/reset-password?token=${rawResetToken}`;
         const escapedName = escapeHtml(user.name);
 
@@ -502,11 +946,11 @@ module.exports = {
           </div>
         `;
 
-        sendEmail({
+        await sendEmail({
           email: user.email,
           subject: 'طلب إعادة تعيين كلمة المرور - صفوة',
           html: emailHtml
-        }).catch(e => console.error('Forgot password email error:', e));
+        });
       } catch (e) {
         console.error('Non-critical forgot password email error:', e);
       }
@@ -541,6 +985,11 @@ module.exports = {
         return res.status(400).json({ message: 'انتهت صلاحية رابط إعادة التعيين. يرجى طلب رابط جديد' });
       }
 
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'لا يمكن استخدام كلمة المرور الحالية. يرجى اختيار كلمة مرور جديدة.' });
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       await user.update({
@@ -548,6 +997,13 @@ module.exports = {
         reset_token_hash: null,
         reset_token_expires_at: null,
         token_version: user.token_version + 1
+      });
+
+      await logAudit({
+        req,
+        action: 'AUTH_PASSWORD_RESET_SUCCESS',
+        entityType: 'User',
+        entityId: user.id
       });
 
       res.json({ message: 'تمت إعادة تعيين كلمة المرور بنجاح' });
@@ -568,6 +1024,13 @@ module.exports = {
       if (user) {
         await user.update({ token_version: user.token_version + 1 });
       }
+
+      await logAudit({
+        req,
+        action: 'AUTH_LOGOUT',
+        entityType: 'User',
+        entityId: req.user.id
+      });
 
       res.json({ message: 'تم تسجيل الخروج بنجاح' });
     } catch (error) {

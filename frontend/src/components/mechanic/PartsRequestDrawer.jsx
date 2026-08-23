@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mechanicAPI, inventoryAPI } from '../../services/api';
+import { mechanicAPI, inventoryAPI, getErrorMessage } from '../../services/api';
+import toast from 'react-hot-toast';
 
 export default function PartsRequestDrawer({ task, onClose }) {
   const queryClient = useQueryClient();
@@ -16,17 +17,19 @@ export default function PartsRequestDrawer({ task, onClose }) {
     queryFn: inventoryAPI.getAll,
   });
 
-  // Submit parts request and explicitly transition status to waiting_parts
+  // Submit parts request
   const partsMutation = useMutation({
     mutationFn: async (data) => {
-      await mechanicAPI.submitPartsRequest(data);
-      await mechanicAPI.updateAppointmentStatus(data.appointment_id, 'waiting_parts');
+      return await mechanicAPI.submitPartsRequest(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['mechanicPartsRequests'] });
       setSubmitted(true);
-      // We don't auto close here so the user can see the success message
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تقديم طلب قطع الغيار'));
+    }
   });
 
   // ─── Post-Submit ─────────────────────────────────────────────────────────────

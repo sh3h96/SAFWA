@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
@@ -10,7 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security Headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+// Serve static upload directory safely
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // CORS Configuration
 const allowedOrigins = process.env.CLIENT_URL
@@ -36,29 +42,28 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Rate Limiter for Authentication Endpoints
-const authLimiter = rateLimit({
+const { loginRateLimiter } = require('./middleware/loginRateLimiter');
+
+// Rate Limiter for Account Recovery Endpoints
+const recoveryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'test' ? 1000 : 15, // 15 attempts per 15 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   statusCode: 429,
-  message: { message: 'Too many authentication attempts, please try again after 15 minutes' }
+  message: { message: 'تم تجاوز عدد المحاولات المسموح بها، يرجى الانتظار 15 دقيقة' }
 });
 
-// Apply rate limiting to authentication and account recovery routes
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/resend-verification', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
-app.use('/api/auth/reset-password', authLimiter);
-app.use('/api/auth/logout', authLimiter);
-app.use('/api/users/login', authLimiter);
-app.use('/api/users/register', authLimiter);
-app.use('/api/users/resend-verification', authLimiter);
-app.use('/api/users/forgot-password', authLimiter);
-app.use('/api/users/reset-password', authLimiter);
-app.use('/api/users/logout', authLimiter);
+// Apply rate limiting to authentication login (progressive) & recovery routes
+app.use('/api/auth/login', loginRateLimiter);
+app.use('/api/users/login', loginRateLimiter);
+
+app.use('/api/auth/resend-verification', recoveryLimiter);
+app.use('/api/auth/forgot-password', recoveryLimiter);
+app.use('/api/auth/reset-password', recoveryLimiter);
+app.use('/api/users/resend-verification', recoveryLimiter);
+app.use('/api/users/forgot-password', recoveryLimiter);
+app.use('/api/users/reset-password', recoveryLimiter);
 
 // Routes
 const userRoutes = require('./routes/userRoutes');
@@ -71,6 +76,12 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const technicalReportRoutes = require('./routes/technicalReportRoutes');
 const requiredPartRoutes = require('./routes/requiredPartRoutes');
+const newPartRequestRoutes = require('./routes/newPartRequestRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const walkInCustomerRoutes = require('./routes/walkInCustomerRoutes');
+const walkInVisitRoutes = require('./routes/walkInVisitRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 app.use('/api/auth', userRoutes); // POST /api/auth/login
 app.use('/api/users', userRoutes);
@@ -82,7 +93,14 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', technicalReportRoutes);
+app.use('/api/technical-reports', technicalReportRoutes);
 app.use('/api/required-parts', requiredPartRoutes);
+app.use('/api/new-part-requests', newPartRequestRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/walk-in-customers', walkInCustomerRoutes);
+app.use('/api/walk-in-visits', walkInVisitRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.get('/', (req, res) => {
   res.send('SAFWA Backend API is running...');

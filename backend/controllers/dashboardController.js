@@ -1,22 +1,24 @@
-const { Vehicle, Appointment, TechnicalReport, Invoice, SparePart, User } = require('../models');
+const { Vehicle, Appointment, TechnicalReport, Invoice, Payment, SparePart, User } = require('../models');
 const { Op } = require('sequelize');
 
 module.exports = {
   // GET /api/dashboard/metrics
   getMetrics: async (req, res) => {
     try {
-      // 1. Total Revenue Today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 1. Total Revenue Today (Payment-based)
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
       
-      const invoicesToday = await Invoice.sum('total_amount', {
+      const paymentsToday = await Payment.sum('amount', {
         where: {
-          created_at: {
-            [Op.gte]: today
+          paid_at: {
+            [Op.between]: [todayStart, todayEnd]
           }
         }
       });
-      const revenue = invoicesToday || 0;
+      const revenue = paymentsToday || 0;
 
       // 2. Cars in Workshop (Appointments currently being inspected, repaired, or waiting parts)
       const carsInWorkshop = await Appointment.count({
@@ -104,7 +106,7 @@ module.exports = {
         d.setDate(d.getDate() - i);
         days.push({ 
           date: d, 
-          dayName: d.toLocaleDateString('ar-SA', { weekday: 'long' }),
+          dayName: d.toISOString().split('T')[0],
           revenue: 0, 
           laborCost: 0 
         });

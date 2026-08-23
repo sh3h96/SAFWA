@@ -16,6 +16,12 @@ export const adminNavGroups = [
         path: '/admin/reviews',
       },
       {
+        id: 'admin_vehicles',
+        icon: 'directions_car',
+        label: 'إدارة المركبات',
+        path: '/admin/vehicles',
+      },
+      {
         id: 'admin_inventory',
         icon: 'inventory_2',
         label: 'إدارة المخزون',
@@ -38,6 +44,13 @@ export const adminNavGroups = [
         icon: 'manage_accounts',
         label: 'إدارة المستخدمين',
         path: '/admin/users',
+      },
+      {
+        id: 'admin_audit_logs',
+        icon: 'history_toggle_off',
+        label: 'سجل التدقيق',
+        path: '/admin/audit-logs',
+        allowedRoles: ['super_admin'],
       },
     ],
   },
@@ -91,13 +104,19 @@ export const clientNavGroups = [
 export const mechanicNavGroups = [
   {
     id: 'mechanic_tasks',
-    title: 'جدول العمل',
+    title: 'جدول العمل والقطع',
     items: [
       {
         id: 'mechanic_assigned_tasks',
         icon: 'assignment',
         label: 'السيارات المخصصة',
         path: '/mechanic/tasks',
+      },
+      {
+        id: 'mechanic_parts_requests',
+        icon: 'precision_manufacturing',
+        label: 'طلبات قطع الغيار',
+        path: '/mechanic/parts-requests',
       }
     ],
   },

@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
+import toast from 'react-hot-toast';
 
 export default function ClientVehiclesPage() {
   const queryClient = useQueryClient();
@@ -20,31 +23,45 @@ export default function ClientVehiclesPage() {
   const [year, setYear] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [vin, setVin] = useState('');
+  const [color, setColor] = useState('');
+  const [transmission, setTransmission] = useState('');
+  const [fuelType, setFuelType] = useState('');
 
   const createMutation = useMutation({
     mutationFn: clientAPI.createVehicle,
     onSuccess: () => {
+      toast.success('تمت إضافة المركبة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] });
       closeModal();
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إضافة المركبة'));
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => clientAPI.updateVehicle(id, data),
     onSuccess: () => {
+      toast.success('تم تعديل بيانات المركبة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] });
       closeModal();
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تعديل المركبة'));
     }
   });
 
   const openModal = (vehicle = null) => {
     if (vehicle) {
       setEditingVehicle(vehicle);
-      setMake(vehicle.make);
-      setModel(vehicle.model);
-      setYear(vehicle.year);
-      setPlateNumber(vehicle.plateNumber);
+      setMake(vehicle.make || '');
+      setModel(vehicle.model || '');
+      setYear(vehicle.year || '');
+      setPlateNumber(vehicle.plateNumber || vehicle.license_plate || '');
       setVin(vehicle.vin || '');
+      setColor(vehicle.color || '');
+      setTransmission(vehicle.transmission || '');
+      setFuelType(vehicle.fuel_type || vehicle.fuelType || '');
     } else {
       setEditingVehicle(null);
       setMake('');
@@ -52,6 +69,9 @@ export default function ClientVehiclesPage() {
       setYear('');
       setPlateNumber('');
       setVin('');
+      setColor('');
+      setTransmission('');
+      setFuelType('');
     }
     setIsModalOpen(true);
   };
@@ -63,7 +83,16 @@ export default function ClientVehiclesPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { make, model, year, license_plate: plateNumber, vin };
+    const data = {
+      make,
+      model,
+      year: year ? parseInt(year, 10) : null,
+      license_plate: plateNumber,
+      vin,
+      color,
+      transmission,
+      fuel_type: fuelType
+    };
     
     if (editingVehicle) {
       updateMutation.mutate({ id: editingVehicle.id, data });
@@ -75,9 +104,12 @@ export default function ClientVehiclesPage() {
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل بيانات المركبات</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل مركباتك"
+        message={getErrorMessage(error)}
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['client', 'vehicles'] })}
+      />
     </div>
   );
 
@@ -104,18 +136,14 @@ export default function ClientVehiclesPage() {
       {/* Vehicle Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vehicles.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">directions_car</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد مركبات</h3>
-            <p className="text-slate-500 text-sm max-w-xs">قم بإضافة مركبتك الأولى للبدء في طلب خدمات الصيانة.</p>
-            <button
-              onClick={() => openModal()}
-              className="mt-6 text-primary font-bold hover:underline"
-            >
-              إضافة مركبة الآن
-            </button>
+          <div className="col-span-full">
+            <EmptyState
+              icon="directions_car"
+              title="لا توجد مركبات مسجلة"
+              message="قم بإضافة مركبتك الأولى للبدء في طلب خدمات الصيانة والتأكد من متابعتها."
+              actionLabel="إضافة مركبة الآن"
+              onAction={() => openModal()}
+            />
           </div>
         ) : (
           vehicles.map((vehicle) => (
@@ -225,15 +253,55 @@ export default function ClientVehiclesPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">رقم الهيكل (VIN)</label>
-                <input
-                  value={vin}
-                  onChange={(e) => setVin(e.target.value)}
-                  placeholder="أدخل الـ 17 حرف/رقم"
-                  maxLength={17}
-                  className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all text-left uppercase font-mono"
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">رقم الهيكل (VIN)</label>
+                  <input
+                    value={vin}
+                    onChange={(e) => setVin(e.target.value)}
+                    placeholder="أدخل الـ 17 حرف/رقم"
+                    maxLength={17}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all text-left uppercase font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">اللون</label>
+                  <input
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    placeholder="أسود، أبيض..."
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">ناقل الحركة</label>
+                  <select
+                    value={transmission}
+                    onChange={(e) => setTransmission(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  >
+                    <option value="">اختر ناقل الحركة</option>
+                    <option value="أوتوماتيك">أوتوماتيك</option>
+                    <option value="يدوي">يدوي (عادي)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">نوع الوقود</label>
+                  <select
+                    value={fuelType}
+                    onChange={(e) => setFuelType(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  >
+                    <option value="">اختر نوع الوقود</option>
+                    <option value="بنزين">بنزين</option>
+                    <option value="ديزل">ديزل</option>
+                    <option value="هجين (Hybrid)">هجين (Hybrid)</option>
+                    <option value="كهربائي">كهربائي</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-4">

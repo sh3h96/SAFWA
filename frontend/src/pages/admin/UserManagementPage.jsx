@@ -9,6 +9,7 @@ import Pagination from '../../components/common/Pagination';
 import Avatar from '../../components/common/Avatar';
 import StatusBadge from '../../components/common/StatusBadge';
 import AddUserModal from '../../components/common/AddUserModal';
+import { formatDate } from '../../utils/formatters';
 
 import { staffHighlights, usersList } from '../../mock/admin/users';
 
@@ -44,7 +45,7 @@ export default function UserManagementPage() {
       phone: newUser.phone || '+966 50 000 0000',
       role: newUser.role,
       roleType: roleTypeMap[newUser.role] || 'admin',
-      registeredAt: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
+      registeredAt: formatDate(new Date()),
       isActive: true,
       avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
       initials: newUser.name.split(' ').map(n => n[0]).join(' ').slice(0, 3)
@@ -113,7 +114,7 @@ export default function UserManagementPage() {
       key: 'registeredAt',
       label: 'تاريخ التسجيل',
       render: (user) => (
-        <span className="data-mono text-sm">{user.registeredAt}</span>
+        <span className="data-mono text-sm">{formatDate(user.registeredAt)}</span>
       )
     },
     {

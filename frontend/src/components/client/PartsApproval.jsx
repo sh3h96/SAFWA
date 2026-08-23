@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientAPI } from '../../services/api';
+import { formatCurrency } from '../../utils/formatters';
 
 export default function PartsApproval({ appointmentId, requestedParts = [], isReadOnly = false }) {
   const queryClient = useQueryClient();
@@ -51,7 +52,7 @@ export default function PartsApproval({ appointmentId, requestedParts = [], isRe
             <div>
               <p className="font-bold text-slate-800">{part.name}</p>
               <p className="text-sm text-slate-500 mt-1">
-                الكمية: {part.quantity} <span className="mx-2">•</span> السعر للقطعة: {Number(part.price || 0).toFixed(2)} ر.س
+                الكمية: {part.quantity} <span className="mx-2">•</span> السعر للقطعة: {formatCurrency(part.price)}
               </p>
             </div>
             
@@ -105,7 +106,7 @@ export default function PartsApproval({ appointmentId, requestedParts = [], isRe
                   <div key={part.id} className="flex justify-between items-center text-sm p-3 bg-white border border-slate-100 rounded-xl opacity-75">
                     <span className="font-medium flex items-center gap-2">
                       {part.name} 
-                      <span className="text-slate-400 text-xs">(الكمية: {part.quantity} • {Number(part.price || 0).toFixed(2)} ر.س/القطعة)</span>
+                      <span className="text-slate-400 text-xs">(الكمية: {part.quantity} • {formatCurrency(part.price)} / للقطعة)</span>
                     </span>
                     {part.status === 'approved' ? (
                       <span className="text-teal-600 bg-teal-50 px-2 py-1 rounded-lg text-xs font-bold shrink-0">تمت الموافقة</span>
@@ -126,7 +127,7 @@ export default function PartsApproval({ appointmentId, requestedParts = [], isRe
                     return (
                       <div className="flex justify-between items-center pt-3 px-2 border-t border-slate-100 mt-2">
                         <span className="font-bold text-slate-700">إجمالي القطع المعتمدة:</span>
-                        <span className="text-lg font-bold text-emerald-600">{totalApproved.toFixed(2)} ر.س</span>
+                        <span className="text-lg font-bold text-emerald-600">{formatCurrency(totalApproved)}</span>
                       </div>
                     );
                   }

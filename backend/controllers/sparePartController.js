@@ -1,5 +1,6 @@
-const { SparePart } = require('../models');
+const { SparePart, RequiredPart } = require('../models');
 const { Op } = require('sequelize');
+const { logAudit } = require('../utils/auditLogger');
 
 module.exports = {
   // GET /api/inventory (GET /api/spare-parts)
@@ -56,7 +57,9 @@ module.exports = {
           purchasePrice: parseFloat(part.price || 0),
           salePrice: parseFloat(part.price || 0) * 1.2,
           supplier: 'مورد معتمد',
-          image: null
+          image: part.image_url || null,
+          image_url: part.image_url || null,
+          imageUrl: part.image_url || null
         };
       });
 
@@ -102,6 +105,14 @@ module.exports = {
         min_stock_level: min_stock_level !== undefined ? parseInt(min_stock_level) : 5
       });
 
+      await logAudit({
+        req,
+        action: 'PART_CREATED',
+        entityType: 'SparePart',
+        entityId: newPart.id,
+        newValues: { name, part_number, brand, price: newPart.price, stock_quantity: newPart.stock_quantity }
+      });
+
       res.status(201).json({ message: 'Part added successfully', part: newPart });
     } catch (error) {
       console.error('Error adding part:', error);
@@ -117,6 +128,15 @@ module.exports = {
         return res.status(404).json({ message: 'Part not found' });
       }
       
+      const oldValues = {
+        name: part.name,
+        part_number: part.part_number,
+        brand: part.brand,
+        stock_quantity: part.stock_quantity,
+        price: part.price,
+        min_stock_level: part.min_stock_level
+      };
+
       const { name, part_number, brand, stock_quantity, price, min_stock_level } = req.body;
       
       if (name !== undefined) part.name = name;
@@ -127,10 +147,92 @@ module.exports = {
       if (min_stock_level !== undefined) part.min_stock_level = parseInt(min_stock_level);
       
       await part.save();
+
+      await logAudit({
+        req,
+        action: 'PART_UPDATED',
+        entityType: 'SparePart',
+        entityId: part.id,
+        oldValues,
+        newValues: { name: part.name, part_number: part.part_number, brand: part.brand, stock_quantity: part.stock_quantity, price: part.price }
+      });
+
+      if (stock_quantity !== undefined && parseInt(stock_quantity) !== oldValues.stock_quantity) {
+        await logAudit({
+          req,
+          action: 'PART_STOCK_ADJUSTED',
+          entityType: 'SparePart',
+          entityId: part.id,
+          oldValues: { stock_quantity: oldValues.stock_quantity },
+          newValues: { stock_quantity: part.stock_quantity }
+        });
+      }
+
       res.json({ message: 'Part updated successfully', part });
     } catch (error) {
       console.error('Error updating part:', error);
       res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // DELETE /api/inventory/:id (DELETE /api/spare-parts/:id)
+  deletePart: async (req, res) => {
+    try {
+      const part = await SparePart.findByPk(req.params.id);
+      if (!part) {
+        return res.status(404).json({ message: 'القطعة غير موجودة' });
+      }
+
+      // Foreign key check: Check if referenced in any RequiredPart request
+      const inUse = await RequiredPart.findOne({ where: { part_id: req.params.id } });
+      if (inUse) {
+        return res.status(409).json({ message: 'لا يمكن حذف قطعة الغيار لأنها مرتبطة بطلبات قطع غيار سابقة أو تاريخية.' });
+      }
+
+      const oldValues = {
+        id: part.id,
+        name: part.name,
+        part_number: part.part_number,
+        brand: part.brand
+      };
+
+      await part.destroy();
+
+      await logAudit({
+        req,
+        action: 'PART_DELETED',
+        entityType: 'SparePart',
+        entityId: req.params.id,
+        oldValues
+      });
+
+      res.json({ message: 'تم حذف قطعة الغيار بنجاح' });
+    } catch (error) {
+      console.error('Error deleting spare part:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/inventory/:id/stock or PUT /api/spare-parts/:id/stock
+  adjustStock: async (req, res) => {
+    try {
+      const InventoryService = require('../services/inventoryService');
+      const { stock_quantity } = req.body;
+      const result = await InventoryService.adjustManualStock({
+        sparePartId: req.params.id,
+        newStockQuantity: stock_quantity,
+        req
+      });
+
+      res.json({
+        message: 'تم تعديل كمية المخزون بنجاح',
+        part: result.sparePart,
+        oldStock: result.oldStock,
+        newStock: result.newStock
+      });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      res.status(status).json({ message: error.message });
     }
   }
 };

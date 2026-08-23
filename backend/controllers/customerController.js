@@ -72,7 +72,7 @@ module.exports = {
       const formattedInvoices = invoices.map(i => ({
         id: `INV-${i.id}`,
         service: i.appointment?.problem_description || 'خدمات صيانة شاملة',
-        date: new Date(i.created_at).toLocaleDateString('ar-SA'),
+        date: i.created_at,
         amount: parseFloat(i.total_amount),
         statusLabel: i.status === 'paid' ? 'مدفوع' : (i.status === 'partially_paid' ? 'مدفوع جزئياً' : 'غير مدفوع')
       }));

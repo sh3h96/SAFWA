@@ -4,8 +4,8 @@ const sendEmail = async (options) => {
   try {
     const smtpHost = process.env.SMTP_HOST || process.env.MAILTRAP_HOST || (process.env.NODE_ENV === 'production' ? null : 'sandbox.smtp.mailtrap.io');
     const smtpPort = process.env.SMTP_PORT || process.env.MAILTRAP_PORT || 2525;
-    const smtpUser = process.env.SMTP_USER || process.env.MAILTRAP_USER;
-    const smtpPass = process.env.SMTP_PASS || process.env.MAILTRAP_PASS;
+    const smtpUser = process.env.SMTP_USER || process.env.MAILTRAP_USER || (process.env.NODE_ENV === 'production' ? null : '7273b0585acc0c');
+    const smtpPass = process.env.SMTP_PASS || process.env.MAILTRAP_PASS || (process.env.NODE_ENV === 'production' ? null : 'eae7bc7dcf0bea');
 
     if (!smtpHost || !smtpUser) {
       if (process.env.NODE_ENV === 'production') {

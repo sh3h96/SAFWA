@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import toast from 'react-hot-toast';
 
 export default function ClientReviewsPage() {
-  const { data: appointmentsRaw = [], isLoading } = useQuery({
+  const { data: appointmentsRaw = [], isLoading, isError, error } = useQuery({
     queryKey: ['client', 'appointments'],
     queryFn: clientAPI.getMyAppointments
   });
 
+  const [selectedApptId, setSelectedApptId] = useState('');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -18,19 +20,29 @@ export default function ClientReviewsPage() {
     mutationFn: clientAPI.submitReview,
     onSuccess: () => {
       setIsSuccess(true);
+      toast.success('شاطراً لك! تم إرسال تقييمك بنجاح');
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إرسال التقييم'));
     }
   });
 
-  // Pick the most recent completed appointment to review
-  const completedAppointments = appointmentsRaw.filter(app => app.status === 'completed' || app.status === 'ready');
-  const appointment = completedAppointments.length > 0 ? completedAppointments[0] : null;
+  // Filter completed or ready services
+  const completedAppointments = appointmentsRaw.filter(app => 
+    ['completed', 'ready_for_pickup', 'ready'].includes(app.status)
+  );
+
+  const unreviewedAppointments = completedAppointments.filter(app => !app.hasReview);
+
+  const currentAppointmentId = selectedApptId || (unreviewedAppointments.length > 0 ? String(unreviewedAppointments[0].id) : '');
+  const appointment = completedAppointments.find(app => String(app.id) === String(currentAppointmentId));
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (rating === 0 || !appointment) return;
     
     reviewMutation.mutate({
-      appointment_id: appointment.id,
+      appointment_id: Number(appointment.id),
       rating,
       comment
     });
@@ -52,7 +64,7 @@ export default function ClientReviewsPage() {
     );
   }
 
-  if (!appointment) {
+  if (completedAppointments.length === 0) {
     return (
       <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500 text-center">
         <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner mx-auto mt-12">
@@ -61,6 +73,20 @@ export default function ClientReviewsPage() {
         <h2 className="text-2xl font-bold text-slate-800 mb-2">لا يوجد مواعيد مكتملة</h2>
         <p className="text-slate-500 max-w-md mx-auto">
           لا يوجد لديك حالياً أي مواعيد صيانة مكتملة لتقييمها. بمجرد اكتمال موعدك القادم، ستتمكن من مشاركة رأيك هنا.
+        </p>
+      </div>
+    );
+  }
+
+  if (unreviewedAppointments.length === 0 && !appointment) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500 text-center">
+        <div className="w-24 h-24 bg-teal-50 rounded-full flex items-center justify-center mb-6 shadow-inner mx-auto mt-12">
+          <span className="material-symbols-outlined text-5xl text-teal-600">task_alt</span>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">تم تقييم جميع الخدمات</h2>
+        <p className="text-slate-500 max-w-md mx-auto">
+          لقد قمت بتقييم جميع خدماتك المكتملة بنجاح. نشكرك على تفاعلك المستمر!
         </p>
       </div>
     );
@@ -77,21 +103,41 @@ export default function ClientReviewsPage() {
         
         {reviewMutation.isError && (
           <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-sm font-bold mb-6">
-            حدث خطأ أثناء إرسال التقييم. يرجى المحاولة مرة أخرى.
+            {reviewMutation.error?.response?.data?.message || 'حدث خطأ أثناء إرسال التقييم. يرجى المحاولة مرة أخرى.'}
+          </div>
+        )}
+
+        {/* Appointment Selection if multiple */}
+        {unreviewedAppointments.length > 1 && (
+          <div className="mb-6">
+            <label className="text-xs font-bold text-slate-500 block mb-2">اختر الخدمة المكتملة المراد تقييمها:</label>
+            <select
+              value={currentAppointmentId}
+              onChange={(e) => setSelectedApptId(e.target.value)}
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none"
+            >
+              {unreviewedAppointments.map(app => (
+                <option key={app.id} value={app.id}>
+                  #{app.id} - {app.vehicleMake} {app.vehicleModel} ({app.date})
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
         {/* Service Details */}
-        <div className="bg-slate-50 rounded-2xl p-5 mb-8 flex items-center justify-between border border-slate-100">
-          <div>
-            <h3 className="font-bold text-slate-800">{appointment.vehicleMake} {appointment.vehicleModel}</h3>
-            <p className="text-sm text-slate-500 mt-1 line-clamp-1">{appointment.description || 'صيانة دورية'}</p>
+        {appointment && (
+          <div className="bg-slate-50 rounded-2xl p-5 mb-8 flex items-center justify-between border border-slate-100">
+            <div>
+              <h3 className="font-bold text-slate-800">{appointment.vehicleMake} {appointment.vehicleModel}</h3>
+              <p className="text-sm text-slate-500 mt-1 line-clamp-1">{appointment.description || 'صيانة دورية'}</p>
+            </div>
+            <div className="text-left text-xs font-mono text-slate-400">
+              <div>#APP-{appointment.id}</div>
+              <div>{appointment.date}</div>
+            </div>
           </div>
-          <div className="text-left text-xs font-mono text-slate-400">
-            <div>#APP-{appointment.id}</div>
-            <div>{appointment.date}</div>
-          </div>
-        </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-10">
           

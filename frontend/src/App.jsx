@@ -14,17 +14,22 @@ import MechanicLayout from './layouts/MechanicLayout';
 // Create a client
 const queryClient = new QueryClient();
 
-// Auth Pages
+// Auth & Legal Pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const PasswordResetPage = lazy(() => import('./pages/auth/PasswordResetPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
+const TermsOfUsePage = lazy(() => import('./pages/legal/TermsOfUsePage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage'));
 
 // Admin Pages
 const AppointmentsControlPage = lazy(() => import('./pages/admin/AppointmentsControlPage'));
+const AdminVehiclesPage = lazy(() => import('./pages/admin/AdminVehiclesPage'));
 const InventoryPage = lazy(() => import('./pages/admin/InventoryPage'));
 const FinancialsPage = lazy(() => import('./pages/admin/FinancialsPage'));
 const UsersManagementPage = lazy(() => import('./pages/admin/UsersManagementPage'));
 const ReviewsReportsPage = lazy(() => import('./pages/admin/ReviewsReportsPage'));
+const AuditLogsPage = lazy(() => import('./pages/admin/AuditLogsPage'));
 
 // Client Pages
 const ClientVehiclesPage = lazy(() => import('./pages/client/ClientVehiclesPage'));
@@ -35,6 +40,7 @@ const ClientReviewsPage = lazy(() => import('./pages/client/ClientReviewsPage'))
 
 // Mechanic Pages
 const MechanicTasksPage = lazy(() => import('./pages/mechanic/MechanicTasksPage'));
+const MechanicPartsRequestsPage = lazy(() => import('./pages/mechanic/MechanicPartsRequestsPage'));
 
 function App() {
   return (
@@ -47,22 +53,33 @@ function App() {
             {/* Default Landing Page -> Login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Auth routes */}
+            {/* Auth & Legal routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
             <Route path="/reset-password" element={<PasswordResetPage />} />
             <Route path="/auth/reset-password" element={<PasswordResetPage />} />
+            <Route path="/terms" element={<TermsOfUsePage />} />
+            <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
-            {/* Admin Dashboard */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            {/* Admin & Super Admin Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="appointments" element={<AppointmentsControlPage />} />
+                <Route path="vehicles" element={<AdminVehiclesPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="financials" element={<FinancialsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />
                 <Route path="reviews" element={<ReviewsReportsPage />} />
+                {/* Super Admin Only Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+                  <Route path="audit-logs" element={<AuditLogsPage />} />
+                </Route>
                 {/* Fallback redirect */}
                 <Route path="*" element={<Navigate to="/admin/appointments" replace />} />
               </Route>
@@ -85,6 +102,7 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['mechanic']} />}>
               <Route path="/mechanic" element={<MechanicLayout />}>
                 <Route path="tasks" element={<MechanicTasksPage />} />
+                <Route path="parts-requests" element={<MechanicPartsRequestsPage />} />
                 {/* Fallback redirect */}
                 <Route path="*" element={<Navigate to="/mechanic/tasks" replace />} />
               </Route>

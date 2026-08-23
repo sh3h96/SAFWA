@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clientAPI } from '../../services/api';
+import { clientAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import ViewInvoiceModal from '../../components/admin/ViewInvoiceModal';
+import { formatDate, formatCurrency } from '../../utils/formatters';
+import toast from 'react-hot-toast';
 
 export default function ClientBillingPage() {
   const queryClient = useQueryClient();
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
-  const { data: invoicesRaw = [], isLoading, isError } = useQuery({
+  const { data: invoicesRaw = [], isLoading, isError, error } = useQuery({
     queryKey: ['client', 'invoices'],
     queryFn: clientAPI.getMyInvoices
   });
@@ -16,7 +20,11 @@ export default function ClientBillingPage() {
   const payMutation = useMutation({
     mutationFn: (id) => clientAPI.payInvoice(id, {}),
     onSuccess: () => {
+      toast.success('تمت عملية الدفع بنجاح');
       queryClient.invalidateQueries({ queryKey: ['client', 'invoices'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تنفيذ عملية الدفع'));
     }
   });
 
@@ -34,9 +42,12 @@ export default function ClientBillingPage() {
   if (isLoading) return <PageLoader />;
 
   if (isError) return (
-    <div className="text-center py-12 text-rose-500">
-      <span className="material-symbols-outlined text-4xl mb-4">error</span>
-      <p>حدث خطأ أثناء تحميل الفواتير</p>
+    <div className="py-8">
+      <ErrorState
+        title="حدث خطأ في تحميل الفواتير"
+        message={getErrorMessage(error)}
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['client', 'invoices'] })}
+      />
     </div>
   );
 
@@ -69,17 +80,19 @@ export default function ClientBillingPage() {
                     {invoice.displayId}
                   </span>
                   <h3 className="text-lg font-bold text-slate-800">{invoice.vehicle}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{invoice.date}</p>
+                  <p className="text-xs text-slate-400 mt-1 font-mono">{formatDate(invoice.date)}</p>
                 </div>
                 <div className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                   invoice.status === 'paid' 
                     ? 'bg-teal-50 text-teal-600' 
+                    : invoice.status === 'partially_paid'
+                    ? 'bg-amber-50 text-amber-600'
                     : 'bg-rose-50 text-rose-600'
                 }`}>
                   <span className="material-symbols-outlined text-[14px]">
-                    {invoice.status === 'paid' ? 'check_circle' : 'error'}
+                    {invoice.status === 'paid' ? 'check_circle' : invoice.status === 'partially_paid' ? 'hourglass_top' : 'error'}
                   </span>
-                  {invoice.status === 'paid' ? 'مدفوعة' : 'غير مدفوعة'}
+                  {invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'partially_paid' ? 'مدفوعة جزئياً' : 'غير مدفوعة'}
                 </div>
               </div>
 
@@ -88,12 +101,12 @@ export default function ClientBillingPage() {
                 {invoice.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between text-sm">
                     <span className="text-slate-600 font-medium">{item.name}</span>
-                    <span className="font-mono text-slate-800">{item.cost} ر.س</span>
+                    <span className="font-mono text-slate-800">{formatCurrency(item.cost)}</span>
                   </div>
                 ))}
                 <div className="pt-3 mt-3 border-t border-slate-200 border-dashed flex justify-between font-bold">
                   <span className="text-slate-800">الإجمالي</span>
-                  <span className="text-primary font-mono text-lg">{invoice.total} ر.س</span>
+                  <span className="text-primary font-mono text-lg">{formatCurrency(invoice.total)}</span>
                 </div>
               </div>
 
@@ -106,7 +119,7 @@ export default function ClientBillingPage() {
                   <span className="material-symbols-outlined text-sm">visibility</span>
                   عرض التفاصيل
                 </button>
-                {invoice.status === 'unpaid' && (
+                {invoice.status !== 'paid' && (
                   <button 
                     onClick={() => payMutation.mutate(invoice.originalId)}
                     disabled={payMutation.isPending}
@@ -120,7 +133,7 @@ export default function ClientBillingPage() {
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-sm">credit_card</span>
-                        دفع الآن
+                        {invoice.status === 'partially_paid' ? 'سداد المتبقي' : 'دفع الآن'}
                       </>
                     )}
                   </button>

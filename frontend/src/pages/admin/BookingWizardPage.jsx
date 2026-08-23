@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import LicensePlate from '../../components/common/LicensePlate';
 import { bookingResponse } from '../../mock/admin/booking';
+import toast from 'react-hot-toast';
 
 export default function BookingWizardPage() {
   const [data] = useState(bookingResponse);
@@ -54,7 +55,7 @@ export default function BookingWizardPage() {
             <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all ${
               currentStep >= 1 ? 'border-primary-container bg-primary-container text-white shadow' : 'border-outline-variant text-outline bg-white'
             }`}>
-              ١
+              1
             </div>
             <span className={`text-xs font-bold ${currentStep >= 1 ? 'text-primary-container' : 'text-outline'}`}>
               تحديد السيارة والخدمة
@@ -66,7 +67,7 @@ export default function BookingWizardPage() {
             <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all ${
               currentStep >= 2 ? 'border-primary-container bg-primary-container text-white shadow' : 'border-outline-variant text-outline bg-white'
             }`}>
-              ٢
+              2
             </div>
             <span className={`text-xs font-bold ${currentStep >= 2 ? 'text-primary-container' : 'text-outline'}`}>
               اختيار التاريخ والوقت
@@ -78,7 +79,7 @@ export default function BookingWizardPage() {
             <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all ${
               currentStep >= 3 ? 'border-primary-container bg-primary-container text-white shadow' : 'border-outline-variant text-outline bg-white'
             }`}>
-              ٣
+              3
             </div>
             <span className={`text-xs font-bold ${currentStep >= 3 ? 'text-primary-container' : 'text-outline'}`}>
               تأكيد الحجز
@@ -289,7 +290,7 @@ export default function BookingWizardPage() {
               </button>
             ) : (
               <button 
-                onClick={() => alert('تم إلغاء الحجز')}
+                onClick={() => toast.error('تم إلغاء الحجز')}
                 className="px-6 py-3 text-secondary hover:text-danger-text transition-colors font-medium text-sm"
               >
                 إلغاء

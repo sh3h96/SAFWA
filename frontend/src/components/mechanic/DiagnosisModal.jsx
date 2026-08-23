@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { mechanicAPI } from '../../services/api';
+import { mechanicAPI, getErrorMessage } from '../../services/api';
+import toast from 'react-hot-toast';
 
 const URGENCY_OPTIONS = [
   { value: 'low',    label: 'منخفض — يمكن تأجيله' },
@@ -11,32 +12,48 @@ const URGENCY_OPTIONS = [
 export default function DiagnosisModal({ task, onClose }) {
   const queryClient = useQueryClient();
 
-  // Form fields
-  const [odometer,    setOdometer]    = useState('');
-  const [obd2Codes,   setObd2Codes]   = useState('');
-  const [visualNotes, setVisualNotes] = useState('');
-  const [diagnostics, setDiagnostics] = useState('');
-  const [repairPlan,  setRepairPlan]  = useState('');
-  const [urgency,     setUrgency]     = useState('normal');
+  // Form fields pre-filled from existing report if available
+  const [odometer,    setOdometer]    = useState(task?.report?.odometer !== undefined && task?.report?.odometer !== null ? String(task.report.odometer) : '');
+  const [obd2Codes,   setObd2Codes]   = useState(task?.report?.obd2_codes || '');
+  const [visualNotes, setVisualNotes] = useState(task?.report?.visual_notes || '');
+  const [diagnostics, setDiagnostics] = useState(task?.report?.diagnostics || '');
+  const [repairPlan,  setRepairPlan]  = useState(task?.report?.repair_plan || '');
+  const [estimatedLaborCost, setEstimatedLaborCost] = useState(
+    task?.report?.estimated_labor_cost !== undefined && task?.report?.estimated_labor_cost !== null 
+      ? String(task.report.estimated_labor_cost) 
+      : ''
+  );
+  const [urgency,     setUrgency]     = useState(task?.report?.urgency_level || 'normal');
 
   // Submit diagnosis report
   const reportMutation = useMutation({
     mutationFn: mechanicAPI.submitDiagnosis,
     onSuccess: () => {
+      toast.success('تم اعتماد تقرير الفحص الفني بنجاح');
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] });
-      onClose(); // Close the modal on success
+      onClose();
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء حفظ التقرير'));
+    }
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const labor = parseFloat(estimatedLaborCost);
+    if (isNaN(labor) || labor < 0) {
+      toast.error('يرجى تحديد أجور العمل التقديرية بشكل صحيح (0 أو أكثر)');
+      return;
+    }
+
     reportMutation.mutate({
-      appointment_id: task.appointment_id,
+      appointment_id: task.appointment_id || task.id,
       odometer:       odometer ? parseInt(odometer) : null,
       obd2_codes:     obd2Codes,
       visual_notes:   visualNotes,
       diagnostics,
       repair_plan:    repairPlan,
+      estimated_labor_cost: labor,
       urgency_level:  urgency,
       mechanic_notes: '',
     });
@@ -191,6 +208,24 @@ export default function DiagnosisModal({ task, onClose }) {
                 rows={3}
                 placeholder="الخطوات المطلوبة للإصلاح..."
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none"
+              />
+            </div>
+
+            {/* Estimated Labor Cost */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-slate-400">payments</span>
+                تكلفة أجور العمل التقديرية (ر.ي) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value={estimatedLaborCost}
+                onChange={e => setEstimatedLaborCost(e.target.value)}
+                placeholder="مثال: 150.00"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
               />
             </div>
 

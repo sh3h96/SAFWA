@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { usersAPI } from '../../services/api';
+import { usersAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
+import ErrorState from '../../components/common/ErrorState';
+import EmptyState from '../../components/common/EmptyState';
 import EditUserModal from '../../components/admin/EditUserModal';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
+import EntityImage from '../../components/common/EntityImage';
+
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function UsersManagementPage() {
   const queryClient = useQueryClient();
+  const { user: currentUser, isSuperAdmin } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -27,16 +34,24 @@ export default function UsersManagementPage() {
   const createUserMutation = useMutation({
     mutationFn: usersAPI.create,
     onSuccess: () => {
+      toast.success('تم إنشاء المستخدم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsModalOpen(false);
       setName(''); setEmail(''); setPhone(''); setRole('client'); setPassword('');
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء إنشاء المستخدم'));
     }
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: (id) => usersAPI.updateStatus(id),
     onSuccess: () => {
+      toast.success('تم تغيير حالة المستخدم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'حدث خطأ أثناء تغيير حالة المستخدم'));
     }
   });
 
@@ -57,6 +72,7 @@ export default function UsersManagementPage() {
 
   const getRoleLabel = (r) => {
     switch(r) {
+      case 'super_admin': return 'سوبر أدمن';
       case 'admin': return 'إدارة';
       case 'mechanic': return 'ميكانيكي';
       case 'client': return 'عميل';
@@ -66,6 +82,7 @@ export default function UsersManagementPage() {
 
   const getRoleColor = (r) => {
     switch(r) {
+      case 'super_admin': return 'bg-purple-50 text-purple-700 font-bold border border-purple-200';
       case 'admin': return 'bg-indigo-50 text-indigo-600';
       case 'mechanic': return 'bg-amber-50 text-amber-600';
       case 'client': return 'bg-teal-50 text-teal-600';
@@ -78,7 +95,17 @@ export default function UsersManagementPage() {
     createUserMutation.mutate({ name, email, phone, password, role });
   };
 
-  if (isError) return <div className="text-center text-red-500 font-bold py-10">حدث خطأ أثناء تحميل البيانات: {error?.message}</div>;
+  if (isError) {
+    return (
+      <div className="py-8">
+        <ErrorState
+          title="حدث خطأ في تحميل قائمة المستخدمين"
+          message={getErrorMessage(error)}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -156,9 +183,12 @@ export default function UsersManagementPage() {
               >
                 
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl ${getRoleColor(user.role)}`}>
-                    {user.name.charAt(0)}
-                  </div>
+                  <EntityImage
+                    src={user.avatar_url || user.avatar || user.avatarUrl || user.image_url || user.imageUrl}
+                    type="user"
+                    name={user.name}
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl ${getRoleColor(user.role)}`}
+                  />
                   
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider ${
@@ -167,49 +197,52 @@ export default function UsersManagementPage() {
                       {user.status === 'active' ? 'نشط' : 'موقوف'}
                     </span>
 
-                    <div className="relative">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(openMenuId === user.id ? null : user.id);
-                        }}
-                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-400 transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-xl">more_vert</span>
-                      </button>
-                      
-                      {openMenuId === user.id && (
-                        <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-[0_10px_40px_rgb(0,0,0,0.12)] border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedUserForEdit(user);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full text-right px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                            تعديل البيانات
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleStatusMutation.mutate(user.id);
-                              setOpenMenuId(null);
-                            }}
-                            disabled={toggleStatusMutation.isPending}
-                            className={`w-full text-right px-4 py-2.5 text-sm font-bold hover:bg-slate-50 flex items-center gap-2 ${
-                              user.status === 'active' ? 'text-rose-600' : 'text-emerald-600'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-[18px]">
-                              {user.status === 'active' ? 'block' : 'check_circle'}
-                            </span>
-                            {user.status === 'active' ? 'إيقاف الحساب' : 'تفعيل الحساب'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Action Menu (Restricted for Admin on other Admins/Super Admins) */}
+                    {!(currentUser?.role === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) && user.role !== 'super_admin' && (
+                      <div className="relative">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === user.id ? null : user.id);
+                          }}
+                          className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-400 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-xl">more_vert</span>
+                        </button>
+                        
+                        {openMenuId === user.id && (
+                          <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-[0_10px_40px_rgb(0,0,0,0.12)] border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedUserForEdit(user);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full text-right px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">edit</span>
+                              تعديل البيانات
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleStatusMutation.mutate(user.id);
+                                setOpenMenuId(null);
+                              }}
+                              disabled={toggleStatusMutation.isPending}
+                              className={`w-full text-right px-4 py-2.5 text-sm font-bold hover:bg-slate-50 flex items-center gap-2 ${
+                                user.status === 'active' ? 'text-rose-600' : 'text-emerald-600'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                {user.status === 'active' ? 'block' : 'check_circle'}
+                              </span>
+                              {user.status === 'active' ? 'إيقاف الحساب' : 'تفعيل الحساب'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -278,7 +311,7 @@ export default function UsersManagementPage() {
                 <select value={role} onChange={e => setRole(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
                   <option value="client">عميل</option>
                   <option value="mechanic">ميكانيكي</option>
-                  <option value="admin">إداري</option>
+                  {isSuperAdmin && <option value="admin">إداري (Admin)</option>}
                 </select>
               </div>
 

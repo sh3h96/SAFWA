@@ -5,10 +5,14 @@ module.exports = (sequelize) => {
   class User extends Model {
     static associate(models) {
       User.hasMany(models.Vehicle, { foreignKey: 'client_id', as: 'vehicles' });
+      User.belongsToMany(models.Vehicle, { through: models.VehicleUser, foreignKey: 'user_id', otherKey: 'vehicle_id', as: 'associatedVehicles' });
       User.hasMany(models.Appointment, { foreignKey: 'client_id', as: 'clientAppointments' });
       User.hasMany(models.Appointment, { foreignKey: 'mechanic_id', as: 'mechanicAppointments' });
+      User.belongsToMany(models.Appointment, { through: models.AppointmentMechanic, as: 'assignedAppointments', foreignKey: 'mechanic_id', otherKey: 'appointment_id' });
       User.hasMany(models.TechnicalReport, { foreignKey: 'mechanic_id', as: 'reports' });
+      User.hasMany(models.NewPartRequest, { foreignKey: 'mechanic_id', as: 'newPartRequests' });
       User.hasMany(models.Review, { foreignKey: 'client_id', as: 'reviews' });
+      User.hasMany(models.AuditLog, { foreignKey: 'actor_user_id', as: 'auditLogs' });
     }
   }
 
@@ -32,6 +36,10 @@ module.exports = (sequelize) => {
         "allowNull": false
     },
     phone: {
+        "type": DataTypes.STRING,
+        "allowNull": true
+    },
+    avatar_url: {
         "type": DataTypes.STRING,
         "allowNull": true
     },
