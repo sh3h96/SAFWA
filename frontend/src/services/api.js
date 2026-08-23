@@ -3,6 +3,15 @@ import axios from 'axios';
 // The backend is running on port 5000 based on our inspection
 const API_URL = 'http://localhost:5000/api';
 
+// Centralized image URL helper to ensure reliable static media resolution
+export const getImageUrl = (path) => {
+  if (!path || typeof path !== 'string') return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const backendBaseUrl = API_URL.replace(/\/api\/?$/, '');
+  return `${backendBaseUrl}${cleanPath}`;
+};
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
@@ -25,6 +34,22 @@ export const getErrorMessage = (error, defaultMsg = 'حدث خطأ غير متو
   const status = error.response.status;
   const data = error.response.data;
 
+  // Handle HTTP 409 Conflict with detailed business context
+  if (status === 409 && data) {
+    if (data.isDuplicate && data.existingAppointment) {
+      return `يوجد موعد نشط سابق لهذه السيارة برقم (#${data.existingAppointment.id}) وتاريخ ${new Date(data.existingAppointment.scheduled_date).toLocaleDateString('ar-EG')}.`;
+    }
+    if (data.candidates && data.candidates.length > 0) {
+      return `تم العثور على عميل سابق يتطابق في البيانات (العدد: ${data.candidates.length}). يرجى تحديد القرار عبر نافذة تأكيد العميل.`;
+    }
+    if (data.requested_quantity !== undefined && data.available_stock !== undefined) {
+      return `الكمية المطلوبة (${data.requested_quantity}) تتجاوز المخزون المتاح حالياً (${data.available_stock}).`;
+    }
+    if (data.message) {
+      return data.message;
+    }
+  }
+
   // Extract validation field errors if present
   if (data && Array.isArray(data.errors) && data.errors.length > 0) {
     const fieldMsgs = data.errors.map(err => err.message).filter(Boolean);
@@ -46,7 +71,7 @@ export const getErrorMessage = (error, defaultMsg = 'حدث خطأ غير متو
     case 400:
       return 'البيانات المدخلة غير صالحة. يرجى التأكد والمحاولة مرة أخرى.';
     case 401:
-      return 'انتهت صلاحة الجلسة أو يجب تسجيل الدخول لطلب هذه البيانات.';
+      return 'انتهت صلاحية الجلسة أو يجب تسجيل الدخول لطلب هذه البيانات.';
     case 403:
       return 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
     case 404:
@@ -197,6 +222,14 @@ export const vehiclesAPI = {
     const response = await api.get(`/vehicles/${id}/history`);
     return response.data;
   },
+  create: async (data) => {
+    const response = await api.post('/vehicles', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/vehicles/${id}`, data);
+    return response.data;
+  },
   delete: async (id) => {
     const response = await api.delete(`/vehicles/${id}`);
     return response.data;
@@ -208,12 +241,20 @@ export const inventoryAPI = {
     const response = await api.get('/inventory', { params: { search } });
     return response.data;
   },
+  getById: async (id) => {
+    const response = await api.get(`/inventory/${id}`);
+    return response.data;
+  },
   create: async (partData) => {
     const response = await api.post('/inventory', partData);
     return response.data;
   },
   update: async (id, partData) => {
     const response = await api.put(`/inventory/${id}`, partData);
+    return response.data;
+  },
+  adjustStock: async (id, stock_quantity) => {
+    const response = await api.put(`/inventory/${id}/stock`, { stock_quantity });
     return response.data;
   },
   delete: async (id) => {
@@ -231,8 +272,54 @@ export const requiredPartsAPI = {
     const response = await api.post('/required-parts', data);
     return response.data;
   },
+  approvePart: async (id, price) => {
+    const response = await api.post(`/required-parts/${id}/approve`, { price });
+    return response.data;
+  },
+  installPart: async (id) => {
+    const response = await api.post(`/required-parts/${id}/install`);
+    return response.data;
+  },
+  rejectPart: async (id) => {
+    const response = await api.post(`/required-parts/${id}/reject`);
+    return response.data;
+  },
   updateApproval: async (decisions) => {
     const response = await api.put('/required-parts/approval', { decisions });
+    return response.data;
+  }
+};
+
+export const technicalReportsAPI = {
+  create: async (data) => {
+    const response = await api.post('/technical-reports', data);
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/technical-reports/${id}`);
+    return response.data;
+  },
+  getByAppointment: async (appointmentId) => {
+    const response = await api.get(`/technical-reports/appointment/${appointmentId}`);
+    return response.data;
+  }
+};
+
+export const newPartRequestsAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/new-part-requests', { params });
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/new-part-requests', data);
+    return response.data;
+  },
+  approve: async (id) => {
+    const response = await api.put(`/new-part-requests/${id}/approve`);
+    return response.data;
+  },
+  reject: async (id, rejection_reason) => {
+    const response = await api.put(`/new-part-requests/${id}/reject`, { rejection_reason });
     return response.data;
   }
 };
@@ -252,10 +339,65 @@ export const appointmentsAPI = {
   }
 };
 
+export const handoverAPI = {
+  performHandover: async (appointmentId, data = {}) => {
+    const response = await api.post(`/appointments/${appointmentId}/handover`, data);
+    return response.data;
+  }
+};
+
 export const financialsAPI = {
   getPendingReports: (search = '') => api.get('/invoices/reports', { params: { search } }).then(res => res.data),
   issueInvoice: (data) => api.post('/invoices/issue', data).then(res => res.data),
   getInvoiceById: (id) => api.get(`/invoices/${id}`).then(res => res.data),
+  getFinancialSummary: (params = {}) => api.get('/invoices/financial-summary', { params }).then(res => res.data),
+};
+
+export const paymentsAPI = {
+  recordPayment: async (invoiceId, data) => {
+    const response = await api.post(`/invoices/${invoiceId}/pay`, data);
+    return response.data;
+  },
+  getPaymentsByInvoice: async (invoiceId) => {
+    const response = await api.get('/payments', { params: { invoice_id: invoiceId } });
+    return response.data;
+  }
+};
+
+export const walkInAPI = {
+  getAllCustomers: async (params = {}) => {
+    const response = await api.get('/walk-in-customers', { params });
+    return response.data;
+  },
+  getCustomerHistory: async (customerId) => {
+    const response = await api.get(`/walk-in-customers/${customerId}/history`);
+    return response.data;
+  },
+  getCustomerVisits: async (customerId) => {
+    const response = await api.get(`/walk-in-customers/${customerId}/visits`);
+    return response.data;
+  },
+  createWithVisit: async (data) => {
+    const response = await api.post('/walk-in-customers/with-visit', data);
+    return response.data;
+  },
+  resolveCandidate: async (data) => {
+    const response = await api.post('/walk-in-customers/resolve', data);
+    return response.data;
+  }
+};
+
+export const uploadsAPI = {
+  uploadImage: async (formData) => {
+    const response = await api.post('/uploads/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+  deleteImage: async (data) => {
+    const response = await api.delete('/uploads/image', { data });
+    return response.data;
+  }
 };
 
 export const reviewsAPI = {

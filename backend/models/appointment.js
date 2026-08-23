@@ -12,6 +12,7 @@ module.exports = (sequelize) => {
       Appointment.hasOne(models.Invoice, { foreignKey: 'appointment_id', as: 'invoice' });
       Appointment.hasOne(models.TechnicalReport, { foreignKey: 'appointment_id', as: 'report' });
       Appointment.hasOne(models.Review, { foreignKey: 'appointment_id', as: 'review' });
+      Appointment.hasOne(models.WalkInVisit, { foreignKey: 'appointment_id', as: 'walkInVisit' });
     }
   }
 
@@ -52,6 +53,14 @@ module.exports = (sequelize) => {
         "allowNull": true
     },
     scheduled_date: {
+        "type": DataTypes.DATE,
+        "allowNull": true
+    },
+    cancellation_reason: {
+        "type": DataTypes.TEXT,
+        "allowNull": true
+    },
+    delivered_at: {
         "type": DataTypes.DATE,
         "allowNull": true
     }

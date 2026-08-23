@@ -1,5 +1,6 @@
 const { RequiredPart, SparePart, TechnicalReport, Appointment, Vehicle, User, AppointmentMechanic } = require('../models');
 const { logAudit } = require('../utils/auditLogger');
+const InventoryService = require('../services/inventoryService');
 
 module.exports = {
   // GET /api/required-parts
@@ -133,7 +134,14 @@ module.exports = {
   // POST /api/required-parts
   submitRequest: async (req, res) => {
     try {
-      const { appointment_id, parts } = req.body;
+      let { appointment_id, technical_report_id, parts } = req.body;
+
+      if (!appointment_id && technical_report_id) {
+        const reportObj = await TechnicalReport.findByPk(technical_report_id);
+        if (reportObj) {
+          appointment_id = reportObj.appointment_id;
+        }
+      }
 
       if (!appointment_id || !parts || !Array.isArray(parts) || parts.length === 0) {
         return res.status(400).json({ message: 'Appointment ID and parts list are required' });
@@ -158,7 +166,7 @@ module.exports = {
         }
       }
 
-      // Strict validation for each part ID and positive quantity (> 0)
+      // Strict validation for each part ID and positive integer quantity (> 0)
       for (const p of parts) {
         const partId = p.id !== undefined ? p.id : p.part_id;
         const qty = p.qty !== undefined ? p.qty : p.quantity;
@@ -211,147 +219,116 @@ module.exports = {
     }
   },
 
-  // PUT /api/required-parts/approval
+  // PUT /api/required-parts/:id/approval (Single Approve)
+  approvePart: async (req, res) => {
+    try {
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+        return res.status(403).json({ message: 'غير مصرح لك باعتماُ قطع الغيار' });
+      }
+
+      const result = await InventoryService.approveSingleRequiredPart({
+        requiredPartId: req.params.id,
+        price: req.body ? req.body.price : null,
+        req
+      });
+
+      res.json({
+        message: 'تم اعتماد قطعة الغيار وخصم الكمية من المخزون بنجاح',
+        requiredPart: result.requiredPart,
+        remainingStock: result.newStock
+      });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      const responsePayload = { message: error.message };
+      if (error.available !== undefined) responsePayload.available = error.available;
+      if (error.requested !== undefined) responsePayload.requested = error.requested;
+      res.status(status).json(responsePayload);
+    }
+  },
+
+  // PUT /api/required-parts/:id/installation (Single Install)
+  installPart: async (req, res) => {
+    try {
+      const result = await InventoryService.installSingleRequiredPart({
+        requiredPartId: req.params.id,
+        req
+      });
+
+      res.json({
+        message: result.message,
+        requiredPart: result.requiredPart
+      });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      res.status(status).json({ message: error.message });
+    }
+  },
+
+  // PUT /api/required-parts/:id/rejection (Single Reject)
+  rejectPart: async (req, res) => {
+    try {
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+        return res.status(403).json({ message: 'غير مصرح لك برفض قطع الغيار' });
+      }
+
+      const result = await InventoryService.rejectSingleRequiredPart({
+        requiredPartId: req.params.id,
+        req
+      });
+
+      res.json({
+        message: 'تم رفض طلب قطعة الغيار بنجاح',
+        requiredPart: result.requiredPart
+      });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      res.status(status).json({ message: error.message });
+    }
+  },
+
+  // PUT /api/required-parts/approval (Batch Decisions)
   updateApproval: async (req, res) => {
-    const { sequelize, SparePart, RequiredPart } = require('../models');
-    const transaction = await sequelize.transaction();
     try {
       const { decisions } = req.body;
 
       if (!decisions || !Array.isArray(decisions) || decisions.length === 0) {
-        await transaction.rollback();
         return res.status(400).json({ message: 'Decisions list is required' });
       }
 
-      // Pass 1: Strict Validation with Row Locking
       for (const decision of decisions) {
-        if (!decision.status || !['approved', 'rejected', 'installed', 'pending'].includes(decision.status)) {
-          await transaction.rollback();
-          return res.status(400).json({ message: `Invalid status decision: ${decision.status}` });
-        }
-
-        const reqPart = await RequiredPart.findByPk(decision.id, {
-          include: [{ model: SparePart, as: 'partDetails' }],
-          transaction,
-          lock: transaction.LOCK.UPDATE
-        });
-
-        if (!reqPart) {
-          await transaction.rollback();
-          return res.status(404).json({ message: `Required parts request #${decision.id} not found` });
-        }
-
         if (decision.status === 'approved') {
-          if (reqPart.status === 'rejected') {
-            await transaction.rollback();
-            return res.status(400).json({ message: `Cannot approve an already rejected parts request (ID: ${decision.id})` });
+          if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+            return res.status(403).json({ message: 'غير مصرح لك باعتماُ قطع الغيار' });
           }
-
-          if (reqPart.status !== 'approved') {
-            const sparePart = await SparePart.findByPk(reqPart.part_id, {
-              transaction,
-              lock: transaction.LOCK.UPDATE
-            });
-            const availableStock = sparePart?.stock_quantity ?? 0;
-            if (availableStock < reqPart.quantity) {
-              await transaction.rollback();
-              return res.status(400).json({
-                message: `المخزون غير كافٍ للقطعة "${reqPart.partDetails?.name || decision.id}". المتوفر: ${availableStock}، المطلوب: ${reqPart.quantity}`
-              });
-            }
+          await InventoryService.approveSingleRequiredPart({
+            requiredPartId: decision.id,
+            req
+          });
+        } else if (decision.status === 'installed') {
+          await InventoryService.installSingleRequiredPart({
+            requiredPartId: decision.id,
+            req
+          });
+        } else if (decision.status === 'rejected') {
+          if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+            return res.status(403).json({ message: 'غير مصرح لك برفض قطع الغيار' });
           }
-        }
-
-        if (decision.status === 'installed') {
-          if (reqPart.status !== 'approved' && reqPart.status !== 'installed') {
-            await transaction.rollback();
-            return res.status(400).json({ message: `لا يمكن تركيب القطعة إلا بعد اعتمادها أولاً (ID: ${decision.id})` });
-          }
+          await InventoryService.rejectSingleRequiredPart({
+            requiredPartId: decision.id,
+            req
+          });
+        } else {
+          return res.status(400).json({ message: `الحالة غير صالحة: ${decision.status}` });
         }
       }
 
-      // Pass 2: Execute updates & stock adjustments
-      for (const decision of decisions) {
-        const oldPart = await RequiredPart.findByPk(decision.id, {
-          include: [{ model: SparePart, as: 'partDetails' }],
-          transaction,
-          lock: transaction.LOCK.UPDATE
-        });
-        const oldStatus = oldPart ? oldPart.status : 'pending';
-
-        await RequiredPart.update(
-          { status: decision.status },
-          { where: { id: decision.id }, transaction }
-        );
-
-        // Scenario A: Transitioning to 'approved' for the first time -> Deduct Stock
-        if (decision.status === 'approved' && oldStatus !== 'approved' && oldPart?.partDetails) {
-          const sparePart = await SparePart.findByPk(oldPart.part_id, {
-            transaction,
-            lock: transaction.LOCK.UPDATE
-          });
-          if (sparePart) {
-            const oldQty = sparePart.stock_quantity;
-            const newQty = Math.max(0, sparePart.stock_quantity - oldPart.quantity);
-            sparePart.stock_quantity = newQty;
-            await sparePart.save({ transaction });
-
-            await logAudit({
-              req,
-              action: 'PART_STOCK_ADJUSTED',
-              entityType: 'SparePart',
-              entityId: sparePart.id,
-              oldValues: { stock_quantity: oldQty },
-              newValues: { stock_quantity: newQty }
-            });
-          }
-        }
-
-        // Scenario B: Transitioning to 'rejected' from 'approved' -> Restore Previously Deducted Stock
-        if (decision.status === 'rejected' && oldStatus === 'approved' && oldPart?.partDetails) {
-          const sparePart = await SparePart.findByPk(oldPart.part_id, {
-            transaction,
-            lock: transaction.LOCK.UPDATE
-          });
-          if (sparePart) {
-            const oldQty = sparePart.stock_quantity;
-            const newQty = sparePart.stock_quantity + oldPart.quantity;
-            sparePart.stock_quantity = newQty;
-            await sparePart.save({ transaction });
-
-            await logAudit({
-              req,
-              action: 'PART_STOCK_RESTORED',
-              entityType: 'SparePart',
-              entityId: sparePart.id,
-              oldValues: { stock_quantity: oldQty },
-              newValues: { stock_quantity: newQty }
-            });
-          }
-        }
-
-        // Scenario C: Transitioning to 'installed' -> No stock change needed (stock was already deducted at 'approved')
-
-        const auditAction = decision.status === 'approved' ? 'PARTS_REQUEST_APPROVED'
-          : (decision.status === 'rejected' ? 'PARTS_REQUEST_REJECTED'
-          : (decision.status === 'installed' ? 'PARTS_REQUEST_INSTALLED' : 'PARTS_REQUEST_UPDATED'));
-
-        await logAudit({
-          req,
-          action: auditAction,
-          entityType: 'RequiredPart',
-          entityId: decision.id,
-          oldValues: { status: oldStatus },
-          newValues: { status: decision.status }
-        });
-      }
-
-      await transaction.commit();
-      res.json({ message: 'تم تحديث حالة طلب قطعة الغيار بنجاح' });
+      res.json({ message: 'تم تحديث حالة طلبات قطع الغيار بنجاح' });
     } catch (error) {
-      await transaction.rollback();
-      console.error('Error updating parts approval:', error);
-      res.status(500).json({ message: 'Server error' });
+      const status = error.statusCode || 500;
+      const responsePayload = { message: error.message };
+      if (error.available !== undefined) responsePayload.available = error.available;
+      if (error.requested !== undefined) responsePayload.requested = error.requested;
+      res.status(status).json(responsePayload);
     }
   }
 };

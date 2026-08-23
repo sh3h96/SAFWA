@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const escapeHtml = require('../utils/htmlEscape');
-const { User, Appointment, Vehicle } = require('../models');
+const { User, Appointment, Vehicle, WalkInCustomer } = require('../models');
 const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
 const { recordLoginFailure, resetLoginFailure } = require('../middleware/loginRateLimiter');
@@ -555,6 +555,21 @@ module.exports = {
         }
       }
 
+      // Check phone uniqueness if changing phone
+      if (phone !== undefined && phone !== user.phone) {
+        const trimmedPhone = phone ? phone.trim() : null;
+        if (trimmedPhone) {
+          const existingUser = await User.findOne({ where: { phone: trimmedPhone, id: { [Op.ne]: user.id } } });
+          if (existingUser) {
+            return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل من قبل حساب آخر' });
+          }
+          const existingWalkIn = await WalkInCustomer.findOne({ where: { phone: trimmedPhone } });
+          if (existingWalkIn) {
+            return res.status(400).json({ message: 'رقم الجوال مسجل حالياً لعميل حضوري. يرجى مراجعة إدارة العملاء.' });
+          }
+        }
+      }
+
       const oldValues = { name: user.name, email: user.email, phone: user.phone, role: user.role };
 
       const updateData = {};
@@ -677,7 +692,22 @@ module.exports = {
       const oldValues = { name: user.name, phone: user.phone };
       const updateData = {};
       if (name !== undefined && name.trim().length > 0) updateData.name = name.trim();
-      if (phone !== undefined) updateData.phone = phone.trim();
+      if (phone !== undefined) {
+        const trimmedPhone = phone.trim();
+        if (trimmedPhone !== user.phone) {
+          if (trimmedPhone.length > 0) {
+            const existingUser = await User.findOne({ where: { phone: trimmedPhone, id: { [Op.ne]: user.id } } });
+            if (existingUser) {
+              return res.status(400).json({ message: 'رقم الجوال مستخدم بالفعل من قبل حساب آخر' });
+            }
+            const existingWalkIn = await WalkInCustomer.findOne({ where: { phone: trimmedPhone } });
+            if (existingWalkIn) {
+              return res.status(400).json({ message: 'رقم الجوال مسجل حالياً لعميل حضوري. يرجى التواصل مع الدعم الفني.' });
+            }
+          }
+          updateData.phone = trimmedPhone;
+        }
+      }
 
       await user.update(updateData);
 

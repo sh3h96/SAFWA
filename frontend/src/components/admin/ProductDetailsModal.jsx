@@ -1,6 +1,9 @@
 import { formatDate, formatCurrency } from '../../utils/formatters';
+import ImageUploader from './ImageUploader';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ProductDetailsModal({ product, onClose }) {
+  const queryClient = useQueryClient();
   if (!product) return null;
 
   const stock = product.stock !== undefined ? product.stock : (product.stock_quantity !== undefined ? product.stock_quantity : 0);
@@ -10,12 +13,15 @@ export default function ProductDetailsModal({ product, onClose }) {
   const price = product.purchasePrice !== undefined ? product.purchasePrice : (product.price ? parseFloat(product.price) : 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
-
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+    >
       {/* Modal Container */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300 custom-scrollbar border border-slate-100">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300 custom-scrollbar border border-slate-100"
+      >
 
         {/* Header */}
         <div className="px-8 py-8 bg-slate-50/70 border-b border-slate-100 flex flex-col items-center text-center relative">
@@ -26,22 +32,9 @@ export default function ProductDetailsModal({ product, onClose }) {
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
 
-          {/* Part Media / Branded Fallback */}
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-20 h-20 rounded-2xl object-cover border border-slate-200 shadow-sm mb-3"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center font-bold mb-3 bg-teal-50 text-teal-700 border border-teal-100 shadow-sm">
-              <span className="material-symbols-outlined text-3xl">inventory_2</span>
-            </div>
-          )}
-
           <h2 className="text-xl font-bold text-slate-800 tracking-tight">{product.name}</h2>
 
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 mb-4">
             <span className="px-3 py-1 text-xs font-mono font-bold rounded-lg bg-slate-900 text-white shadow-inner">
               {product.sku || product.part_number || `P${product.id}`}
             </span>
@@ -49,6 +42,21 @@ export default function ProductDetailsModal({ product, onClose }) {
               {product.category || 'قطع غيار'}
             </span>
           </div>
+
+          <ImageUploader
+            entityType="spare-part"
+            entityId={product.id}
+            currentImageUrl={product.image_url || product.image || product.imageUrl}
+            onImageUpdated={() => {
+              queryClient.invalidateQueries(['inventory']);
+              queryClient.invalidateQueries(['adminRequiredPartsRequests']);
+            }}
+            onImageDeleted={() => {
+              queryClient.invalidateQueries(['inventory']);
+              queryClient.invalidateQueries(['adminRequiredPartsRequests']);
+            }}
+            label="صورة قطعة الغيار"
+          />
         </div>
 
         {/* Details Content */}

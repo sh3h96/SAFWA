@@ -6,6 +6,7 @@ module.exports = (sequelize) => {
     static associate(models) {
       SparePart.hasMany(models.RequiredPart, { foreignKey: 'part_id', as: 'requests' });
       SparePart.hasMany(models.InvoiceItem, { foreignKey: 'part_id', as: 'invoiceItems' });
+      SparePart.hasMany(models.NewPartRequest, { foreignKey: 'created_spare_part_id', as: 'originatingRequests' });
     }
   }
 
@@ -36,6 +37,10 @@ module.exports = (sequelize) => {
         "defaultValue": 5
     },
     brand: {
+        "type": DataTypes.STRING,
+        "allowNull": true
+    },
+    image_url: {
         "type": DataTypes.STRING,
         "allowNull": true
     }

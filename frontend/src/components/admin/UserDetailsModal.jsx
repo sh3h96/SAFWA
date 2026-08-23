@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usersAPI } from '../../services/api';
 import { formatDate } from '../../utils/formatters';
 import VehicleDetailsModal from './VehicleDetailsModal';
+import ImageUploader from './ImageUploader';
 
 export default function UserDetailsModal({ user: directUser, userId, onClose }) {
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const targetId = userId || directUser?.id;
+  const queryClient = useQueryClient();
 
-  const { data: fetchedUser, isLoading, isError } = useQuery({
+  const { data: fetchedUser, isLoading, isError, refetch } = useQuery({
     queryKey: ['userDetails', targetId],
     queryFn: () => usersAPI.getById(targetId),
     enabled: !!targetId
@@ -55,15 +57,15 @@ export default function UserDetailsModal({ user: directUser, userId, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+    >
       {/* Modal Container */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300"
+      >
 
         {/* Header Section */}
         <div className="shrink-0 px-8 py-8 bg-slate-50/50 border-b border-slate-100 flex flex-col items-center text-center relative">
@@ -74,20 +76,12 @@ export default function UserDetailsModal({ user: directUser, userId, onClose }) 
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
 
-          <div className="w-20 h-20 rounded-2xl bg-teal-50 text-teal-800 border border-teal-100/60 flex items-center justify-center font-bold text-3xl mb-3 shadow-sm">
-            {isLoading ? (
-              <span className="material-symbols-outlined animate-spin text-2xl text-teal-600">sync</span>
-            ) : (
-              user?.name?.charAt(0) || 'م'
-            )}
-          </div>
-
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight mb-1">
             {isLoading ? 'جاري تحميل بيانات الملف...' : (user?.name || 'غير معروف')}
           </h2>
 
           {!isLoading && user && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mb-4">
               <span className={`px-3 py-1 text-xs font-bold rounded-full ${getRoleBadgeStyle(user?.role)}`}>
                 {getRoleLabel(user?.role)}
               </span>
@@ -97,6 +91,23 @@ export default function UserDetailsModal({ user: directUser, userId, onClose }) 
                 {user?.status === 'active' || user?.status === 'نشط' ? 'حساب نشط' : 'موقوف'}
               </span>
             </div>
+          )}
+
+          {!isLoading && user && (
+            <ImageUploader
+              entityType="user"
+              entityId={user.id}
+              currentImageUrl={user.avatar_url || user.avatarUrl}
+              onImageUpdated={() => {
+                queryClient.invalidateQueries(['userDetails', targetId]);
+                refetch();
+              }}
+              onImageDeleted={() => {
+                queryClient.invalidateQueries(['userDetails', targetId]);
+                refetch();
+              }}
+              label="الصورة الشخصية"
+            />
           )}
         </div>
 

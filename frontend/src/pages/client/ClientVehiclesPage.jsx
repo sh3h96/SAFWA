@@ -23,6 +23,9 @@ export default function ClientVehiclesPage() {
   const [year, setYear] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [vin, setVin] = useState('');
+  const [color, setColor] = useState('');
+  const [transmission, setTransmission] = useState('');
+  const [fuelType, setFuelType] = useState('');
 
   const createMutation = useMutation({
     mutationFn: clientAPI.createVehicle,
@@ -51,11 +54,14 @@ export default function ClientVehiclesPage() {
   const openModal = (vehicle = null) => {
     if (vehicle) {
       setEditingVehicle(vehicle);
-      setMake(vehicle.make);
-      setModel(vehicle.model);
-      setYear(vehicle.year);
-      setPlateNumber(vehicle.plateNumber);
+      setMake(vehicle.make || '');
+      setModel(vehicle.model || '');
+      setYear(vehicle.year || '');
+      setPlateNumber(vehicle.plateNumber || vehicle.license_plate || '');
       setVin(vehicle.vin || '');
+      setColor(vehicle.color || '');
+      setTransmission(vehicle.transmission || '');
+      setFuelType(vehicle.fuel_type || vehicle.fuelType || '');
     } else {
       setEditingVehicle(null);
       setMake('');
@@ -63,6 +69,9 @@ export default function ClientVehiclesPage() {
       setYear('');
       setPlateNumber('');
       setVin('');
+      setColor('');
+      setTransmission('');
+      setFuelType('');
     }
     setIsModalOpen(true);
   };
@@ -74,7 +83,16 @@ export default function ClientVehiclesPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { make, model, year, license_plate: plateNumber, vin };
+    const data = {
+      make,
+      model,
+      year: year ? parseInt(year, 10) : null,
+      license_plate: plateNumber,
+      vin,
+      color,
+      transmission,
+      fuel_type: fuelType
+    };
     
     if (editingVehicle) {
       updateMutation.mutate({ id: editingVehicle.id, data });
@@ -235,15 +253,55 @@ export default function ClientVehiclesPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">رقم الهيكل (VIN)</label>
-                <input
-                  value={vin}
-                  onChange={(e) => setVin(e.target.value)}
-                  placeholder="أدخل الـ 17 حرف/رقم"
-                  maxLength={17}
-                  className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all text-left uppercase font-mono"
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">رقم الهيكل (VIN)</label>
+                  <input
+                    value={vin}
+                    onChange={(e) => setVin(e.target.value)}
+                    placeholder="أدخل الـ 17 حرف/رقم"
+                    maxLength={17}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all text-left uppercase font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">اللون</label>
+                  <input
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    placeholder="أسود، أبيض..."
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">ناقل الحركة</label>
+                  <select
+                    value={transmission}
+                    onChange={(e) => setTransmission(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  >
+                    <option value="">اختر ناقل الحركة</option>
+                    <option value="أوتوماتيك">أوتوماتيك</option>
+                    <option value="يدوي">يدوي (عادي)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">نوع الوقود</label>
+                  <select
+                    value={fuelType}
+                    onChange={(e) => setFuelType(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  >
+                    <option value="">اختر نوع الوقود</option>
+                    <option value="بنزين">بنزين</option>
+                    <option value="ديزل">ديزل</option>
+                    <option value="هجين (Hybrid)">هجين (Hybrid)</option>
+                    <option value="كهربائي">كهربائي</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-4">

@@ -1,46 +1,38 @@
-const { Appointment, User, Vehicle } = require('../models');
+const { Appointment, User, Vehicle, WalkInVisit, WalkInCustomer } = require('../models');
 const { Op } = require('sequelize');
 const { logAudit } = require('../utils/auditLogger');
+const { 
+  VALID_STATUSES, 
+  ALLOWED_TRANSITIONS, 
+  validateAndAssertTransition 
+} = require('../services/appointmentStateMachine');
+const { findActiveDuplicateAppointment } = require('../services/duplicateAppointmentService');
 
-const VALID_STATUSES = [
-  'pending', 
-  'awaiting_assignment', 
-  'under_inspection', 
-  'in_progress', 
-  'waiting_parts', 
-  'ready_for_pickup', 
-  'completed', 
-  'cancelled'
-];
+const helperGetDayName = (d) => {
+  const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  return days[d.getDay()];
+};
 
-const ALLOWED_TRANSITIONS = {
-  pending: ['awaiting_assignment', 'under_inspection', 'in_progress', 'cancelled'],
-  awaiting_assignment: ['under_inspection', 'in_progress', 'cancelled'],
-  under_inspection: ['in_progress', 'waiting_parts', 'ready_for_pickup', 'completed', 'cancelled'],
-  in_progress: ['waiting_parts', 'ready_for_pickup', 'completed', 'cancelled'],
-  waiting_parts: ['under_inspection', 'in_progress', 'ready_for_pickup', 'completed', 'cancelled'],
-  ready_for_pickup: ['completed', 'in_progress', 'cancelled'],
-  completed: [],
-  cancelled: []
+const helperGetMonthName = (d) => {
+  const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  return months[d.getMonth()];
 };
 
 module.exports = {
   // GET /api/appointments/slots
   getAvailableSlots: async (req, res) => {
     try {
-      // Generate next 5 days dynamically
       const availableDates = [];
       for (let i = 0; i < 5; i++) {
         const d = new Date();
         d.setDate(d.getDate() + i);
         availableDates.push({
-          dayName: getDayName(d),
+          dayName: helperGetDayName(d),
           dayNumber: d.getDate().toString(),
-          month: getMonthName(d)
+          month: helperGetMonthName(d)
         });
       }
 
-      // Fetch customer vehicles if user is authenticated, else []
       let formattedVehicles = [];
       if (req.user && req.user.id) {
         const vehicles = await Vehicle.findAll({ where: { client_id: req.user.id } });
@@ -78,6 +70,8 @@ module.exports = {
 
   // POST /api/appointments
   createAppointment: async (req, res) => {
+    const { sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
     try {
       const { vehicle_id, appointment_date, scheduled_date, description, problem_description } = req.body;
       const targetVehicleId = vehicle_id;
@@ -85,6 +79,7 @@ module.exports = {
       const targetDesc = description || problem_description;
       
       if (!targetVehicleId) {
+        await transaction.rollback();
         return res.status(400).json({ message: 'vehicle_id is required' });
       }
 
@@ -93,6 +88,7 @@ module.exports = {
         const privilegedFields = ['status', 'mechanic_id', 'mechanic_ids', 'financial_status', 'payment_status'];
         const hasPrivileged = privilegedFields.some(f => req.body[f] !== undefined);
         if (hasPrivileged) {
+          await transaction.rollback();
           return res.status(400).json({ message: 'Clients cannot set privileged appointment fields' });
         }
       }
@@ -101,19 +97,44 @@ module.exports = {
       let vehicle;
       if (req.user && req.user.role === 'client') {
         vehicle = await Vehicle.findOne({
-          where: { id: targetVehicleId, client_id: req.user.id }
+          where: { id: targetVehicleId, client_id: req.user.id },
+          transaction
         });
         if (!vehicle) {
+          await transaction.rollback();
           return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
         }
       } else {
-        vehicle = await Vehicle.findByPk(targetVehicleId);
+        vehicle = await Vehicle.findByPk(targetVehicleId, { transaction });
         if (!vehicle) {
+          await transaction.rollback();
           return res.status(404).json({ message: 'Vehicle not found' });
         }
       }
 
       const clientId = (req.user && req.user.role === 'client') ? req.user.id : (vehicle.client_id || req.user.id);
+
+      // INTELLIGENT DUPLICATE PREVENTION CHECK (Rule D & Concurrency Protection)
+      const existingDuplicate = await findActiveDuplicateAppointment({
+        clientId,
+        vehicleId: targetVehicleId,
+        problemDescription: targetDesc || 'صيانة عامة',
+        transaction
+      });
+
+      if (existingDuplicate) {
+        await transaction.rollback();
+        return res.status(409).json({
+          message: 'يوجد بالفعل موعد نشط مطابق لهذه السيارة ونفس طلب الصيانة.',
+          isDuplicate: true,
+          duplicateAppointment: {
+            existingAppointmentId: existingDuplicate.id,
+            existingAppointmentStatus: existingDuplicate.status,
+            scheduledDate: existingDuplicate.scheduled_date,
+            problemDescription: existingDuplicate.problem_description
+          }
+        });
+      }
 
       const newAppointment = await Appointment.create({
         client_id: clientId,
@@ -121,7 +142,9 @@ module.exports = {
         scheduled_date: targetDate || new Date(),
         problem_description: targetDesc || 'صيانة عامة',
         status: 'pending'
-      });
+      }, { transaction });
+
+      await transaction.commit();
 
       await logAudit({
         req,
@@ -139,6 +162,9 @@ module.exports = {
       
       res.status(201).json({ message: 'Appointment created successfully', appointment: newAppointment });
     } catch (error) {
+      if (transaction && !transaction.finished) {
+        try { await transaction.rollback(); } catch (e) {}
+      }
       console.error('Error creating appointment:', error);
       res.status(500).json({ message: 'Server error' });
     }
@@ -192,6 +218,7 @@ module.exports = {
           plateNumber: app.vehicle?.license_plate || '',
           description: app.problem_description,
           status: app.status,
+          cancellation_reason: app.cancellation_reason,
           hasReview: !!app.review,
           review: app.review ? { id: app.review.id, rating: app.review.rating, comment: app.review.comment } : null,
           requestedParts
@@ -210,7 +237,6 @@ module.exports = {
     try {
       const { TechnicalReport, RequiredPart, SparePart, AppointmentMechanic } = require('../models');
       
-      // Fetch appointment IDs assigned to mechanic via join table
       const assignedMechRecords = await AppointmentMechanic.findAll({
         where: { mechanic_id: req.user.id },
         attributes: ['appointment_id']
@@ -264,6 +290,7 @@ module.exports = {
           plate: app.vehicle?.license_plate || '',
           clientIssue: app.problem_description,
           status: app.status,
+          cancellation_reason: app.cancellation_reason,
           hasReport: !!app.report,
           requestedParts,
           timeAssigned: app.scheduled_date || app.created_at,
@@ -289,7 +316,10 @@ module.exports = {
           [Op.or]: [
             { '$customer.name$': { [Op.like]: `%${search}%` } },
             { '$customer.phone$': { [Op.like]: `%${search}%` } },
-            { '$vehicle.license_plate$': { [Op.like]: `%${search}%` } }
+            { '$vehicle.license_plate$': { [Op.like]: `%${search}%` } },
+            { '$walkInVisit.vehicle_license_plate$': { [Op.like]: `%${search}%` } },
+            { '$walkInVisit.customer.name$': { [Op.like]: `%${search}%` } },
+            { '$walkInVisit.customer.phone$': { [Op.like]: `%${search}%` } }
           ]
         };
       }
@@ -297,30 +327,98 @@ module.exports = {
       const appointments = await Appointment.findAll({
         where: whereClause,
         include: [
-          { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+          { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate', 'image_url'] },
           { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
           { model: User, as: 'mechanic', attributes: ['id', 'name'] },
-          { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } }
+          { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } },
+          {
+            model: WalkInVisit,
+            as: 'walkInVisit',
+            include: [{ model: WalkInCustomer, as: 'customer' }]
+          }
         ],
-        order: [['scheduled_date', 'ASC']]
+        order: [['scheduled_date', 'ASC'], ['created_at', 'DESC']]
       });
 
-      const formatted = appointments.map(app => ({
-        id: app.id.toString(),
-        client_id: app.client_id,
-        vehicle_id: app.vehicle_id,
-        clientName: app.customer?.name || 'غير معروف',
-        clientPhone: app.customer?.phone || '',
-        car: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''} - ${app.vehicle?.license_plate || ''}`.trim(),
-        vehicleMake: app.vehicle?.make || '',
-        vehicleModel: app.vehicle?.model || '',
-        vehiclePlate: app.vehicle?.license_plate || '',
-        issue: app.problem_description,
-        time: app.scheduled_date || app.created_at,
-        date: app.scheduled_date || app.created_at,
-        status: app.status,
-        mechanic_id: app.mechanic_id,
-        mechanics: app.mechanics && app.mechanics.length > 0 ? app.mechanics : (app.mechanic ? [app.mechanic] : [])
+      const formatted = await Promise.all(appointments.map(async (app) => {
+        const walkIn = app.walkInVisit;
+        const walkInCust = walkIn ? walkIn.customer : null;
+
+        let resolvedVehicleId = app.vehicle_id ? Number(app.vehicle_id) : null;
+        let vehicleMake = app.vehicle?.make || '';
+        let vehicleModel = app.vehicle?.model || '';
+        let vehiclePlate = app.vehicle?.license_plate || '';
+
+        if (!resolvedVehicleId && walkIn) {
+          vehicleMake = walkIn.vehicle_make || '';
+          vehicleModel = walkIn.vehicle_model || '';
+          vehiclePlate = walkIn.vehicle_license_plate || '';
+          
+          try {
+            const vehicleMatchingService = require('../services/vehicleMatchingService');
+            const normPlate = vehiclePlate ? vehicleMatchingService.normalizePlate(vehiclePlate) : null;
+            const normVin = walkIn.vehicle_vin ? vehicleMatchingService.normalizeVin(walkIn.vehicle_vin) : null;
+            
+            let existingV = await vehicleMatchingService.findPotentialVehicleMatch({
+              vin: normVin,
+              license_plate: normPlate,
+              make: vehicleMake,
+              model: vehicleModel,
+              year: walkIn.vehicle_year
+            });
+            
+            let physVehicle = existingV.hasMatch ? existingV.vehicle : null;
+            if (!physVehicle && (vehicleMake || vehicleModel || normPlate)) {
+              const finalPlate = normPlate || `WALKIN-PLT-${Date.now()}`;
+              physVehicle = await Vehicle.create({
+                client_id: app.client_id || null,
+                make: vehicleMake || 'غير محدد',
+                model: vehicleModel || 'غير محدد',
+                year: walkIn.vehicle_year || null,
+                license_plate: finalPlate,
+                vin: normVin || null,
+                color: walkIn.vehicle_color || null,
+                transmission: walkIn.vehicle_transmission || null,
+                fuel_type: walkIn.vehicle_fuel_type || null
+              });
+            }
+            if (physVehicle) {
+              resolvedVehicleId = Number(physVehicle.id);
+              app.vehicle_id = physVehicle.id;
+              await app.update({ vehicle_id: physVehicle.id });
+            }
+          } catch (e) {
+            console.error('Error resolving walkin vehicle for appt:', e);
+          }
+        }
+
+        const clientName = app.customer?.name || (walkInCust ? walkInCust.name : (walkIn ? 'عميل مباشر' : 'غير معروف'));
+        const clientPhone = app.customer?.phone || (walkInCust ? walkInCust.phone : '');
+        const carStr = `${vehicleMake} ${vehicleModel} ${vehiclePlate ? '- ' + vehiclePlate : ''}`.trim() || 'غير محددة';
+
+        return {
+          id: app.id.toString(),
+          client_id: app.client_id,
+          vehicle_id: resolvedVehicleId,
+          walk_in_visit_id: walkIn ? walkIn.id : null,
+          walk_in_customer_id: walkInCust ? walkInCust.id : null,
+          is_walk_in: !app.client_id || !!walkIn,
+          clientName,
+          clientPhone,
+          car: carStr,
+          vehicleMake,
+          vehicleModel,
+          vehiclePlate,
+          vehicle_image: app.vehicle?.image_url || null,
+          vehicle_url: app.vehicle?.image_url || null,
+          issue: app.problem_description || (walkIn ? walkIn.problem_description : ''),
+          time: app.scheduled_date || app.created_at,
+          date: app.scheduled_date || app.created_at,
+          status: app.status,
+          cancellation_reason: app.cancellation_reason,
+          mechanic_id: app.mechanic_id,
+          mechanics: app.mechanics && app.mechanics.length > 0 ? app.mechanics : (app.mechanic ? [app.mechanic] : [])
+        };
       }));
 
       res.json(formatted);
@@ -346,7 +444,6 @@ module.exports = {
         await transaction.rollback();
         return res.status(403).json({ message: 'Access forbidden: clients cannot update appointments via this endpoint' });
       }
-
 
       // Check if current user is assigned to this appointment
       let isAssignedMechanic = false;
@@ -377,28 +474,42 @@ module.exports = {
 
       const oldStatus = appointment.status;
       const oldMechanicId = appointment.mechanic_id;
-
-      const { status, mechanic_id, mechanic_ids } = req.body;
+      const { status, mechanic_id, mechanic_ids, cancellation_reason } = req.body;
       
       if (status !== undefined && status !== oldStatus) {
-        if (!VALID_STATUSES.includes(status)) {
-          await transaction.rollback();
-          return res.status(400).json({ message: `Invalid status: ${status}. Valid statuses: ${VALID_STATUSES.join(', ')}` });
+        if (status === 'completed') {
+          if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+            await transaction.rollback();
+            return res.status(403).json({ message: 'ليس لديك صلاحية لتسليم السيارة.' });
+          }
         }
 
-        if (oldStatus) {
-          if (oldStatus === 'completed' || oldStatus === 'cancelled') {
-            await transaction.rollback();
-            return res.status(400).json({ message: `Cannot change status of an appointment that is already ${oldStatus}` });
-          }
-          const allowedNext = ALLOWED_TRANSITIONS[oldStatus] || [];
-          if (!allowedNext.includes(status)) {
-            await transaction.rollback();
-            return res.status(400).json({ message: `Invalid status transition from '${oldStatus}' to '${status}'` });
-          }
+        // ENFORCE CENTRALIZED STATE MACHINE TRANSITION & TRANSITION GUARDS
+        try {
+          await validateAndAssertTransition({
+            appointment,
+            newStatus: status,
+            reqBody: req.body,
+            transaction
+          });
+        } catch (guardErr) {
+          await transaction.rollback();
+          return res.status(guardErr.statusCode || 400).json({ message: guardErr.message });
         }
 
         appointment.status = status;
+        if (status === 'completed') {
+          appointment.delivered_at = new Date();
+        }
+
+        if (status === 'cancelled') {
+          const reason = cancellation_reason || req.body.reason;
+          if (reason) {
+            appointment.cancellation_reason = reason;
+          }
+        }
+      } else if (cancellation_reason && appointment.status === 'cancelled') {
+        appointment.cancellation_reason = cancellation_reason;
       }
 
       let mechanicAssignmentChanged = false;
@@ -406,10 +517,8 @@ module.exports = {
 
       // Handle Multi-Mechanic assignment array
       if (mechanic_ids !== undefined && Array.isArray(mechanic_ids)) {
-        // Deduplicate mechanic IDs
         const uniqueMechanicIds = Array.from(new Set(mechanic_ids.map(id => Number(id))));
 
-        // Validate all mechanic IDs
         if (uniqueMechanicIds.length > 0) {
           const validMechanics = await User.findAll({
             where: { id: uniqueMechanicIds, role: 'mechanic', status: 'active' },
@@ -421,7 +530,6 @@ module.exports = {
           }
         }
 
-        // Clear existing mechanics and bulk insert new assignments
         await AppointmentMechanic.destroy({ where: { appointment_id: appointment.id }, transaction });
         if (uniqueMechanicIds.length > 0) {
           const amRecords = uniqueMechanicIds.map(mId => ({
@@ -430,14 +538,13 @@ module.exports = {
             assigned_at: new Date()
           }));
           await AppointmentMechanic.bulkCreate(amRecords, { transaction });
-          appointment.mechanic_id = uniqueMechanicIds[0]; // Legacy fallback sync
+          appointment.mechanic_id = uniqueMechanicIds[0];
           assignedMechanicIds = uniqueMechanicIds;
         } else {
           appointment.mechanic_id = null;
         }
         mechanicAssignmentChanged = true;
       } else if (mechanic_id !== undefined) {
-        // Single mechanic update legacy handling
         if (mechanic_id !== null) {
           const mechanic = await User.findOne({ where: { id: mechanic_id, role: 'mechanic', status: 'active' }, transaction });
           if (!mechanic) {
@@ -469,7 +576,7 @@ module.exports = {
           entityType: 'Appointment',
           entityId: appointment.id,
           oldValues: { status: oldStatus },
-          newValues: { status: appointment.status }
+          newValues: { status: appointment.status, cancellation_reason: appointment.cancellation_reason }
         });
       }
 
@@ -484,16 +591,6 @@ module.exports = {
         });
       }
 
-      await logAudit({
-        req,
-        action: 'APPOINTMENT_UPDATED',
-        entityType: 'Appointment',
-        entityId: appointment.id,
-        oldValues: { status: oldStatus, mechanic_id: oldMechanicId },
-        newValues: { status: appointment.status, mechanic_id: appointment.mechanic_id }
-      });
-      
-      // Fetch updated appointment with mechanics
       const updatedAppointment = await Appointment.findByPk(appointment.id, {
         include: [
           { model: User, as: 'mechanics', attributes: ['id', 'name'], through: { attributes: [] } }
@@ -518,6 +615,11 @@ module.exports = {
           { model: User, as: 'customer', attributes: ['name', 'phone'] },
           { model: User, as: 'mechanic', attributes: ['id', 'name'] },
           { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone'], through: { attributes: [] } },
+          {
+            model: WalkInVisit,
+            as: 'walkInVisit',
+            include: [{ model: WalkInCustomer, as: 'customer' }]
+          },
           { 
             model: TechnicalReport, 
             as: 'report',
@@ -538,14 +640,12 @@ module.exports = {
         return res.status(404).json({ message: 'Appointment not found' });
       }
 
-      // Ownership Verification: Client can only view their own appointment
       if (req.user && req.user.role === 'client') {
         if (appointment.client_id !== req.user.id) {
           return res.status(404).json({ message: 'Appointment not found' });
         }
       }
 
-      // Assignment Verification: Mechanic can only view appointments assigned to them
       if (req.user && req.user.role === 'mechanic') {
         let isAssigned = appointment.mechanic_id === req.user.id;
         if (!isAssigned) {
@@ -573,20 +673,41 @@ module.exports = {
         }));
       }
 
+      const walkIn = appointment.walkInVisit;
+      const walkInCust = walkIn ? walkIn.customer : null;
+
+      const clientName = appointment.customer?.name || (walkInCust ? walkInCust.name : (walkIn ? 'عميل مباشر' : 'غير معروف'));
+      const clientPhone = appointment.customer?.phone || (walkInCust ? walkInCust.phone : '');
+
+      let vehicleMake = appointment.vehicle?.make || '';
+      let vehicleModel = appointment.vehicle?.model || '';
+      let vehiclePlate = appointment.vehicle?.license_plate || '';
+
+      if (!appointment.vehicle && walkIn) {
+        vehicleMake = walkIn.vehicle_make || '';
+        vehicleModel = walkIn.vehicle_model || '';
+        vehiclePlate = walkIn.vehicle_license_plate || '';
+      }
+
+      const carStr = `${vehicleMake} ${vehicleModel} ${vehiclePlate ? '- ' + vehiclePlate : ''}`.trim() || 'غير محددة';
+
       const formatted = {
         id: appointment.id,
         client_id: appointment.client_id,
         vehicle_id: appointment.vehicle_id,
-        clientName: appointment.customer?.name || 'غير معروف',
-        clientPhone: appointment.customer?.phone || '',
-        car: `${appointment.vehicle?.make || ''} ${appointment.vehicle?.model || ''} - ${appointment.vehicle?.license_plate || ''}`.trim(),
-        vehicleMake: appointment.vehicle?.make || '',
-        vehicleModel: appointment.vehicle?.model || '',
-        vehiclePlate: appointment.vehicle?.license_plate || '',
-        issue: appointment.problem_description,
+        walk_in_visit_id: walkIn ? walkIn.id : null,
+        is_walk_in: !appointment.client_id || !!walkIn,
+        clientName,
+        clientPhone,
+        car: carStr,
+        vehicleMake,
+        vehicleModel,
+        vehiclePlate,
+        issue: appointment.problem_description || (walkIn ? walkIn.problem_description : ''),
         time: appointment.scheduled_date || appointment.created_at,
         date: appointment.scheduled_date || appointment.created_at,
         status: appointment.status,
+        cancellation_reason: appointment.cancellation_reason,
         mechanicName: appointment.mechanic?.name || (appointment.mechanics && appointment.mechanics[0]?.name) || 'غير محدد',
         mechanics: appointment.mechanics || [],
         report: appointment.report ? {
@@ -602,6 +723,24 @@ module.exports = {
     } catch (error) {
       console.error('Error fetching appointment details:', error);
       res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // POST /api/appointments/:id/handover
+  handoverAppointment: async (req, res) => {
+    try {
+      const HandoverService = require('../services/handoverService');
+      const result = await HandoverService.performHandover({
+        appointment_id: req.params.id,
+        handover_notes: req.body.handover_notes || req.body.notes,
+        req
+      });
+      res.json(result);
+    } catch (error) {
+      if (!error.statusCode || error.statusCode >= 500) {
+        console.error('Error performing vehicle handover:', error);
+      }
+      res.status(error.statusCode || 500).json({ message: error.message });
     }
   }
 };

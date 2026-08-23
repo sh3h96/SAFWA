@@ -6,6 +6,7 @@ import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import EditUserModal from '../../components/admin/EditUserModal';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
+import EntityImage from '../../components/common/EntityImage';
 
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -182,9 +183,12 @@ export default function UsersManagementPage() {
               >
                 
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl ${getRoleColor(user.role)}`}>
-                    {user.name.charAt(0)}
-                  </div>
+                  <EntityImage
+                    src={user.avatar_url || user.avatar || user.avatarUrl || user.image_url || user.imageUrl}
+                    type="user"
+                    name={user.name}
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl ${getRoleColor(user.role)}`}
+                  />
                   
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider ${

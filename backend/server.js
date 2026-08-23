@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
@@ -10,7 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security Headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+// Serve static upload directory safely
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // CORS Configuration
 const allowedOrigins = process.env.CLIENT_URL
@@ -70,7 +76,12 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const technicalReportRoutes = require('./routes/technicalReportRoutes');
 const requiredPartRoutes = require('./routes/requiredPartRoutes');
+const newPartRequestRoutes = require('./routes/newPartRequestRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const walkInCustomerRoutes = require('./routes/walkInCustomerRoutes');
+const walkInVisitRoutes = require('./routes/walkInVisitRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 app.use('/api/auth', userRoutes); // POST /api/auth/login
 app.use('/api/users', userRoutes);
@@ -84,7 +95,12 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', technicalReportRoutes);
 app.use('/api/technical-reports', technicalReportRoutes);
 app.use('/api/required-parts', requiredPartRoutes);
+app.use('/api/new-part-requests', newPartRequestRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/walk-in-customers', walkInCustomerRoutes);
+app.use('/api/walk-in-visits', walkInVisitRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.get('/', (req, res) => {
   res.send('SAFWA Backend API is running...');

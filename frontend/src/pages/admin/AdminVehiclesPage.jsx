@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatters';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
 import VehicleDetailsModal from '../../components/admin/VehicleDetailsModal';
+import EntityImage from '../../components/common/EntityImage';
 
 export default function AdminVehiclesPage() {
   const queryClient = useQueryClient();
@@ -298,9 +299,12 @@ export default function AdminVehiclesPage() {
                           className="flex items-center gap-3 cursor-pointer group p-1 -m-1 rounded-xl hover:bg-teal-50/40 transition-all"
                           title="انقر لعرض تفاصيل المركبة"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-lg border border-teal-100/60 group-hover:scale-105 transition-transform">
-                            <span className="material-symbols-outlined">directions_car</span>
-                          </div>
+                          <EntityImage
+                            src={v.image_url || v.image || v.imageUrl}
+                            type="vehicle"
+                            name={`${v.make} ${v.model}`}
+                            className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold border border-teal-100/60 group-hover:scale-105 transition-transform"
+                          />
                           <div>
                             <p className="font-bold text-slate-800 group-hover:text-teal-800 flex items-center gap-1 transition-colors">
                               {v.make} {v.model}

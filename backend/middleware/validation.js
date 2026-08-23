@@ -167,13 +167,25 @@ const createVehicleValidation = [
     .trim()
     .notEmpty().withMessage('موديل السيارة مطلوب')
     .isLength({ min: 1, max: 50 }).withMessage('موديل السيارة غير صالح'),
+  body('license_plate')
+    .trim()
+    .notEmpty().withMessage('رقم اللوحة مطلوب')
+    .isLength({ min: 1, max: 20 }).withMessage('رقم اللوحة غير صالح'),
   body('year')
     .optional({ checkFalsy: true })
     .isInt({ min: 1900, max: 2100 }).withMessage('سنة الصنع غير صالحة'),
-  body('license_plate')
+  body('vin')
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ min: 1, max: 20 }).withMessage('رقم اللوحة غير صالح'),
+    .trim(),
+  body('color')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('transmission')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('fuel_type')
+    .optional({ checkFalsy: true })
+    .trim(),
   body('client_id')
     .optional({ checkFalsy: true })
     .isInt({ min: 1 }).withMessage('معرف العميل غير صالح'),
@@ -247,20 +259,71 @@ const payInvoiceValidation = [
   handleValidation
 ];
 
+const VALID_URGENCY_LEVELS = ['low', 'medium', 'high', 'critical', 'ضعيف', 'متوسط', 'عالي', 'حرج'];
+
 // 6. Technical Report Validation Rules
 const createTechnicalReportValidation = [
   body('appointment_id')
     .notEmpty().withMessage('معرف الموعد مطلوب')
     .isInt({ min: 1 }).withMessage('معرف الموعد غير صالح'),
   body().custom((value, { req }) => {
-    if (!req.body.diagnosis && !req.body.diagnostics) {
+    const rawDiag = req.body.diagnostics !== undefined ? req.body.diagnostics : req.body.diagnosis;
+    if (rawDiag === undefined || rawDiag === null || typeof rawDiag !== 'string' || !rawDiag.trim()) {
       throw new Error('التشخيص الفني مطلوب');
+    }
+    const labor = req.body.estimated_labor_cost !== undefined ? req.body.estimated_labor_cost : req.body.labor_cost;
+    if (labor !== undefined && labor !== null && labor !== '') {
+      const numLabor = Number(labor);
+      if (isNaN(numLabor) || numLabor < 0) {
+        throw new Error('التكلفة التقديرية لأجور العمل يجب أن تكون رقماً موجباً');
+      }
+    }
+    if (req.body.odometer !== undefined && req.body.odometer !== null && req.body.odometer !== '') {
+      const numOdo = Number(req.body.odometer);
+      if (isNaN(numOdo) || !Number.isInteger(numOdo) || numOdo < 0) {
+        throw new Error('قراءة العداد يجب أن تكون رقماً موجباً');
+      }
+    }
+    if (req.body.urgency_level) {
+      if (!VALID_URGENCY_LEVELS.includes(req.body.urgency_level.toString().toLowerCase())) {
+        throw new Error('مستوى الأهمية غير صالح');
+      }
     }
     return true;
   }),
-  body('labor_cost')
-    .optional()
-    .isFloat({ min: 0 }).withMessage('تكلفة العمل اليدوي يجب أن تكون رقماً موجباً'),
+  handleValidation
+];
+
+const updateTechnicalReportValidation = [
+  param('id')
+    .isInt({ min: 1 }).withMessage('معرف التقرير غير صالح'),
+  body().custom((value, { req }) => {
+    const rawDiag = req.body.diagnostics !== undefined ? req.body.diagnostics : req.body.diagnosis;
+    if (rawDiag !== undefined) {
+      if (typeof rawDiag !== 'string' || !rawDiag.trim()) {
+        throw new Error('التشخيص الفني لا يمكن أن يكون فارغاً');
+      }
+    }
+    const labor = req.body.estimated_labor_cost !== undefined ? req.body.estimated_labor_cost : req.body.labor_cost;
+    if (labor !== undefined && labor !== null && labor !== '') {
+      const numLabor = Number(labor);
+      if (isNaN(numLabor) || numLabor < 0) {
+        throw new Error('التكلفة التقديرية لأجور العمل يجب أن تكون رقماً موجباً');
+      }
+    }
+    if (req.body.odometer !== undefined && req.body.odometer !== null && req.body.odometer !== '') {
+      const numOdo = Number(req.body.odometer);
+      if (isNaN(numOdo) || !Number.isInteger(numOdo) || numOdo < 0) {
+        throw new Error('قراءة العداد يجب أن تكون رقماً موجباً');
+      }
+    }
+    if (req.body.urgency_level) {
+      if (!VALID_URGENCY_LEVELS.includes(req.body.urgency_level.toString().toLowerCase())) {
+        throw new Error('مستوى الأهمية غير صالح');
+      }
+    }
+    return true;
+  }),
   handleValidation
 ];
 
@@ -375,6 +438,45 @@ const resetPasswordValidation = [
   handleValidation
 ];
 
+// 11. Walk-in Customer & Visit Validation Rules
+const createWalkInCustomerValidation = [
+  body('name')
+    .trim()
+    .notEmpty().withMessage('اسم العميل مطلوب')
+    .isLength({ min: 2, max: 100 }).withMessage('الاسم يجب أن يكون بين حرفين و 100 حرف'),
+  body('phone')
+    .trim()
+    .notEmpty().withMessage('رقم الهاتف مطلوب')
+    .custom((val) => {
+      const cleanVal = (val || '').trim();
+      if (!YEMENI_PHONE_REGEX.test(cleanVal)) {
+        throw new Error('يرجى إدخال رقم جوال يمني صحيح مكون من 9 أرقام يبدأ بـ 7.');
+      }
+      return true;
+    }),
+  handleValidation
+];
+
+const createWalkInVisitValidation = [
+  body('vehicle_make')
+    .trim()
+    .notEmpty().withMessage('نوع السيارة مطلوب'),
+  body('vehicle_model')
+    .trim()
+    .notEmpty().withMessage('موديل السيارة مطلوب'),
+  body('problem_description')
+    .trim()
+    .notEmpty().withMessage('وصف المشكلة مطلوب'),
+  handleValidation
+];
+
+const resolveMatchValidation = [
+  body('decision')
+    .notEmpty().withMessage('قرار المطابقة مطلوب')
+    .isIn(['same_customer', 'different_customer']).withMessage('قرار المطابقة غير صالح'),
+  handleValidation
+];
+
 module.exports = {
   handleValidation,
   registerValidation,
@@ -389,6 +491,7 @@ module.exports = {
   issueInvoiceValidation,
   payInvoiceValidation,
   createTechnicalReportValidation,
+  updateTechnicalReportValidation,
   createRequiredPartValidation,
   updateApprovalValidation,
   createReviewValidation,
@@ -399,5 +502,8 @@ module.exports = {
   forgotPasswordValidation,
   resetPasswordValidation,
   updateProfileValidation,
-  changePasswordValidation
+  changePasswordValidation,
+  createWalkInCustomerValidation,
+  createWalkInVisitValidation,
+  resolveMatchValidation
 };

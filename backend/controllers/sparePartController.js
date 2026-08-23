@@ -57,7 +57,9 @@ module.exports = {
           purchasePrice: parseFloat(part.price || 0),
           salePrice: parseFloat(part.price || 0) * 1.2,
           supplier: 'مورد معتمد',
-          image: null
+          image: part.image_url || null,
+          image_url: part.image_url || null,
+          imageUrl: part.image_url || null
         };
       });
 
@@ -208,6 +210,29 @@ module.exports = {
     } catch (error) {
       console.error('Error deleting spare part:', error);
       res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // PUT /api/inventory/:id/stock or PUT /api/spare-parts/:id/stock
+  adjustStock: async (req, res) => {
+    try {
+      const InventoryService = require('../services/inventoryService');
+      const { stock_quantity } = req.body;
+      const result = await InventoryService.adjustManualStock({
+        sparePartId: req.params.id,
+        newStockQuantity: stock_quantity,
+        req
+      });
+
+      res.json({
+        message: 'تم تعديل كمية المخزون بنجاح',
+        part: result.sparePart,
+        oldStock: result.oldStock,
+        newStock: result.newStock
+      });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      res.status(status).json({ message: error.message });
     }
   }
 };

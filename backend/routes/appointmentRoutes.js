@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
+const technicalReportController = require('../controllers/technicalReportController');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const {
   createAppointmentValidation,
@@ -17,6 +18,8 @@ router.get('/my', authenticateToken, requireRole('client'), appointmentControlle
 router.get('/assigned', authenticateToken, requireRole('mechanic'), appointmentController.getAssignedTasks);
 router.get('/', authenticateToken, requireRole('admin'), appointmentController.getAllAppointments);
 router.get('/:id', authenticateToken, requireRole('admin', 'mechanic', 'client'), paramIdValidation, appointmentController.getAppointmentById);
+router.get('/:appointmentId/technical-report', authenticateToken, requireRole('admin', 'mechanic', 'client'), technicalReportController.getReportByAppointment);
 router.put('/:id', authenticateToken, requireRole('admin', 'mechanic'), updateAppointmentValidation, appointmentController.updateAppointment);
+router.post('/:id/handover', authenticateToken, requireRole('admin', 'super_admin'), paramIdValidation, appointmentController.handoverAppointment);
 
 module.exports = router;

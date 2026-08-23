@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { appointmentsAPI, usersAPI, getErrorMessage } from '../../services/api';
+import { appointmentsAPI, usersAPI, handoverAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import AppointmentDetailsModal from '../../components/admin/AppointmentDetailsModal';
 import VehicleDetailsModal from '../../components/admin/VehicleDetailsModal';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
+import WalkInCustomerHistoryModal from '../../components/admin/WalkInCustomerHistoryModal';
+import WalkInModal from '../../components/admin/WalkInModal';
 import MultiSelect from '../../components/common/MultiSelect';
+import EntityImage from '../../components/common/EntityImage';
 import { formatDate, formatTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
@@ -18,6 +21,7 @@ export default function AppointmentsControlPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -49,17 +53,30 @@ export default function AppointmentsControlPage() {
     }
   });
 
+  const handoverMutation = useMutation({
+    mutationFn: (id) => handoverAPI.performHandover(id),
+    onSuccess: (data) => {
+      toast.success(data.message || 'تمت عملية تسليم المركبة للعميل بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    }
+  });
+
   // Modal States
   const [selectedMechanics, setSelectedMechanics] = useState({});
   const [activeFilter, setActiveFilter] = useState('pending');
   const [detailsModalAppId, setDetailsModalAppId] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null); // { id, vehicleObj }
   const [selectedUser, setSelectedUser] = useState(null); // { id, userObj }
+  const [selectedWalkInCustomerId, setSelectedWalkInCustomerId] = useState(null);
 
   const columns = [
     { id: 'pending', label: 'بانتظار التأكيد', color: 'bg-slate-100 text-slate-700' },
     { id: 'awaiting_assignment', label: 'بانتظار التعيين', color: 'bg-amber-100 text-amber-800' },
     { id: 'in_progress', label: 'قيد الإصلاح', color: 'bg-teal-100 text-teal-800' },
+    { id: 'ready_for_pickup', label: 'جاهز للتسليم', color: 'bg-emerald-100 text-emerald-800' },
     { id: 'completed', label: 'مكتمل', color: 'bg-emerald-100 text-emerald-800' },
   ];
 
@@ -114,6 +131,13 @@ export default function AppointmentsControlPage() {
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">إدارة المواعيد</h1>
           <p className="text-slate-500 mt-2 text-sm">تتبع وإدارة المواعيد بحسب حالتها الحالية وإسناد الفنيين.</p>
         </div>
+        <button
+          onClick={() => setIsWalkInOpen(true)}
+          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold text-sm transition-all shadow-md shadow-teal-600/20 active:scale-95 flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-lg">person_add</span>
+          <span>تسجيل عميل مباشر (Walk-in)</span>
+        </button>
       </div>
 
       {/* Row 2: Toolbar */}
@@ -188,7 +212,25 @@ export default function AppointmentsControlPage() {
 
                     {/* Interactive Vehicle Header */}
                     <div
-                      onClick={() => setSelectedVehicle({ id: app.vehicle_id, vehicleObj: { make: carName || app.vehicleMake, model: app.vehicleModel, license_plate: carPlate || app.vehiclePlate } })}
+                      onClick={() => {
+                        const vObj = {
+                          id: app.vehicle_id || null,
+                          make: app.vehicleMake || carName || 'غير محدد',
+                          model: app.vehicleModel || '',
+                          license_plate: carPlate || app.vehiclePlate || '',
+                          year: app.vehicleYear || null,
+                          color: app.vehicleColor || null,
+                          vin: app.vehicleVin || null,
+                          fuel_type: app.vehicleFuelType || null,
+                          transmission: app.vehicleTransmission || null,
+                          image_url: app.vehicle_image || app.vehicle_url || app.vehicle?.image_url || null,
+                          isWalkInSnapshot: !app.vehicle_id,
+                          walkInCustomerName: app.clientName,
+                          walkInCustomerPhone: app.clientPhone,
+                          problem_description: app.issue
+                        };
+                        setSelectedVehicle({ id: app.vehicle_id || null, vehicleObj: vObj });
+                      }}
                       className="flex items-start justify-between group cursor-pointer p-2.5 -mx-2.5 rounded-2xl hover:bg-slate-50/80 transition-colors"
                       title="عرض تفاصيل المركبة"
                     >
@@ -199,16 +241,27 @@ export default function AppointmentsControlPage() {
                         </h4>
                         {carPlate && <p className="text-xs font-mono font-bold text-slate-500 mt-1 uppercase tracking-wider">{carPlate}</p>}
                       </div>
-                      <div className="w-10 h-10 rounded-2xl bg-teal-50/80 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100/50 shadow-sm group-hover:scale-105 transition-transform">
-                        <span className="material-symbols-outlined text-xl">directions_car</span>
-                      </div>
+                      <EntityImage
+                        src={app.vehicle_image || app.vehicleImage || app.vehicle_url || app.vehicle?.image_url}
+                        type="vehicle"
+                        name={carName}
+                        className="w-10 h-10 rounded-2xl bg-teal-50/80 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100/50 shadow-sm group-hover:scale-105 transition-transform"
+                      />
                     </div>
 
                     {/* Key Details Rows */}
                     <div className="space-y-2">
                       {/* Interactive Customer Row */}
                       <div
-                        onClick={() => setSelectedUser({ id: app.client_id, userObj: { name: app.clientName, phone: app.clientPhone, role: 'client' } })}
+                        onClick={() => {
+                          if (app.walk_in_customer_id) {
+                            setSelectedWalkInCustomerId(app.walk_in_customer_id);
+                          } else if (app.client_id) {
+                            setSelectedUser({ id: app.client_id, userObj: { name: app.clientName, phone: app.clientPhone, role: 'client' } });
+                          } else {
+                            toast.error('بيانات العميل غير متاحة حالياً');
+                          }
+                        }}
                         className="flex items-center justify-between bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-100/50 hover:bg-teal-50/50 hover:border-teal-100/50 cursor-pointer group transition-all"
                         title="عرض تفاصيل العميل"
                       >
@@ -338,6 +391,17 @@ export default function AppointmentsControlPage() {
                       </button>
                     )}
 
+                    {app.status === 'ready_for_pickup' && (
+                      <button
+                        onClick={() => handoverMutation.mutate(app.id)}
+                        disabled={handoverMutation.isPending}
+                        className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">key</span>
+                        <span>تسليم المركبة (Handover)</span>
+                      </button>
+                    )}
+
                     {app.status === 'completed' && (
                       <div className="flex justify-between items-center gap-2">
                         <button
@@ -364,6 +428,14 @@ export default function AppointmentsControlPage() {
         )}
       </div>
 
+      {/* Walk-in Registration Modal */}
+      {isWalkInOpen && (
+        <WalkInModal
+          onClose={() => setIsWalkInOpen(false)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['appointments'] })}
+        />
+      )}
+
       {/* Appointment Details Modal */}
       {detailsModalAppId && (
         <AppointmentDetailsModal
@@ -387,6 +459,15 @@ export default function AppointmentsControlPage() {
           userId={selectedUser.id}
           user={selectedUser.userObj}
           onClose={() => setSelectedUser(null)}
+        />
+      )}
+
+      {/* Walk-in Customer History Modal */}
+      {selectedWalkInCustomerId && (
+        <WalkInCustomerHistoryModal
+          customerId={selectedWalkInCustomerId}
+          isOpen={true}
+          onClose={() => setSelectedWalkInCustomerId(null)}
         />
       )}
 
