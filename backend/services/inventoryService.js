@@ -156,34 +156,32 @@ class InventoryService {
         throw err;
       }
 
-      // 2. Authorization Check (Rule INV-008 & INV-010)
-      if (req.user && req.user.role === 'client') {
+      // 2. Authorization Check (Rule INV-008 & INV-010: Mechanic assigned to task ONLY)
+      if (!req.user || req.user.role !== 'mechanic') {
         if (!externalTransaction) await transaction.rollback();
-        const err = new Error('غير مصرح لك بتغيير حالة القطعة إلى مركب');
+        const err = new Error('غير مصرح لك بتركيب قطعة الغيار. هذه صلاحية الفني المسند للمهمة فقط.');
         err.statusCode = 403;
         throw err;
       }
 
-      if (req.user && req.user.role === 'mechanic') {
-        const appt = reqPart.technicalReport?.appointment;
-        const report = reqPart.technicalReport;
-        let isAssigned = false;
-        if (appt && (appt.mechanic_id === req.user.id || report?.mechanic_id === req.user.id)) {
-          isAssigned = true;
-        } else if (appt) {
-          const amRecord = await AppointmentMechanic.findOne({
-            where: { appointment_id: appt.id, mechanic_id: req.user.id },
-            transaction
-          });
-          if (amRecord) isAssigned = true;
-        }
+      const appt = reqPart.technicalReport?.appointment;
+      const report = reqPart.technicalReport;
+      let isAssigned = false;
+      if (appt && (appt.mechanic_id === req.user.id || report?.mechanic_id === req.user.id)) {
+        isAssigned = true;
+      } else if (appt) {
+        const amRecord = await AppointmentMechanic.findOne({
+          where: { appointment_id: appt.id, mechanic_id: req.user.id },
+          transaction
+        });
+        if (amRecord) isAssigned = true;
+      }
 
-        if (!isAssigned) {
-          if (!externalTransaction) await transaction.rollback();
-          const err = new Error('غير مصرح لك بتركيب قطعة لتقرير فني مسند لفني آخر');
-          err.statusCode = 403;
-          throw err;
-        }
+      if (!isAssigned) {
+        if (!externalTransaction) await transaction.rollback();
+        const err = new Error('غير مصرح لك بتركيب قطعة لمهمة مسندة لفني آخر');
+        err.statusCode = 403;
+        throw err;
       }
 
       // 3. State Machine Check (Rule INV-003)

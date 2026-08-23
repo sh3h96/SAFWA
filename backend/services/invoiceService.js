@@ -217,7 +217,8 @@ class InvoiceService {
           as: 'appointment',
           include: [
             { model: User, as: 'customer', attributes: ['id', 'name', 'phone', 'email'] },
-            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] }
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate'] },
+            { model: TechnicalReport, as: 'report' }
           ]
         },
         {

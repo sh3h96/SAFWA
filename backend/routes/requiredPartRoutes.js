@@ -59,11 +59,11 @@ router.put(
   requiredPartController.approvePart
 );
 
-// 5. Single Install Required Part (Mechanic / Admin / Super Admin)
+// 5. Single Install Required Part (Mechanic ONLY)
 router.put(
   '/:id/installation',
   authenticateToken,
-  requireRole('mechanic', 'admin', 'super_admin'),
+  requireRole('mechanic'),
   paramIdValidation,
   requiredPartController.installPart
 );
@@ -71,7 +71,7 @@ router.put(
 router.post(
   '/:id/install',
   authenticateToken,
-  requireRole('mechanic', 'admin', 'super_admin'),
+  requireRole('mechanic'),
   paramIdValidation,
   requiredPartController.installPart
 );
@@ -79,7 +79,7 @@ router.post(
 router.put(
   '/:id/install',
   authenticateToken,
-  requireRole('mechanic', 'admin', 'super_admin'),
+  requireRole('mechanic'),
   paramIdValidation,
   requiredPartController.installPart
 );
@@ -107,6 +107,24 @@ router.put(
   requireRole('admin', 'super_admin'),
   paramIdValidation,
   requiredPartController.rejectPart
+);
+
+// 7. Update Pending Request Quantity (Mechanic ONLY)
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('mechanic'),
+  paramIdValidation,
+  requiredPartController.updateRequest
+);
+
+// 8. Cancel/Delete Pending Request (Mechanic ONLY)
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('mechanic'),
+  paramIdValidation,
+  requiredPartController.cancelRequest
 );
 
 module.exports = router;

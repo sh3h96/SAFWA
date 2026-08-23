@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import Avatar from '../common/Avatar';
 import ProfileModal from '../common/ProfileModal';
 
 // Route context mapping dictionary for clean header breadcrumb
@@ -108,12 +109,13 @@ export default function TopNavbar() {
               </span>
             </div>
 
-            {/* Simple Avatar Circle */}
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-              user?.role === 'super_admin' ? 'bg-purple-700' : 'bg-teal-700'
-            }`}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'م'}
-            </div>
+            {/* Avatar Component with image support & fallback */}
+            <Avatar 
+              src={user?.avatar_url || user?.avatar || user?.image_url} 
+              name={user?.name} 
+              initials={user?.name ? user.name.charAt(0).toUpperCase() : 'م'} 
+              size="md" 
+            />
 
             {/* Dropdown Arrow Indicator */}
             <span className={`material-symbols-outlined text-slate-400 text-sm transition-transform duration-200 ${

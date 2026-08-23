@@ -259,7 +259,7 @@ const payInvoiceValidation = [
   handleValidation
 ];
 
-const VALID_URGENCY_LEVELS = ['low', 'medium', 'high', 'critical', 'ضعيف', 'متوسط', 'عالي', 'حرج'];
+const VALID_URGENCY_LEVELS = ['low', 'medium', 'normal', 'high', 'critical', 'ضعيف', 'متوسط', 'عادي', 'عالي', 'حرج'];
 
 // 6. Technical Report Validation Rules
 const createTechnicalReportValidation = [

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { inventoryAPI, requiredPartsAPI, getErrorMessage } from '../../services/api';
+import { inventoryAPI, requiredPartsAPI, newPartRequestsAPI, getErrorMessage } from '../../services/api';
 import PageLoader from '../../components/common/PageLoader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
@@ -13,7 +13,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 export default function InventoryPage() {
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'requests'
+  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'requests' | 'new_part_requests'
 
   // Tab 1: Inventory Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +42,10 @@ export default function InventoryPage() {
 
   // Modal State for Request Rejection Confirmation
   const [requestToReject, setRequestToReject] = useState(null);
+
+  // Modal State for New Part Request Rejection
+  const [newPartToReject, setNewPartToReject] = useState(null);
+  const [newPartRejectionReason, setNewPartRejectionReason] = useState('');
 
   // Form State
   const [name, setName] = useState('');
@@ -82,6 +86,18 @@ export default function InventoryPage() {
     queryKey: ['adminRequiredPartsRequests'],
     queryFn: () => requiredPartsAPI.getAll(),
     enabled: activeTab === 'requests'
+  });
+
+  // Fetch New Non-Existing Part Requests (Admin View)
+  const {
+    data: newPartRequestsData,
+    isLoading: isLoadingNewPartRequests,
+    isFetching: isFetchingNewPartRequests,
+    isError: isNewPartRequestsError
+  } = useQuery({
+    queryKey: ['adminNewPartRequests'],
+    queryFn: () => newPartRequestsAPI.getAll(),
+    enabled: activeTab === 'new_part_requests' || activeTab === 'inventory' || activeTab === 'requests'
   });
 
   // Mutations
@@ -146,6 +162,33 @@ export default function InventoryPage() {
     onError: (err) => {
       setErrorMessage(err?.response?.data?.message || 'حدث خطأ أثناء تحديث حالة طلب القطعة.');
       setRequestToReject(null);
+    }
+  });
+
+  const approveNewPartMutation = useMutation({
+    mutationFn: (id) => newPartRequestsAPI.approve(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['adminNewPartRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setErrorMessage(null);
+      showSuccess(res.message || 'تم اعتماد قطعة الغيار بنجاح وإضافتها إلى كتالوج قطع الغيار في المخزون.');
+    },
+    onError: (err) => {
+      setErrorMessage(getErrorMessage(err, 'حدث خطأ أثناء اعتماد طلب القطعة الجديدة'));
+    }
+  });
+
+  const rejectNewPartMutation = useMutation({
+    mutationFn: ({ id, reason }) => newPartRequestsAPI.reject(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminNewPartRequests'] });
+      setNewPartToReject(null);
+      setNewPartRejectionReason('');
+      setErrorMessage(null);
+      showSuccess('تم رفض طلب قطعة الغيار الجديدة بنجاح.');
+    },
+    onError: (err) => {
+      setErrorMessage(getErrorMessage(err, 'حدث خطأ أثناء رفض طلب القطعة الجديدة'));
     }
   });
 
@@ -219,6 +262,17 @@ export default function InventoryPage() {
 
   const inventoryItems = inventoryData?.items || [];
   const requestsList = useMemo(() => Array.isArray(requestsData) ? requestsData : [], [requestsData]);
+
+  const newPartRequestsList = useMemo(() => {
+    if (newPartRequestsData?.requests && Array.isArray(newPartRequestsData.requests)) {
+      return newPartRequestsData.requests;
+    }
+    return Array.isArray(newPartRequestsData) ? newPartRequestsData : [];
+  }, [newPartRequestsData]);
+
+  const pendingNewPartRequestsCount = useMemo(() => {
+    return newPartRequestsList.filter(r => r.status === 'pending').length;
+  }, [newPartRequestsList]);
 
   // Combined Filtering Pipeline for Technician Requests (Pure Business Statuses: pending, approved, installed, rejected)
   const filteredRequests = useMemo(() => {
@@ -340,6 +394,23 @@ export default function InventoryPage() {
           {pendingRequestsCount > 0 && (
             <span className="px-2.5 py-0.5 bg-amber-500 text-white rounded-full text-xs font-bold animate-pulse">
               {pendingRequestsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('new_part_requests')}
+          className={`pb-4 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'new_part_requests'
+              ? 'border-amber-600 text-amber-800'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
+          <span>طلبات توفير قطع جديدة</span>
+          {pendingNewPartRequestsCount > 0 && (
+            <span className="px-2.5 py-0.5 bg-amber-500 text-white rounded-full text-xs font-bold animate-pulse">
+              {pendingNewPartRequestsCount}
             </span>
           )}
         </button>
@@ -737,19 +808,19 @@ export default function InventoryPage() {
                               {isPending && (
                                 <span className="px-3.5 py-1.5 bg-amber-50/90 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                  قيد الانتظار
+                                  بانتظار موافقة الإدارة
                                 </span>
                               )}
                               {isApproved && (
                                 <span className="px-3.5 py-1.5 bg-emerald-50/90 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                                   <span className="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span>
-                                  معتمد
+                                  معتمد - جاهز للتركيب
                                 </span>
                               )}
                               {isInstalled && (
                                 <span className="px-3.5 py-1.5 bg-teal-50/90 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                                   <span className="material-symbols-outlined text-[15px] text-teal-600">build</span>
-                                  تم التركيب
+                                  تم تركيب القطعة
                                 </span>
                               )}
                               {isRejected && (
@@ -830,23 +901,9 @@ export default function InventoryPage() {
                                 </>
                               )}
 
-                              {/* Option B: Approved State Actions (Mark Installed or Reject & Restore Stock) */}
+                              {/* Option B: Approved State Actions (Admin can only Reject/Undo Approval to restore stock; Admin does NOT install) */}
                               {isApproved && (
                                 <>
-                                  <button
-                                    onClick={() => handleApprovalDecision(reqItem.id, 'installed')}
-                                    disabled={approvalMutation.isPending}
-                                    className="px-4 py-2 bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-teal-700/20"
-                                    title="تأكيد تركيب القطعة بالمركبة (لا يخصم المخزون مرة ثانية)"
-                                  >
-                                    {approvalMutation.isPending && approvalMutation.variables?.[0]?.id === reqItem.id && approvalMutation.variables?.[0]?.status === 'installed' ? (
-                                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <span className="material-symbols-outlined text-[16px]">build</span>
-                                    )}
-                                    <span>تركيب القطعة</span>
-                                  </button>
-
                                   <button
                                     onClick={() => handleApprovalDecision(reqItem.id, 'rejected')}
                                     disabled={approvalMutation.isPending}
@@ -864,6 +921,181 @@ export default function InventoryPage() {
                                 <span className="text-xs text-slate-400 font-bold">-</span>
                               )}
 
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* ==================================================== */}
+      {/* TAB 3: NEW / NON-EXISTING PART PROVISIONING REQUESTS */}
+      {/* ==================================================== */}
+      {activeTab === 'new_part_requests' && (
+        <div className="space-y-6">
+          <div className="bg-amber-50/60 p-5 rounded-3xl border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                <span className="material-symbols-outlined text-xl">add_shopping_cart</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-950 text-sm">طلبات توفير قطع غيار جديدة غير مسجلة بالنظام</h3>
+                <p className="text-xs text-amber-800/80 mt-0.5">مراجعة طلبات الفنيين لقطع غيار غير متوفرة بكتالوج المخزون، واعتماد توفيرها أو رفضها.</p>
+              </div>
+            </div>
+            <div className="text-xs font-bold text-amber-900 bg-amber-100/80 px-3 py-1.5 rounded-xl border border-amber-200">
+              إجمالي الطلبات: <span className="font-mono">{newPartRequestsList.length}</span>
+            </div>
+          </div>
+
+          {isLoadingNewPartRequests ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-4">
+              <div className="w-12 h-12 border-4 border-slate-200 border-t-amber-600 rounded-full animate-spin"></div>
+              <p className="text-sm font-bold animate-pulse">جاري تحميل طلبات توفير القطع...</p>
+            </div>
+          ) : isNewPartRequestsError ? (
+            <div className="p-8 bg-rose-50 text-rose-700 rounded-3xl text-center font-bold text-sm border border-rose-200">
+              حدث خطأ أثناء تحميل طلبات القطع الجديدة من الخادم.
+            </div>
+          ) : newPartRequestsList.length === 0 ? (
+            <div className="p-8">
+              <EmptyState
+                icon="add_shopping_cart"
+                title="لا توجد طلبات توفير قطع جديدة"
+                message="عندما يقوم الفنيون بطلب قطع غيار غير موجودة بالنظام، ستظهر الطلبات هنا لمراجعتها واعتمادها."
+              />
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="py-4 px-6">القطعة والمواصفات</th>
+                      <th className="py-4 px-6">الفني طالب القطعة</th>
+                      <th className="py-4 px-6">المركبة والمالك</th>
+                      <th className="py-4 px-6 text-center">الكمية المطلوبة</th>
+                      <th className="py-4 px-6 text-center">الحالة</th>
+                      <th className="py-4 px-6 text-center">الإجراء والاعتماد</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {newPartRequestsList.map((item) => {
+                      const isPending = item.status === 'pending';
+                      const isApproved = item.status === 'approved';
+                      const isRejected = item.status === 'rejected';
+
+                      const report = item.technicalReport || item.technical_report;
+                      const appointment = report?.appointment;
+                      const vehicle = appointment?.vehicle;
+                      const customer = appointment?.customer;
+
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          {/* 1. Part & Specs */}
+                          <td className="py-4 px-6 space-y-1">
+                            <p className="font-bold text-slate-800 text-sm">{item.name}</p>
+                            {item.brand && (
+                              <span className="text-[11px] font-semibold text-slate-500 block">الماركة: {item.brand}</span>
+                            )}
+                            {item.description && (
+                              <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100 mt-1">
+                                {item.description}
+                              </p>
+                            )}
+                          </td>
+
+                          {/* 2. Technician */}
+                          <td className="py-4 px-6 text-xs">
+                            <span className="font-bold text-slate-800 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[15px] text-slate-400">engineering</span>
+                              {item.mechanic?.name || 'فني الصيانة'}
+                            </span>
+                          </td>
+
+                          {/* 3. Vehicle & Owner */}
+                          <td className="py-4 px-6 text-xs space-y-1">
+                            {vehicle ? (
+                              <p className="font-bold text-slate-800">
+                                {vehicle.make} {vehicle.model} ({vehicle.license_plate})
+                              </p>
+                            ) : (
+                              <p className="text-slate-400">غير محدد</p>
+                            )}
+                            {customer && (
+                              <p className="text-slate-400">العميل: {customer.name}</p>
+                            )}
+                          </td>
+
+                          {/* 4. Quantity */}
+                          <td className="py-4 px-6 text-center font-mono font-bold text-sm text-slate-800">
+                            {item.quantity || 1}
+                          </td>
+
+                          {/* 5. Status */}
+                          <td className="py-4 px-6 text-center">
+                            {isPending && (
+                              <span className="px-3.5 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                بانتظار الاعتماد والتوفير
+                              </span>
+                            )}
+                            {isApproved && (
+                              <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span>
+                                تم الاعتماد والتوفير
+                              </span>
+                            )}
+                            {isRejected && (
+                              <span className="px-3.5 py-1.5 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-xs font-bold inline-flex items-center gap-1.5" title={item.rejection_reason}>
+                                <span className="material-symbols-outlined text-[15px] text-rose-600">cancel</span>
+                                مرفوض
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 6. Actions */}
+                          <td className="py-4 px-6 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isPending && (
+                                <>
+                                  <button
+                                    onClick={() => approveNewPartMutation.mutate(item.id)}
+                                    disabled={approveNewPartMutation.isPending}
+                                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-600/20 disabled:opacity-50"
+                                    title="اعتماد توفير القطعة وإضافتها فوراً لكتالوج قطع الغيار"
+                                  >
+                                    {approveNewPartMutation.isPending && approveNewPartMutation.variables === item.id ? (
+                                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <span className="material-symbols-outlined text-[16px]">add_task</span>
+                                    )}
+                                    <span>اعتماد وتوفير</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setNewPartToReject(item);
+                                      setNewPartRejectionReason('');
+                                    }}
+                                    disabled={rejectNewPartMutation.isPending}
+                                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                                    title="رفض طلب القطعة الجديدة"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">cancel</span>
+                                    <span>رفض</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {!isPending && (
+                                <span className="text-xs text-slate-400 font-bold">-</span>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1113,6 +1345,82 @@ export default function InventoryPage() {
               <button
                 disabled={approvalMutation.isPending}
                 onClick={() => setRequestToReject(null)}
+                className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ---------------------------------------------------- */}
+      {/* 3.5. NEW PART REQUEST REJECTION MODAL                */}
+      {/* ---------------------------------------------------- */}
+      {newPartToReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => !rejectNewPartMutation.isPending && setNewPartToReject(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-4 text-rose-600">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center border border-rose-100">
+                <span className="material-symbols-outlined text-2xl text-rose-600">cancel</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">تأكيد رفض طلب القطعة الجديدة</h3>
+                <p className="text-xs text-slate-500 mt-0.5">يرجى توضيح سبب الرفض للفني (سبب الرفض إجباري).</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold">اسم القطعة المطلوبة:</span>
+                  <span className="font-bold text-slate-800">{newPartToReject.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold">الكمية المطلوبة:</span>
+                  <span className="font-bold text-slate-800 font-mono">{newPartToReject.quantity || 1}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  سبب الرفض <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={newPartRejectionReason}
+                  onChange={(e) => setNewPartRejectionReason(e.target.value)}
+                  placeholder="مثال: القطعة غير متوافقة مع موديل المحرك أو غير متوفرة بالسوق..."
+                  rows={3}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-rose-500 text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                disabled={rejectNewPartMutation.isPending || !newPartRejectionReason.trim()}
+                onClick={() => {
+                  if (newPartRejectionReason.trim()) {
+                    rejectNewPartMutation.mutate({
+                      id: newPartToReject.id,
+                      reason: newPartRejectionReason.trim()
+                    });
+                  }
+                }}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+              >
+                {rejectNewPartMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>جاري الرفض...</span>
+                  </>
+                ) : (
+                  'تأكيد رفض الطلب'
+                )}
+              </button>
+              <button
+                disabled={rejectNewPartMutation.isPending}
+                onClick={() => setNewPartToReject(null)}
                 className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-colors disabled:opacity-50"
               >
                 إلغاء

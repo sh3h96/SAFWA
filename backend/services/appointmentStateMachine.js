@@ -19,7 +19,7 @@ const ALLOWED_TRANSITIONS = {
   under_inspection: ['in_progress', 'waiting_parts', 'cancelled'],
   in_progress: ['waiting_parts', 'ready_for_pickup', 'cancelled'],
   waiting_parts: ['in_progress', 'cancelled'],
-  ready_for_pickup: ['completed', 'cancelled'],
+  ready_for_pickup: ['completed', 'in_progress', 'cancelled'],
   completed: [],
   cancelled: []
 };
@@ -112,16 +112,18 @@ async function validateAndAssertTransition({ appointment, newStatus, reqBody = {
       throw error;
     }
 
-    // Phase 5 Strengthening: Cannot start repair if any requested part is still in 'pending' status
-    const pendingPartsCount = await RequiredPart.count({
-      where: { technical_report_id: report.id, status: 'pending' },
-      transaction
-    });
+    // Cannot start repair from under_inspection/waiting_parts if any requested part is still 'pending' or 'approved' (uninstalled)
+    if (oldStatus === 'under_inspection' || oldStatus === 'waiting_parts') {
+      const uninstalledPartsCount = await RequiredPart.count({
+        where: { technical_report_id: report.id, status: ['pending', 'approved'] },
+        transaction
+      });
 
-    if (pendingPartsCount > 0) {
-      const error = new Error('لا يمكن بدء الإصلاح مع وجود قطع غيار في حالة الانتظار (pending). يجب اعتماد أو رفض القطع المطلوبة أولاً.');
-      error.statusCode = 400;
-      throw error;
+      if (uninstalledPartsCount > 0) {
+        const error = new Error('لا يمكن بدء/متابعة الإصلاح مع وجود قطع غيار بانتظار الاعتماد أو التركيب. يجب تركئب القطع المعتمدة وحسم جميع الطلبات المعلقة أولاً.');
+        error.statusCode = 400;
+        throw error;
+      }
     }
   }
 

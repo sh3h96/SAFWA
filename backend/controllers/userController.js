@@ -683,15 +683,18 @@ module.exports = {
   // PUT /api/users/profile
   updateProfile: async (req, res) => {
     try {
-      const { name, phone } = req.body;
+      const { name, phone, avatar, avatar_url } = req.body;
       const user = await User.findByPk(req.user.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      const oldValues = { name: user.name, phone: user.phone };
+      const oldValues = { name: user.name, phone: user.phone, avatar_url: user.avatar_url };
       const updateData = {};
       if (name !== undefined && name.trim().length > 0) updateData.name = name.trim();
+      if (avatar !== undefined || avatar_url !== undefined) {
+        updateData.avatar_url = avatar_url !== undefined ? avatar_url : avatar;
+      }
       if (phone !== undefined) {
         const trimmedPhone = phone.trim();
         if (trimmedPhone !== user.phone) {

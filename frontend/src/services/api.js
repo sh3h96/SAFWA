@@ -272,16 +272,24 @@ export const requiredPartsAPI = {
     const response = await api.post('/required-parts', data);
     return response.data;
   },
+  updateRequest: async (id, quantity) => {
+    const response = await api.put(`/required-parts/${id}`, { quantity });
+    return response.data;
+  },
+  cancelRequest: async (id) => {
+    const response = await api.delete(`/required-parts/${id}`);
+    return response.data;
+  },
   approvePart: async (id, price) => {
-    const response = await api.post(`/required-parts/${id}/approve`, { price });
+    const response = await api.put(`/required-parts/${id}/approval`, { price });
     return response.data;
   },
   installPart: async (id) => {
-    const response = await api.post(`/required-parts/${id}/install`);
+    const response = await api.put(`/required-parts/${id}/installation`);
     return response.data;
   },
   rejectPart: async (id) => {
-    const response = await api.post(`/required-parts/${id}/reject`);
+    const response = await api.put(`/required-parts/${id}/rejection`);
     return response.data;
   },
   updateApproval: async (decisions) => {
@@ -335,6 +343,10 @@ export const appointmentsAPI = {
   },
   updateStatus: async (id, data) => {
     const response = await api.put(`/appointments/${id}`, data);
+    return response.data;
+  },
+  requestRework: async (id, data) => {
+    const response = await api.post(`/appointments/${id}/rework`, data);
     return response.data;
   }
 };

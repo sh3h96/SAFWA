@@ -251,7 +251,7 @@ module.exports = {
           ]
         },
         include: [
-          { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'license_plate'] },
+          { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'license_plate', 'image_url'] },
           { model: User, as: 'mechanics', attributes: ['id', 'name', 'phone'], through: { attributes: [] } },
           { 
             model: TechnicalReport, 
@@ -277,21 +277,59 @@ module.exports = {
             id: rp.id,
             part_id: rp.part_id,
             name: rp.partDetails?.name || 'قطعة غير معروفة',
+            sku: rp.partDetails?.part_number || '-',
             quantity: rp.quantity,
             price: rp.partDetails?.price || 0,
             status: rp.status || 'pending'
           }));
         }
 
+        const report = app.report;
+        const isInspectionComplete = !!(
+          report &&
+          report.diagnostics && report.diagnostics.trim().length > 0 &&
+          report.repair_plan && report.repair_plan.trim().length > 0 &&
+          report.estimated_labor_cost !== null && report.estimated_labor_cost !== undefined &&
+          !isNaN(Number(report.estimated_labor_cost)) && Number(report.estimated_labor_cost) >= 0
+        );
+
+        let reworkHistory = [];
+        if (report && report.rework_history) {
+          try {
+            reworkHistory = typeof report.rework_history === 'string' ? JSON.parse(report.rework_history) : report.rework_history;
+            if (!Array.isArray(reworkHistory)) reworkHistory = [];
+          } catch (e) {
+            reworkHistory = [];
+          }
+        }
+        const latestRework = reworkHistory.length > 0 ? reworkHistory[reworkHistory.length - 1] : null;
+
         return {
           id: `APP-${app.id}`,
           appointment_id: app.id,
+          vehicle_id: app.vehicle?.id || null,
           vehicle: `${app.vehicle?.make || ''} ${app.vehicle?.model || ''}`.trim(),
+          vehicle_image: app.vehicle?.image_url || null,
           plate: app.vehicle?.license_plate || '',
           clientIssue: app.problem_description,
           status: app.status,
           cancellation_reason: app.cancellation_reason,
+          rework_notes: latestRework ? latestRework.admin_notes : null,
+          rework_history: reworkHistory,
           hasReport: !!app.report,
+          reportDetails: report ? {
+            id: report.id,
+            diagnostics: report.diagnostics || '',
+            repair_plan: report.repair_plan || '',
+            estimated_labor_cost: report.estimated_labor_cost !== null ? parseFloat(report.estimated_labor_cost) : '',
+            urgency_level: report.urgency_level || 'normal',
+            vehicle_condition: report.vehicle_condition || '',
+            technician_notes: report.technician_notes || '',
+            photos: report.photos || [],
+            rework_history: reworkHistory,
+            rework_notes: latestRework ? latestRework.admin_notes : null
+          } : null,
+          isInspectionComplete,
           requestedParts,
           timeAssigned: app.scheduled_date || app.created_at,
           date: app.scheduled_date || app.created_at
@@ -691,6 +729,17 @@ module.exports = {
 
       const carStr = `${vehicleMake} ${vehicleModel} ${vehiclePlate ? '- ' + vehiclePlate : ''}`.trim() || 'غير محددة';
 
+      let appReworkHistory = [];
+      if (appointment.report && appointment.report.rework_history) {
+        try {
+          appReworkHistory = typeof appointment.report.rework_history === 'string' ? JSON.parse(appointment.report.rework_history) : appointment.report.rework_history;
+          if (!Array.isArray(appReworkHistory)) appReworkHistory = [];
+        } catch (e) {
+          appReworkHistory = [];
+        }
+      }
+      const appLatestRework = appReworkHistory.length > 0 ? appReworkHistory[appReworkHistory.length - 1] : null;
+
       const formatted = {
         id: appointment.id,
         client_id: appointment.client_id,
@@ -708,13 +757,21 @@ module.exports = {
         date: appointment.scheduled_date || appointment.created_at,
         status: appointment.status,
         cancellation_reason: appointment.cancellation_reason,
+        rework_notes: appLatestRework ? appLatestRework.admin_notes : null,
+        rework_history: appReworkHistory,
         mechanicName: appointment.mechanic?.name || (appointment.mechanics && appointment.mechanics[0]?.name) || 'غير محدد',
         mechanics: appointment.mechanics || [],
         report: appointment.report ? {
+          id: appointment.report.id,
+          diagnostics: appointment.report.diagnostics,
+          repair_plan: appointment.report.repair_plan,
+          estimated_labor_cost: appointment.report.estimated_labor_cost,
+          urgency_level: appointment.report.urgency_level,
           odometer: appointment.report.odometer,
           obd2_codes: appointment.report.obd2_codes,
           visual_notes: appointment.report.visual_notes,
-          repair_plan: appointment.report.repair_plan
+          rework_history: appReworkHistory,
+          rework_notes: appLatestRework ? appLatestRework.admin_notes : null
         } : null,
         requestedParts
       };
@@ -741,6 +798,102 @@ module.exports = {
         console.error('Error performing vehicle handover:', error);
       }
       res.status(error.statusCode || 500).json({ message: error.message });
+    }
+  },
+
+  // POST /api/appointments/:id/rework
+  requestRework: async (req, res) => {
+    const { TechnicalReport, sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
+    try {
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+        await transaction.rollback();
+        return res.status(403).json({ message: 'غير مصرح لك بطلب إعادة الإصلاح.' });
+      }
+
+      const { rework_notes, notes } = req.body;
+      const notesInput = (rework_notes || notes || '').trim();
+
+      if (!notesInput) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'يرجى كتابة ملاحظات وتعليمات إعادة الإصلاح.' });
+      }
+
+      const appointment = await Appointment.findByPk(req.params.id, { transaction });
+      if (!appointment) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'الموعد غير موجود' });
+      }
+
+      if (appointment.status !== 'ready_for_pickup') {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'يمكن إعادة المركبة إلى الإصلاح فقط عندما تكون في حالة جاهز للاستلام.' });
+      }
+
+      let report = await TechnicalReport.findOne({
+        where: { appointment_id: appointment.id },
+        transaction
+      });
+
+      if (!report) {
+        report = await TechnicalReport.create({
+          appointment_id: appointment.id,
+          mechanic_id: appointment.mechanic_id,
+          diagnostics: 'فحص ابتدائي مسبق',
+          repair_plan: 'إصلاح مسبق'
+        }, { transaction });
+      }
+
+      let currentHistory = [];
+      if (report.rework_history) {
+        try {
+          currentHistory = typeof report.rework_history === 'string' ? JSON.parse(report.rework_history) : report.rework_history;
+          if (!Array.isArray(currentHistory)) currentHistory = [];
+        } catch (e) {
+          currentHistory = [];
+        }
+      }
+
+      const newEntry = {
+        id: currentHistory.length + 1,
+        admin_notes: notesInput,
+        requested_at: new Date(),
+        requested_by: req.user.name || 'الإدارة',
+        mechanic_notes: null,
+        status: 'pending_rework'
+      };
+
+      currentHistory.push(newEntry);
+
+      await report.update({
+        rework_history: JSON.stringify(currentHistory)
+      }, { transaction });
+
+      await appointment.update({
+        status: 'in_progress'
+      }, { transaction });
+
+      await transaction.commit();
+
+      await logAudit({
+        req,
+        action: 'APPOINTMENT_REWORK_REQUESTED',
+        entityType: 'Appointment',
+        entityId: appointment.id,
+        newValues: { status: 'in_progress', rework_notes: notesInput }
+      });
+
+      res.json({
+        message: 'تمت إعادة المركبة إلى قسم الإصلاح بنجاح.',
+        appointment,
+        reworkEntry: newEntry
+      });
+    } catch (error) {
+      if (transaction && !transaction.finished) {
+        try { await transaction.rollback(); } catch (e) {}
+      }
+      console.error('Error requesting rework:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   }
 };

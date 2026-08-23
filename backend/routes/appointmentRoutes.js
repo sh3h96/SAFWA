@@ -21,5 +21,6 @@ router.get('/:id', authenticateToken, requireRole('admin', 'mechanic', 'client')
 router.get('/:appointmentId/technical-report', authenticateToken, requireRole('admin', 'mechanic', 'client'), technicalReportController.getReportByAppointment);
 router.put('/:id', authenticateToken, requireRole('admin', 'mechanic'), updateAppointmentValidation, appointmentController.updateAppointment);
 router.post('/:id/handover', authenticateToken, requireRole('admin', 'super_admin'), paramIdValidation, appointmentController.handoverAppointment);
+router.post('/:id/rework', authenticateToken, requireRole('admin', 'super_admin'), paramIdValidation, appointmentController.requestRework);
 
 module.exports = router;

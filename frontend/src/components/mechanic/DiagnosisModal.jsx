@@ -18,6 +18,11 @@ export default function DiagnosisModal({ task, onClose }) {
   const [visualNotes, setVisualNotes] = useState(task?.report?.visual_notes || '');
   const [diagnostics, setDiagnostics] = useState(task?.report?.diagnostics || '');
   const [repairPlan,  setRepairPlan]  = useState(task?.report?.repair_plan || '');
+  const [estimatedLaborCost, setEstimatedLaborCost] = useState(
+    task?.report?.estimated_labor_cost !== undefined && task?.report?.estimated_labor_cost !== null 
+      ? String(task.report.estimated_labor_cost) 
+      : ''
+  );
   const [urgency,     setUrgency]     = useState(task?.report?.urgency_level || 'normal');
 
   // Submit diagnosis report
@@ -35,6 +40,12 @@ export default function DiagnosisModal({ task, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const labor = parseFloat(estimatedLaborCost);
+    if (isNaN(labor) || labor < 0) {
+      toast.error('يرجى تحديد أجور العمل التقديرية بشكل صحيح (0 أو أكثر)');
+      return;
+    }
+
     reportMutation.mutate({
       appointment_id: task.appointment_id || task.id,
       odometer:       odometer ? parseInt(odometer) : null,
@@ -42,6 +53,7 @@ export default function DiagnosisModal({ task, onClose }) {
       visual_notes:   visualNotes,
       diagnostics,
       repair_plan:    repairPlan,
+      estimated_labor_cost: labor,
       urgency_level:  urgency,
       mechanic_notes: '',
     });
@@ -196,6 +208,24 @@ export default function DiagnosisModal({ task, onClose }) {
                 rows={3}
                 placeholder="الخطوات المطلوبة للإصلاح..."
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none"
+              />
+            </div>
+
+            {/* Estimated Labor Cost */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-slate-400">payments</span>
+                تكلفة أجور العمل التقديرية (ر.ي) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value={estimatedLaborCost}
+                onChange={e => setEstimatedLaborCost(e.target.value)}
+                placeholder="مثال: 150.00"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
               />
             </div>
 

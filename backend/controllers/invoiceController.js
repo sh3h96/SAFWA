@@ -452,6 +452,10 @@ module.exports = {
 
       const invoiceData = {
         invoiceId: invoice.id,
+        appointment_id: invoice.appointment_id,
+        appointmentId: invoice.appointment_id,
+        report_id: appointment?.report?.id || null,
+        appointmentStatus: appointment?.status || null,
         status: statusMap[derivedStatus] || 'غير مسددة',
         rawStatus: derivedStatus,
         vatId: '300012345600003',

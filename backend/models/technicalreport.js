@@ -62,6 +62,29 @@ module.exports = (sequelize) => {
     estimated_labor_cost: {
         "type": DataTypes.DECIMAL(10,2),
         "allowNull": true
+    },
+    rework_history: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        get() {
+            const raw = this.getDataValue('rework_history');
+            if (!raw) return [];
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        },
+        set(val) {
+            if (Array.isArray(val)) {
+                this.setDataValue('rework_history', JSON.stringify(val));
+            } else if (typeof val === 'string') {
+                this.setDataValue('rework_history', val);
+            } else {
+                this.setDataValue('rework_history', null);
+            }
+        }
     }
   }, {
     sequelize,

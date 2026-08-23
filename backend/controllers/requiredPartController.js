@@ -204,6 +204,12 @@ module.exports = {
 
       const createdRecords = await RequiredPart.bulkCreate(records);
 
+      // If appointment is under_inspection, transition appointment to waiting_parts.
+      // Rule 7: If appointment is already in_progress, DO NOT change appointment status!
+      if (appt.status === 'under_inspection') {
+        await appt.update({ status: 'waiting_parts' });
+      }
+
       await logAudit({
         req,
         action: 'PARTS_REQUEST_SUBMITTED',
@@ -246,7 +252,7 @@ module.exports = {
     }
   },
 
-  // PUT /api/required-parts/:id/installation (Single Install)
+  // PUT /api/required-parts/:id/installation (Single Install - Mechanic ONLY)
   installPart: async (req, res) => {
     try {
       const result = await InventoryService.installSingleRequiredPart({
@@ -286,7 +292,7 @@ module.exports = {
     }
   },
 
-  // PUT /api/required-parts/approval (Batch Decisions)
+  // PUT /api/required-parts/approval (Batch Decisions - Admin ONLY for approve/reject)
   updateApproval: async (req, res) => {
     try {
       const { decisions } = req.body;
@@ -304,11 +310,6 @@ module.exports = {
             requiredPartId: decision.id,
             req
           });
-        } else if (decision.status === 'installed') {
-          await InventoryService.installSingleRequiredPart({
-            requiredPartId: decision.id,
-            req
-          });
         } else if (decision.status === 'rejected') {
           if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
             return res.status(403).json({ message: 'غير مصرح لك برفض قطع الغيار' });
@@ -318,7 +319,7 @@ module.exports = {
             req
           });
         } else {
-          return res.status(400).json({ message: `الحالة غير صالحة: ${decision.status}` });
+          return res.status(400).json({ message: `الحالة غير صالحة للاعتماد من الإدارة: ${decision.status}` });
         }
       }
 
@@ -329,6 +330,92 @@ module.exports = {
       if (error.available !== undefined) responsePayload.available = error.available;
       if (error.requested !== undefined) responsePayload.requested = error.requested;
       res.status(status).json(responsePayload);
+    }
+  },
+
+  // PUT /api/required-parts/:id (Edit pending request quantity)
+  updateRequest: async (req, res) => {
+    try {
+      const { quantity } = req.body;
+      const numQty = Number(quantity);
+
+      if (!quantity || isNaN(numQty) || !Number.isInteger(numQty) || numQty <= 0) {
+        return res.status(400).json({ message: 'الكمية المطلوبة يجب أن تكون رقماً صحيحاً أكبر من صفر' });
+      }
+
+      const reqPart = await RequiredPart.findByPk(req.params.id, {
+        include: [{ model: TechnicalReport, as: 'technicalReport', include: [{ model: Appointment, as: 'appointment' }] }]
+      });
+
+      if (!reqPart) {
+        return res.status(404).json({ message: 'طلب قطعة الغيار غير موجود' });
+      }
+
+      if (reqPart.status !== 'pending') {
+        return res.status(409).json({ message: 'لا يمكن تعديل طلب قطعة غير معلق' });
+      }
+
+      if (req.user && req.user.role === 'mechanic') {
+        const appt = reqPart.technicalReport?.appointment;
+        let isAssigned = appt && appt.mechanic_id === req.user.id;
+        if (!isAssigned && appt) {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appt.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssigned = true;
+        }
+
+        if (!isAssigned) {
+          return res.status(403).json({ message: 'غير مصرح لك بتعديل طلب لمهمة غير مسندة إليك' });
+        }
+      }
+
+      reqPart.quantity = numQty;
+      await reqPart.save();
+
+      res.json({ message: 'تم تحديث كمية الطلب بنجاح', requiredPart: reqPart });
+    } catch (error) {
+      console.error('Error updating required part request:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+
+  // DELETE /api/required-parts/:id (Cancel/Delete pending request)
+  cancelRequest: async (req, res) => {
+    try {
+      const reqPart = await RequiredPart.findByPk(req.params.id, {
+        include: [{ model: TechnicalReport, as: 'technicalReport', include: [{ model: Appointment, as: 'appointment' }] }]
+      });
+
+      if (!reqPart) {
+        return res.status(404).json({ message: 'طلب قطعة الغيار غير موجود' });
+      }
+
+      if (reqPart.status !== 'pending') {
+        return res.status(409).json({ message: 'لا يمكن إلغاء طلب قطعة غير معلق' });
+      }
+
+      if (req.user && req.user.role === 'mechanic') {
+        const appt = reqPart.technicalReport?.appointment;
+        let isAssigned = appt && appt.mechanic_id === req.user.id;
+        if (!isAssigned && appt) {
+          const amRecord = await AppointmentMechanic.findOne({
+            where: { appointment_id: appt.id, mechanic_id: req.user.id }
+          });
+          if (amRecord) isAssigned = true;
+        }
+
+        if (!isAssigned) {
+          return res.status(403).json({ message: 'غير مصرح لك بإلغاء طلب لمهمة غير مسندة إليك' });
+        }
+      }
+
+      await reqPart.destroy();
+
+      res.json({ message: 'تم إلغاء طلب قطعة الغيار بنجاح' });
+    } catch (error) {
+      console.error('Error deleting required part request:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   }
 };

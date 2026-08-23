@@ -105,21 +105,23 @@ export default function ClientAppointmentsPage() {
 
             stages.push(
               { id: 'in_progress', label: 'جاري الإصلاح', icon: 'build' },
+              { id: 'ready_for_pickup', label: 'جاهز للاستلام', icon: 'mark_email_read' },
               { id: 'completed', label: 'مكتمل', icon: 'check_circle' }
             );
 
             const getStageIndex = (status) => {
-              if (status === 'completed' || status === 'ready') return stages.length - 1;
-              if (status === 'in_progress' || status === 'repairing') return stages.length - 2;
-              if (needsPartsStage && status === 'waiting_parts') return 2; 
-              if (status === 'under_inspection' || status === 'inspection') return 1; 
+              if (status === 'completed') return stages.length - 1;
+              if (status === 'ready_for_pickup' || status === 'ready') return stages.findIndex(s => s.id === 'ready_for_pickup');
+              if (status === 'in_progress' || status === 'repairing') return stages.findIndex(s => s.id === 'in_progress');
+              if (needsPartsStage && status === 'waiting_parts') return stages.findIndex(s => s.id === 'waiting_parts'); 
+              if (status === 'under_inspection' || status === 'inspection') return stages.findIndex(s => s.id === 'under_inspection'); 
               return 0; // pending or confirmed fallback
             };
 
             let currentStageIdx = getStageIndex(app.status);
             if (currentStageIdx === -1) currentStageIdx = 0; // fallback to pending
             
-            const isCompleted = currentStageIdx === stages.length - 1;
+            const isCompleted = status === 'completed';
 
             return (
               <div 

@@ -83,9 +83,9 @@ module.exports = {
         return res.status(404).json({ message: 'Appointment not found or unauthorized' });
       }
 
-      // Service Eligibility Verification: Only completed or ready_for_pickup appointments can be reviewed
-      if (!['completed', 'ready_for_pickup'].includes(appointment.status)) {
-        return res.status(400).json({ message: 'Only completed services can be reviewed' });
+      // Service Eligibility Verification: Only completed appointments can be reviewed
+      if (appointment.status !== 'completed') {
+        return res.status(400).json({ message: 'يمكن تقييم المواعيد المكتملة فقط بعد تسليم المركبة وسداد الفاتورة.' });
       }
 
       // Duplicate Review Protection

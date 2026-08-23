@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usersAPI, authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import toast from 'react-hot-toast';
+import Avatar from './Avatar';
+import ImageUploader from '../admin/ImageUploader';
 
 export default function ProfileModal({ onClose }) {
   const { user, updateUserContext } = useAuth();
@@ -152,9 +153,12 @@ export default function ProfileModal({ onClose }) {
 
         {/* User Card Profile Header (SaaS Standard Layout) */}
         <div className="p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 text-white flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-teal-600 border-2 border-white/20 shadow-md flex items-center justify-center font-bold text-2xl text-white">
-            {currentUser?.name?.charAt(0).toUpperCase() || 'م'}
-          </div>
+          <Avatar 
+            src={currentUser?.avatar_url || currentUser?.avatar || currentUser?.image_url} 
+            name={currentUser?.name} 
+            initials={currentUser?.name?.charAt(0).toUpperCase() || 'م'} 
+            size="lg" 
+          />
           <div className="space-y-1">
             <h3 className="font-bold text-lg leading-snug">{currentUser?.name || 'مستخدم SAFWA'}</h3>
             <div className="flex items-center gap-2 flex-wrap">
@@ -197,6 +201,26 @@ export default function ProfileModal({ onClose }) {
           <form onSubmit={handleProfileSubmit} className="p-6 space-y-5">
             <div className="max-w-md mx-auto space-y-4">
               
+              {/* Profile Image Uploader */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <ImageUploader
+                  entityType="user"
+                  entityId={currentUser?.id}
+                  currentImageUrl={currentUser?.avatar_url || currentUser?.avatar || currentUser?.image_url}
+                  label="الصورة الشخصية"
+                  onImageUpdated={(newUrl) => {
+                    queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+                    queryClient.invalidateQueries({ queryKey: ['users'] });
+                    if (updateUserContext) updateUserContext({ ...currentUser, avatar_url: newUrl });
+                  }}
+                  onImageDeleted={() => {
+                    queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+                    queryClient.invalidateQueries({ queryKey: ['users'] });
+                    if (updateUserContext) updateUserContext({ ...currentUser, avatar_url: null });
+                  }}
+                />
+              </div>
+
               {/* Full Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600">الاسم الكامل</label>

@@ -56,16 +56,22 @@ module.exports = {
   createRequest: async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-      const {
+      let {
         technical_report_id,
+        appointment_id,
         name,
+        part_name,
         part_number,
         brand,
         description,
+        notes,
         vehicle_compatibility,
         quantity,
         image_url
       } = req.body;
+
+      const partNameVal = (name || part_name || '').trim();
+      const descVal = (description || notes || '').trim();
 
       // 0. Role Check: Client cannot create requests
       if (!req.user || (req.user.role !== 'mechanic' && req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
@@ -73,13 +79,24 @@ module.exports = {
         return res.status(403).json({ message: 'غير مصرح لك بتقديم طلبات قطع الغيار الجديدة' });
       }
 
+      // If technical_report_id is not directly given, try to resolve from appointment_id
+      if ((!technical_report_id || isNaN(Number(technical_report_id))) && appointment_id) {
+        const foundReport = await TechnicalReport.findOne({
+          where: { appointment_id: Number(appointment_id) },
+          transaction
+        });
+        if (foundReport) {
+          technical_report_id = foundReport.id;
+        }
+      }
+
       // 1. Mandatory Validations
       if (!technical_report_id || isNaN(Number(technical_report_id))) {
         await transaction.rollback();
-        return res.status(400).json({ message: 'معرف التقرير الفني مطلوب' });
+        return res.status(400).json({ message: 'معرف التقرير الفني مطلوب أو لا يمتلك الموعد تقريراً فنياً مكتملاً' });
       }
 
-      if (!name || typeof name !== 'string' || !name.trim()) {
+      if (!partNameVal) {
         await transaction.rollback();
         return res.status(400).json({ message: 'اسم قطعة الغيار مطلوب' });
       }
@@ -135,7 +152,7 @@ module.exports = {
       // 4. Catalog Existence Check (Prevent requesting parts that already exist in SparePart catalog)
       const existingCatalogPart = await findMatchingSparePart({
         part_number,
-        name,
+        name: partNameVal,
         brand,
         transaction
       });
@@ -150,7 +167,7 @@ module.exports = {
 
       // 5. Duplicate Pending Request Check (Same report + same part + status = pending)
       const normPartNumber = normalizeText(part_number);
-      const normName = normalizeText(name);
+      const normName = normalizeText(partNameVal);
 
       const pendingRequests = await NewPartRequest.findAll({
         where: {
@@ -182,10 +199,10 @@ module.exports = {
       const newRequest = await NewPartRequest.create({
         technical_report_id,
         mechanic_id: mechanicId,
-        name: name.trim(),
+        name: partNameVal,
         part_number: part_number ? part_number.trim() : null,
         brand: brand ? brand.trim() : null,
-        description: description ? description.trim() : null,
+        description: descVal || null,
         vehicle_compatibility: vehicle_compatibility ? vehicle_compatibility.trim() : null,
         quantity: numQty,
         image_url: image_url || null,

@@ -15,6 +15,9 @@ import EntityImage from '../../components/common/EntityImage';
 import { formatDate, formatTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
+import ReworkModal from '../../components/admin/ReworkModal';
+import ViewInvoiceModal from '../../components/admin/ViewInvoiceModal';
+
 export default function AppointmentsControlPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -22,6 +25,22 @@ export default function AppointmentsControlPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+
+  // Modal & Rework states
+  const [selectedInvoiceApp, setSelectedInvoiceApp] = useState(null); // { invoiceId, appointmentId }
+  const [reworkTargetApp, setReworkTargetApp] = useState(null);
+
+  const reworkMutation = useMutation({
+    mutationFn: ({ id, data }) => appointmentsAPI.requestRework(id, data),
+    onSuccess: () => {
+      toast.success('تمت إعادة المركبة لقسم الإصلاح وإضافة ملاحظات الفحص بنجاح');
+      setReworkTargetApp(null);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    }
+  });
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -71,6 +90,8 @@ export default function AppointmentsControlPage() {
   const [selectedVehicle, setSelectedVehicle] = useState(null); // { id, vehicleObj }
   const [selectedUser, setSelectedUser] = useState(null); // { id, userObj }
   const [selectedWalkInCustomerId, setSelectedWalkInCustomerId] = useState(null);
+  const [cancellationModalAppId, setCancellationModalAppId] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
 
   const columns = [
     { id: 'pending', label: 'بانتظار التأكيد', color: 'bg-slate-100 text-slate-700' },
@@ -78,6 +99,7 @@ export default function AppointmentsControlPage() {
     { id: 'in_progress', label: 'قيد الإصلاح', color: 'bg-teal-100 text-teal-800' },
     { id: 'ready_for_pickup', label: 'جاهز للتسليم', color: 'bg-emerald-100 text-emerald-800' },
     { id: 'completed', label: 'مكتمل', color: 'bg-emerald-100 text-emerald-800' },
+    { id: 'cancelled', label: 'ملغاة / متوقفة', color: 'bg-rose-100 text-rose-800' },
   ];
 
   const handleAction = (app) => {
@@ -103,6 +125,24 @@ export default function AppointmentsControlPage() {
             delete newState[app.id];
             return newState;
           });
+        }
+      }
+    );
+  };
+
+  const handleCancelAppointment = () => {
+    if (!cancellationReason || !cancellationReason.trim()) {
+      toast.error('يرجى كتابة سبب إلغاء/إيقاف العملية');
+      return;
+    }
+
+    updateStatusMutation.mutate(
+      { id: cancellationModalAppId, data: { status: 'cancelled', cancellation_reason: cancellationReason } },
+      {
+        onSuccess: () => {
+          toast.success('تم نقل العملية إلى قسم المواعيد الملغاة/المتوقفة بنجاح');
+          setCancellationModalAppId(null);
+          setCancellationReason('');
         }
       }
     );
@@ -383,23 +423,54 @@ export default function AppointmentsControlPage() {
                     )}
 
                     {(app.status === 'in_progress' || app.status === 'under_inspection' || app.status === 'waiting_parts') && (
-                      <button
-                        onClick={() => setDetailsModalAppId(app.id)}
-                        className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] bg-white border-2 border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200"
-                      >
-                        عرض التفاصيل
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setDetailsModalAppId(app.id)}
+                          className="flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] bg-white border-2 border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200"
+                        >
+                          عرض التفاصيل
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCancellationModalAppId(app.id);
+                            setCancellationReason('');
+                          }}
+                          className="px-3 py-3 rounded-xl text-xs font-bold transition-all bg-rose-50 border border-rose-200/80 text-rose-700 hover:bg-rose-100 flex items-center justify-center gap-1 shrink-0"
+                          title="إلغاء وإيقاف عملية الإصلاح"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">cancel</span>
+                          <span>إلغاء / إيقاف</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {app.status === 'cancelled' && (
+                      <div className="p-3 bg-rose-50/80 rounded-xl border border-rose-200/60 text-right">
+                        <span className="text-[10px] font-bold text-rose-700 uppercase block mb-1">سبب إلغاء/إيقاف العملية</span>
+                        <p className="text-xs font-bold text-rose-900 leading-relaxed">{app.cancellation_reason || 'تم إيقاف العملية من قِبل الإدارة'}</p>
+                      </div>
                     )}
 
                     {app.status === 'ready_for_pickup' && (
-                      <button
-                        onClick={() => handoverMutation.mutate(app.id)}
-                        disabled={handoverMutation.isPending}
-                        className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">key</span>
-                        <span>تسليم المركبة (Handover)</span>
-                      </button>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedInvoiceApp({ invoiceId: app.invoice_id || app.invoice?.id, appointmentId: app.id })}
+                            className="flex-1 py-3 rounded-xl text-xs font-bold transition-all active:scale-[0.98] bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                            <span>الفاتورة وتسليم المركبة</span>
+                          </button>
+                          <button
+                            onClick={() => setReworkTargetApp(app)}
+                            className="px-3 py-3 rounded-xl text-xs font-bold transition-all bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 flex items-center justify-center gap-1 shrink-0"
+                            title="إعادة للورشة والإصلاح (Rework)"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">replay</span>
+                            <span>إعادة للإصلاح</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
 
                     {app.status === 'completed' && (
@@ -436,6 +507,52 @@ export default function AppointmentsControlPage() {
         />
       )}
 
+      {/* Cancellation Modal */}
+      {cancellationModalAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setCancellationModalAppId(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4 text-rose-600">
+              <span className="material-symbols-outlined text-2xl">error</span>
+              <h3 className="text-lg font-bold text-slate-800">إلغاء / إيقاف عملية الإصلاح</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              سيتم نقل الموعد إلى قسم المواعيد الملغاة/المتوقفة وتوثيق أن عملية الإصلاح لم تكتمل.
+            </p>
+            <div className="mb-5">
+              <label className="block text-xs font-bold text-slate-700 mb-2">سبب إيقاف أو إلغاء العملية <span className="text-rose-500">*</span></label>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="أدخل سبب إلغاء العملية (مثال: عدم توفر قطع غيار أساسية / اعتذار العميل)..."
+                rows={4}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-rose-500 focus:bg-white transition-all font-medium text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCancellationModalAppId(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all"
+              >
+                تراجع
+              </button>
+              <button
+                onClick={handleCancelAppointment}
+                disabled={updateStatusMutation.isPending}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/20 flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {updateStatusMutation.isPending ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-[16px]">do_not_disturb_on</span>
+                )}
+                <span>تأكيد الإلغاء والإيقاف</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Appointment Details Modal */}
       {detailsModalAppId && (
         <AppointmentDetailsModal
@@ -468,6 +585,31 @@ export default function AppointmentsControlPage() {
           customerId={selectedWalkInCustomerId}
           isOpen={true}
           onClose={() => setSelectedWalkInCustomerId(null)}
+        />
+      )}
+
+      {/* Rework Modal */}
+      {reworkTargetApp && (
+        <ReworkModal
+          isOpen={true}
+          appointment={reworkTargetApp}
+          onClose={() => setReworkTargetApp(null)}
+          onSubmit={({ rework_notes }) => {
+            reworkMutation.mutate({ id: reworkTargetApp.id, data: { rework_notes } });
+          }}
+          isLoading={reworkMutation.isPending}
+        />
+      )}
+
+      {/* View Invoice & Handover Modal */}
+      {selectedInvoiceApp && (
+        <ViewInvoiceModal
+          invoiceId={selectedInvoiceApp.invoiceId}
+          appointmentId={selectedInvoiceApp.appointmentId}
+          onClose={() => setSelectedInvoiceApp(null)}
+          onHandoverSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'] });
+          }}
         />
       )}
 

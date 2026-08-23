@@ -214,12 +214,30 @@ export default function MechanicPartsRequestsPage() {
                         <td className="py-4 px-6 text-center">
                           {reqItem.status === 'pending' && (
                             <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-bold">
-                              قيد الانتظار
+                              بانتظار موافقة الإدارة
                             </span>
                           )}
                           {reqItem.status === 'approved' && (
-                            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
-                              معتمد
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
+                                معتمد - جاهز للتركيب
+                              </span>
+                              <button
+                                onClick={() => {
+                                  requiredPartsAPI.installPart(reqItem.id).then(() => {
+                                    queryClient.invalidateQueries({ queryKey: ['mechanicPartsRequests'] });
+                                    queryClient.invalidateQueries({ queryKey: ['mechanic', 'tasks'] });
+                                  });
+                                }}
+                                className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all"
+                              >
+                                تركيب القطعة
+                              </button>
+                            </div>
+                          )}
+                          {reqItem.status === 'installed' && (
+                            <span className="px-3 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-full text-xs font-bold">
+                              تم تركيب القطعة
                             </span>
                           )}
                           {reqItem.status === 'rejected' && (
