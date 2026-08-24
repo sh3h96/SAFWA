@@ -1,8 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
+const { authenticateToken, requireRole } = require('../middleware/auth');
+const {
+  createVehicleValidation,
+  updateVehicleValidation,
+  paramIdValidation
+} = require('../middleware/validation');
 
-// Define routes for vehicle here
-// router.get('/', vehicleController.getAll);
+// Protected Vehicle routes (RBAC Restricted)
+router.get('/', authenticateToken, requireRole('admin'), vehicleController.getAllVehicles);
+router.get('/my', authenticateToken, requireRole('client'), vehicleController.getMyVehicles);
+router.post('/', authenticateToken, requireRole('client', 'admin'), createVehicleValidation, vehicleController.createVehicle);
+router.get('/:id/history', authenticateToken, requireRole('admin', 'mechanic', 'client'), paramIdValidation, vehicleController.getVehicleHistory);
+router.get('/:id', authenticateToken, paramIdValidation, vehicleController.getVehicleById);
+router.put('/:id', authenticateToken, requireRole('admin', 'client'), updateVehicleValidation, vehicleController.updateVehicle);
+router.delete('/:id', authenticateToken, requireRole('admin'), paramIdValidation, vehicleController.deleteVehicle);
 
 module.exports = router;
